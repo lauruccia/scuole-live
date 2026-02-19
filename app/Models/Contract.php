@@ -78,6 +78,9 @@ class Contract extends Model
         'hours_consumed',
 
         'notes',
+
+        'company_id',
+'billing_profile_id',
     ];
 
     protected $casts = [
@@ -162,6 +165,16 @@ class Contract extends Model
         return $this->hasMany(ContractLessonSlot::class, 'contract_id');
     }
 
+    public function company(): BelongsTo
+{
+    return $this->belongsTo(Company::class);
+}
+
+public function billingProfile(): BelongsTo
+{
+    return $this->belongsTo(BillingProfile::class);
+}
+
     /* -----------------------------------------------------------------
      |  COMPUTED
      | ----------------------------------------------------------------- */
@@ -182,17 +195,23 @@ class Contract extends Model
     }
 
     public function getBillingDisplayNameAttribute(): string
-    {
-        if (($this->billing_type ?? 'private') === 'company') {
-            return (string) ($this->company_name ?: '—');
-        }
-
-        $first = trim((string) ($this->billing_first_name ?? ''));
-        $last  = trim((string) ($this->billing_last_name ?? ''));
-
-        $full = trim($last . ' ' . $first);
-        return $full !== '' ? $full : '—';
+{
+    // Se abbiamo un profilo collegato, usiamo quello (nuovo sistema)
+    if ($this->billingProfile) {
+        return $this->billingProfile->display_name;
     }
+
+    // Fallback: vecchio sistema dentro contracts (il tuo attuale)
+    if (($this->billing_type ?? 'private') === 'company') {
+        return (string) ($this->company_name ?: '—');
+    }
+
+    $first = trim((string) ($this->billing_first_name ?? ''));
+    $last  = trim((string) ($this->billing_last_name ?? ''));
+
+    $full = trim($last . ' ' . $first);
+    return $full !== '' ? $full : '—';
+}
 
     public function isPrivate(): bool
     {
