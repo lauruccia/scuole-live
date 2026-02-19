@@ -222,6 +222,42 @@ class ContractResource extends Resource
                                     ->columnSpan(4),
                             ]),
 
+                            use App\Models\Company;
+
+Select::make('company_id')
+    ->label('Azienda (se già presente)')
+    ->searchable()
+    ->preload()
+    ->options(fn () => Company::query()->orderBy('name')->pluck('name', 'id')->toArray())
+    ->live()
+    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+        if (! $state) return;
+
+        $c = Company::find((int) $state);
+        if (! $c) return;
+
+        // copia nei campi "storici" che già usi per stampa/email
+        $set('company_name', $c->name);
+        $set('vat_number', $c->vat_number);
+        $set('company_tax_code', $c->tax_code);
+        $set('sdi', $c->sdi);
+        $set('pec', $c->pec);
+
+        $set('company_email', $c->email);
+        $set('company_phone', $c->phone);
+        $set('company_address', $c->address);
+        $set('company_city', $c->city);
+        $set('company_province', $c->province);
+        $set('company_zip', $c->zip);
+        $set('company_country', $c->country);
+
+        // se la tua tabella companies ha billing_profile_id
+        if (isset($c->billing_profile_id) && $c->billing_profile_id) {
+            $set('billing_profile_id', $c->billing_profile_id);
+        }
+    })
+    ->visible(fn (Get $get) => $get('billing_type') === 'company'),
+
                         Section::make('Dati azienda')
                             ->columns(4)
                             ->visible(fn (Get $get) => $get('billing_type') === 'company')
@@ -440,38 +476,34 @@ class ContractResource extends Resource
 
                 Step::make('Beneficiari e dettagli')
                     ->schema([
-                        ToggleButtons::make('billing_is_beneficiary')
-                            ->label('L’intestatario del contratto è anche il beneficiario?')
-                            ->options([1 => 'Sì', 0 => 'No'])
-                            ->inline()
-                            ->default(0)
-                            ->live()
-                            ->disabled(fn (Get $get) => $get('billing_type') === 'company')
-                            ->afterStateHydrated(function (Get $get, Set $set) {
-                                // azienda: forza No
-                                if ($get('billing_type') === 'company') {
-                                    $set('billing_is_beneficiary', 0);
-                                    return;
-                                }
-
-                                // se è Sì, forza 1 beneficiario e aggiornalo
-                                if ((int) ($get('billing_is_beneficiary') ?? 0) === 1) {
-                                    static::syncSingleBeneficiaryFromBilling($get, $set);
-                                }
-                            })
-                            ->afterStateUpdated(function (Get $get, Set $set, $state) {
-                                if ($get('billing_type') === 'company') {
-                                    $set('billing_is_beneficiary', 0);
-                                    $set('beneficiaries', []);
-                                    return;
-                                }
-
-                                if ((int) $state === 1) {
-                                    static::syncSingleBeneficiaryFromBilling($get, $set);
-                                } else {
-                                    $set('beneficiaries', []);
-                                }
-                            }),
+                        ToggleButtons::make('billing_is_student')
+    ->label('Il pagante (intestatario) coincide con lo studente beneficiario?')
+    ->options([1 => 'Sì (studente)', 0 => 'No (genitore/terzo)'])
+    ->inline()
+    ->default(0)
+    ->live()
+    ->disabled(fn (Get $get) => $get('billing_type') === 'company')
+    ->afterStateHydrated(function (Get $get, Set $set) {
+        if ($get('billing_type') === 'company') {
+            $set('billing_is_student', 0);
+            return;
+        }
+        if ((int) ($get('billing_is_student') ?? 0) === 1) {
+            static::syncSingleBeneficiaryFromBilling($get, $set);
+        }
+    })
+    ->afterStateUpdated(function (Get $get, Set $set, $state) {
+        if ($get('billing_type') === 'company') {
+            $set('billing_is_student', 0);
+            return;
+        }
+        if ((int) $state === 1) {
+            static::syncSingleBeneficiaryFromBilling($get, $set);
+        } else {
+            // genitore/terzo: beneficiari liberi (non svuotare per forza, io NON svuoterei)
+            // se vuoi svuotare: $set('beneficiaries', []);
+        }
+    }),
 
                         Repeater::make('beneficiaries')
                             ->label('Studenti beneficiari')
@@ -479,9 +511,9 @@ class ContractResource extends Resource
                             ->addActionLabel('Aggiungi studente')
                             ->defaultItems(0)
                             // ✅ quando "Sì" blocca aggiunta/eliminazione/riordino
-                            ->addable(fn (Get $get) => (int) ($get('../../billing_is_beneficiary') ?? 0) !== 1)
-                            ->deletable(fn (Get $get) => (int) ($get('../../billing_is_beneficiary') ?? 0) !== 1)
-                            ->reorderable(fn (Get $get) => (int) ($get('../../billing_is_beneficiary') ?? 0) !== 1)
+                            ->addable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
+->deletable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
+->reorderable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
                             ->schema([
                                 Placeholder::make('auto_match_label')
                                     ->label('')
@@ -626,8 +658,7 @@ class ContractResource extends Resource
             return;
         }
 
-        if ((int) ($get('billing_is_beneficiary') ?? 0) !== 1) {
-            return;
+        if ((int) ($get('billing_is_student') ?? 0) !== 1) return;
         }
 
         $set('beneficiaries', [[

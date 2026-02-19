@@ -81,10 +81,14 @@ class Contract extends Model
 
         'company_id',
 'billing_profile_id',
+
+'billing_is_student',
+
     ];
 
     protected $casts = [
         'billing_is_beneficiary' => 'boolean',
+        'billing_is_student' => 'boolean',
 
         'billing_birth_date'     => 'date',
         'admission_date'         => 'date',
@@ -173,6 +177,16 @@ class Contract extends Model
 public function billingProfile(): BelongsTo
 {
     return $this->belongsTo(BillingProfile::class);
+}
+
+public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+{
+    return $this->belongsTo(\App\Models\Company::class);
+}
+
+public function billingProfile(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+{
+    return $this->belongsTo(\App\Models\BillingProfile::class);
 }
 
     /* -----------------------------------------------------------------

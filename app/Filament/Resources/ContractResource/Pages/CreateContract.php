@@ -262,4 +262,21 @@ class CreateContract extends CreateRecord
 
         return (int) $s->id;
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+{
+    $this->beneficiariesData = $data['beneficiaries'] ?? [];
+    unset($data['beneficiaries']);
+
+    // mapping compatibilità
+    $data['billing_is_beneficiary'] = (int) ($data['billing_is_student'] ?? 0);
+
+    if (($data['billing_type'] ?? 'private') === 'company') {
+        $data['billing_is_student'] = 0;
+        $data['billing_is_beneficiary'] = 0;
+    }
+
+    ...
+    return $data;
+}
 }
