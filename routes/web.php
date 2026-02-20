@@ -7,12 +7,14 @@ use App\Http\Controllers\GoogleOAuthController;
 Route::get('/', fn () => view('welcome'));
 
 // ✅ solo staff scuola
-Route::middleware(['web', 'auth', 'role:superadmin|amministrazione|segreteria'])
+Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria'])
     ->group(function () {
 
+        // ✅ stampa (view)
         Route::get('/contracts/{contract}/print', [ContractDocumentController::class, 'show'])
             ->name('contracts.print');
 
+        // ✅ PDF inline
         Route::get('/contracts/{contract}/pdf', [ContractDocumentController::class, 'pdf'])
             ->name('contracts.pdf');
 

@@ -7,68 +7,187 @@ use App\Models\Student;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Placeholder;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class LessonSlotsRelationManager extends RelationManager
 {
     protected static string $relationship = 'lessonSlots';
 
+    /**
+     * Ritorna gli ID studenti collegati al contratto (ContractStudent.student_id)
+     */
+    protected function getContractStudentIds(?int $includeStudentId = null): array
+    {
+        $contract = $this->getOwnerRecord();
+        if (! $contract) {
+            return [];
+        }
+
+        $ids = ContractStudent::query()
+            ->where('contract_id', $contract->id)
+            ->whereNotNull('student_id')
+            ->pluck('student_id')
+            ->map(fn ($v) => (int) $v)
+            ->unique()
+            ->values()
+            ->all();
+
+        // include sempre lo studente già presente nello slot (edit)
+        if ($includeStudentId) {
+            $ids[] = (int) $includeStudentId;
+            $ids = array_values(array_unique($ids));
+        }
+
+        return $ids;
+    }
+
+    protected function getStudentOptions(array $ids): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        return Student::query()
+            ->whereIn('id', $ids)
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get()
+            ->mapWithKeys(function (Student $s) {
+                $label = $s->full_name
+                    ?? trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? ''));
+
+                if ($label === '') {
+                    $label = 'Studente #' . $s->id;
+                }
+
+                return [(int) $s->id => $label];
+            })
+            ->toArray();
+    }
+
     public function form(Form $form): Form
     {
         return $form->schema([
+            // ✅ starts_at dello slot = starts_at del contratto (se non impostato)
+            Hidden::make('starts_at')
+                ->default(function (?Model $record) {
+                    if ($record?->starts_at) {
+                        return $record->starts_at;
+                    }
+
+                    $contract = $this->getOwnerRecord();
+                    return $contract?->starts_at ? (string) $contract->starts_at : null;
+                })
+                ->dehydrated(true)
+                ->nullable(),
+
+            Placeholder::make('student_auto_info')
+                ->label('Studente')
+                ->content(function (?Model $record) {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
+
+                    if (count($ids) === 1) {
+                        $s = Student::find((int) $ids[0]);
+                        return $s?->full_name
+                            ?? trim(($s?->last_name ?? '') . ' ' . ($s?->first_name ?? ''))
+                            ?? ('Studente #' . $ids[0]);
+                    }
+
+                    return '—';
+                })
+                ->visible(function (?Model $record) {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
+                    return count($ids) === 1;
+                })
+                ->dehydrated(false),
+
+            Hidden::make('student_id')
+                ->default(function (?Model $record) {
+                    if ($record?->student_id) {
+                        return (int) $record->student_id;
+                    }
+
+                    $ids = $this->getContractStudentIds();
+                    return count($ids) === 1 ? (int) $ids[0] : null;
+                })
+                ->required()
+                ->visible(function (?Model $record) {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
+                    return count($ids) === 1;
+                }),
+
             Forms\Components\Select::make('student_id')
                 ->label('Studente')
                 ->placeholder('Seleziona studente del contratto')
                 ->searchable()
                 ->preload()
-                ->options(function (): array {
-                    $contract = $this->getOwnerRecord();
-                    if (! $contract) return [];
+                ->options(function (?Model $record): array {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
+                    return $this->getStudentOptions($ids);
+                })
+                ->getSearchResultsUsing(function (string $search, ?Model $record): array {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
 
-                    $studentIds = ContractStudent::query()
-                        ->where('contract_id', $contract->id)
-                        ->whereNotNull('student_id')
-                        ->pluck('student_id')
-                        ->unique()
-                        ->values();
+                    if (empty($ids)) {
+                        return [];
+                    }
 
-                    if ($studentIds->isEmpty()) return [];
+                    $s = trim($search);
+                    if ($s === '') {
+                        return $this->getStudentOptions($ids);
+                    }
 
                     return Student::query()
-                        ->whereIn('id', $studentIds)
+                        ->whereIn('id', $ids)
+                        ->where(function ($q) use ($s) {
+                            $q->where('first_name', 'like', "%{$s}%")
+                                ->orWhere('last_name', 'like', "%{$s}%")
+                                ->orWhereRaw("concat(coalesce(first_name,''),' ',coalesce(last_name,'')) like ?", ["%{$s}%"])
+                                ->orWhereRaw("concat(coalesce(last_name,''),' ',coalesce(first_name,'')) like ?", ["%{$s}%"]);
+                        })
                         ->orderBy('last_name')
                         ->orderBy('first_name')
+                        ->limit(25)
                         ->get()
-                        ->mapWithKeys(fn (Student $s) => [
-                            $s->id => $s->full_name
-                                ?? trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? ''))
-                                ?: ('Studente #' . $s->id),
-                        ])
+                        ->mapWithKeys(function (Student $st) {
+                            $label = $st->full_name
+                                ?? trim(($st->last_name ?? '') . ' ' . ($st->first_name ?? ''))
+                                ?: ('Studente #' . $st->id);
+
+                            return [(int) $st->id => $label];
+                        })
                         ->toArray();
                 })
-                ->default(function () {
-                    $contract = $this->getOwnerRecord();
-                    if (! $contract) return null;
-
-                    $ids = ContractStudent::query()
-                        ->where('contract_id', $contract->id)
-                        ->whereNotNull('student_id')
-                        ->pluck('student_id')
-                        ->unique()
-                        ->values();
-
-                    return $ids->count() === 1 ? (int) $ids->first() : null;
+                ->getOptionLabelUsing(function ($value): ?string {
+                    if (! $value) return null;
+                    $s = Student::find((int) $value);
+                    return $s?->full_name
+                        ?? trim(($s?->last_name ?? '') . ' ' . ($s?->first_name ?? ''))
+                        ?: ('Studente #' . (int) $value);
                 })
-                ->required(),
+                ->required()
+                ->visible(function (?Model $record) {
+                    $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
+                    $ids = $this->getContractStudentIds($currentStudentId);
+                    return count($ids) !== 1;
+                }),
 
             Forms\Components\Select::make('teacher_id')
                 ->label('Docente')
                 ->searchable()
                 ->preload()
                 ->options(fn () => User::query()
-                    ->role('Docente')
+                    ->whereHas('roles', fn ($q) => $q->whereIn('name', ['docente', 'Docente']))
                     ->orderBy('name')
                     ->get()
                     ->mapWithKeys(function (User $u) {
@@ -79,7 +198,7 @@ class LessonSlotsRelationManager extends RelationManager
                         if ($label === '') {
                             $label = $u->email ?: ('Docente #' . $u->id);
                         }
-                        return [$u->id => $label];
+                        return [(int) $u->id => $label];
                     })
                     ->toArray()
                 )
@@ -154,7 +273,15 @@ class LessonSlotsRelationManager extends RelationManager
                 Tables\Columns\IconColumn::make('is_active')->label('Attivo')->boolean(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                Tables\Actions\CreateAction::make()
+                    ->mutateFormDataUsing(function (array $data): array {
+                        // ✅ se non arriva starts_at, lo mettiamo uguale al contratto
+                        $contract = $this->getOwnerRecord();
+                        if (empty($data['starts_at']) && $contract?->starts_at) {
+                            $data['starts_at'] = (string) $contract->starts_at;
+                        }
+                        return $data;
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

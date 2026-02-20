@@ -18,7 +18,6 @@ class LessonGeneratorService
         $contract->loadMissing(['course', 'beneficiaries']);
 
         if (! $contract->starts_at) {
-            // non blocchiamo il form: semplicemente non generiamo
             return;
         }
 
@@ -27,7 +26,6 @@ class LessonGeneratorService
             return;
         }
 
-        // ✅ LOCK: se è già in corso, NON esplodere (Livewire 500)
         $lock = Cache::lock("contract:{$contract->id}:generate_lessons", 10);
 
         if (! $lock->get()) {
@@ -74,6 +72,12 @@ class LessonGeneratorService
 
                 foreach ($slotsByStudent as $studentId => $studentSlots) {
 
+                    // ✅ capiamo se questo studente aveva già lezioni (prima della rigenerazione)
+                    $hasAnyLessons = Lesson::query()
+                        ->where('contract_id', $contract->id)
+                        ->where('student_id', (int) $studentId)
+                        ->exists();
+
                     $existingCount = Lesson::query()
                         ->where('contract_id', $contract->id)
                         ->where('student_id', (int) $studentId)
@@ -90,7 +94,6 @@ class LessonGeneratorService
                         ->value('id');
 
                     if (! $contractStudentId) {
-                        // non blocchiamo tutto: semplicemente saltiamo questo studente
                         continue;
                     }
 
@@ -99,14 +102,28 @@ class LessonGeneratorService
                         ->where('student_id', (int) $studentId)
                         ->max('lesson_number') ?? 0) + 1;
 
-                    $baseStartDay = Carbon::parse($contract->starts_at)->startOfDay();
-                    if ($baseStartDay->lt($today)) {
+                    /**
+                     * ✅ LOGICA DESIDERATA:
+                     * - force=true -> sempre da starts_at contratto
+                     * - force=false:
+                     *    - se NON esistono ancora lezioni per questo studente -> da starts_at contratto
+                     *    - se esistono -> da oggi (solo futuro)
+                     */
+                    $contractStartDay = Carbon::parse($contract->starts_at)->startOfDay();
+
+                    $baseStartDay = $contractStartDay->copy();
+                    if (! $force && $hasAnyLessons && $baseStartDay->lt($today)) {
                         $baseStartDay = $today;
                     }
 
+                    // soglia datetime (evita creare nel passato rispetto a "adesso" quando stiamo aggiornando)
+                    $notBefore = ($force || ! $hasAnyLessons)
+                        ? Carbon::parse($contract->starts_at)->startOfDay()
+                        : now();
+
                     $nextBySlot = [];
                     foreach ($studentSlots as $slot) {
-                        $nextBySlot[$slot->id] = $this->nextOccurrenceForSlot($slot, $baseStartDay);
+                        $nextBySlot[$slot->id] = $this->nextOccurrenceForSlot($slot, $baseStartDay, $notBefore);
                     }
 
                     $generated = 0;
@@ -130,7 +147,8 @@ class LessonGeneratorService
                         if ($slot->starts_at && $startAt->lt(Carbon::parse($slot->starts_at)->startOfDay())) {
                             $nextBySlot[$slot->id] = $this->nextOccurrenceForSlot(
                                 $slot,
-                                Carbon::parse($slot->starts_at)->startOfDay()
+                                Carbon::parse($slot->starts_at)->startOfDay(),
+                                $notBefore
                             );
                             continue;
                         }
@@ -234,7 +252,7 @@ class LessonGeneratorService
         return [$bestSlot, $bestDt];
     }
 
-    private function nextOccurrenceForSlot(ContractLessonSlot $slot, Carbon $fromDay): ?Carbon
+    private function nextOccurrenceForSlot(ContractLessonSlot $slot, Carbon $fromDay, Carbon $notBefore): ?Carbon
     {
         $day = (int) $slot->weekly_day; // 1..7 ISO
         if ($day < 1 || $day > 7) return null;
@@ -251,8 +269,11 @@ class LessonGeneratorService
 
         $candidate = $base->copy()->addDays($delta);
 
-        if ($candidate->isSameDay(now()) && $candidate->lte(now())) {
-            $candidate = $candidate->addWeek();
+        // sposta avanti finché supera la soglia notBefore
+        $guard = 0;
+        while ($candidate->lt($notBefore) && $guard < 1040) {
+            $candidate->addWeek();
+            $guard++;
         }
 
         return $candidate;

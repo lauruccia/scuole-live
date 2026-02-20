@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ContractResource\Pages;
 
 use App\Filament\Resources\ContractResource;
+use App\Models\BillingProfile;
 use App\Models\Contract;
 use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
@@ -11,12 +12,18 @@ use App\Models\Student;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CreateContract extends CreateRecord
 {
     protected static string $resource = ContractResource::class;
 
+    /**
+     * Dati repeater beneficiari (salvati prima della create, poi inseriti manualmente in contract_students)
+     * @var array<int, array<string, mixed>>
+     */
     protected array $beneficiariesData = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
@@ -24,17 +31,41 @@ class CreateContract extends CreateRecord
         $this->beneficiariesData = $data['beneficiaries'] ?? [];
         unset($data['beneficiaries']);
 
+        // ✅ compat: non usare più billing_is_beneficiary
+        $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
+        unset($data['billing_is_beneficiary']);
+
+        // azienda: mai "pagante = studente"
+        if (($data['billing_type'] ?? 'private') === 'company') {
+            $data['billing_is_student'] = 0;
+        }
+
+        // default data prima rata se modalità rate
         if (($data['payment_mode'] ?? 'single') === 'installments' && empty($data['first_installment_date'])) {
             $data['first_installment_date'] = now()->toDateString();
         }
 
-        if (($data['billing_type'] ?? 'private') === 'company') {
-            $data['billing_is_beneficiary'] = 0;
+        // normalizzo email
+        if (! empty($data['billing_email'])) {
+            $data['billing_email'] = Str::lower(trim((string) $data['billing_email']));
+        }
+        if (! empty($data['company_email'])) {
+            $data['company_email'] = Str::lower(trim((string) $data['company_email']));
+        }
+        if (! empty($data['pec'])) {
+            $data['pec'] = Str::lower(trim((string) $data['pec']));
+        }
+        if (! empty($data['billing_pec'])) {
+            $data['billing_pec'] = Str::lower(trim((string) $data['billing_pec']));
         }
 
-        if (! empty($data['billing_email'])) $data['billing_email'] = strtolower(trim((string) $data['billing_email']));
-        if (! empty($data['company_email'])) $data['company_email'] = strtolower(trim((string) $data['company_email']));
-        if (! empty($data['pec']))          $data['pec']          = strtolower(trim((string) $data['pec']));
+        /**
+         * ✅ FIX: se PRIVATO e non scelgo billing_profile_id ma compilo billing_*,
+         * crea/riusa BillingProfile e assegna billing_profile_id
+         */
+        if (($data['billing_type'] ?? 'private') === 'private') {
+            $data = $this->attachOrCreateBillingProfileForPrivate($data);
+        }
 
         return $data;
     }
@@ -48,7 +79,7 @@ class CreateContract extends CreateRecord
 
             // 1) Beneficiari (+ creazione automatica Student se manca)
             foreach (($this->beneficiariesData ?? []) as $b) {
-                $email = strtolower(trim((string) ($b['beneficiary_email'] ?? '')));
+                $email = Str::lower(trim((string) ($b['beneficiary_email'] ?? '')));
                 $phone = trim((string) ($b['beneficiary_phone'] ?? ''));
 
                 $studentId = $b['student_id'] ?? null;
@@ -77,10 +108,11 @@ class CreateContract extends CreateRecord
 
                     'beneficiary_birth_date'  => $b['beneficiary_birth_date'] ?? null,
                     'beneficiary_birth_place' => $b['beneficiary_birth_place'] ?? null,
-                    'beneficiary_address'     => $b['beneficiary_address'] ?? null,
-                    'beneficiary_city'        => $b['beneficiary_city'] ?? null,
-                    'beneficiary_zip'         => $b['beneficiary_zip'] ?? null,
-                    'beneficiary_country'     => $b['beneficiary_country'] ?? null,
+
+                    'beneficiary_address' => $b['beneficiary_address'] ?? null,
+                    'beneficiary_city'    => $b['beneficiary_city'] ?? null,
+                    'beneficiary_zip'     => $b['beneficiary_zip'] ?? null,
+                    'beneficiary_country' => $b['beneficiary_country'] ?? null,
 
                     'weekly_day'  => $b['weekly_day'] ?? null,
                     'weekly_time' => $b['weekly_time'] ?? null,
@@ -91,108 +123,137 @@ class CreateContract extends CreateRecord
                 ]);
             }
 
-            // 2) Pagamenti
-            Installment::where('contract_id', $contract->id)->delete();
+            // 2) Pagamenti (con error handling)
+            try {
+                Installment::where('contract_id', $contract->id)->delete();
 
-            $coursePrice   = (float) $contract->course_price;
-            $enrollmentFee = (float) $contract->enrollment_fee;
-            $deposit       = (float) $contract->deposit;
+                $coursePrice   = (float) $contract->course_price;
+                $enrollmentFee = (float) $contract->enrollment_fee;
+                $deposit       = (float) $contract->deposit;
 
-            $total = $coursePrice + $enrollmentFee;
+                $total = $coursePrice + $enrollmentFee;
 
-            // ✅ data base = data ammissione (come hai richiesto) oppure oggi
-            $baseDate = $contract->admission_date
-                ? Carbon::parse($contract->admission_date)
-                : now();
+                $baseDate = $contract->admission_date
+                    ? Carbon::parse($contract->admission_date)
+                    : now();
 
-            // ✅ Tassa iscrizione (numero separato per non “mischiarla” alle rate)
-            if ($enrollmentFee > 0) {
-                Installment::create([
-                    'contract_id' => $contract->id,
-                    'number'      => -1,
-                    'is_deposit'  => false,
-                    'due_date'    => $baseDate->toDateString(),
-                    'amount'      => round($enrollmentFee, 2),
-                    'status'      => 'unpaid',
-                ]);
-            }
+                $nextNumber = 1;
 
-            // ✅ Acconto = RATA 0
-            if ($deposit > 0) {
-                Installment::create([
-                    'contract_id' => $contract->id,
-                    'number'      => 0,
-                    'is_deposit'  => true,
-                    'due_date'    => $baseDate->toDateString(),
-                    'amount'      => round($deposit, 2),
-                    'status'      => 'unpaid',
-                ]);
-            }
-
-            // ✅ Residuo da pagare (corso + tassa - acconto)
-            $residual = max(0, $total - $deposit);
-            if ($residual <= 0) {
-                return;
-            }
-
-            if (($contract->payment_mode ?? 'single') === 'installments') {
-                $count = max(1, (int) ($contract->installments_count ?? 1));
-
-                $first = $contract->first_installment_date
-                    ? Carbon::parse($contract->first_installment_date)
-                    : $baseDate->copy()->addDays(15);
-
-                $base = floor(($residual / $count) * 100) / 100;
-                $sum  = 0.0;
-
-                for ($i = 1; $i <= $count; $i++) {
-                    $sum += $base;
-
+                // Tassa iscrizione (0)
+                if ($enrollmentFee > 0) {
                     Installment::create([
                         'contract_id' => $contract->id,
-                        'number'      => $i, // ✅ rate 1..N
+                        'number'      => 0,
                         'is_deposit'  => false,
-                        'due_date'    => $first->copy()->addMonths($i - 1)->toDateString(),
-                        'amount'      => $base,
+                        'due_date'    => $baseDate->toDateString(),
+                        'amount'      => round($enrollmentFee, 2),
                         'status'      => 'unpaid',
                     ]);
                 }
 
-                $diff = round($residual - $sum, 2);
-                if ($diff !== 0.0) {
-                    $last = Installment::query()
-                        ->where('contract_id', $contract->id)
-                        ->where('number', $count)
-                        ->first();
-
-                    if ($last) {
-                        $last->amount = round(((float) $last->amount + $diff), 2);
-                        $last->save();
-                    }
+                // Acconto (1)
+                if ($deposit > 0) {
+                    Installment::create([
+                        'contract_id' => $contract->id,
+                        'number'      => $nextNumber,
+                        'is_deposit'  => true,
+                        'due_date'    => $baseDate->toDateString(),
+                        'amount'      => round($deposit, 2),
+                        'status'      => 'unpaid',
+                    ]);
+                    $nextNumber++;
                 }
-            } else {
-                // ✅ pagamento unico: saldo in una riga (number=1)
-                $due = $contract->first_installment_date
-                    ? Carbon::parse($contract->first_installment_date)
-                    : $baseDate->copy()->addDays(15);
 
-                Installment::create([
-                    'contract_id' => $contract->id,
-                    'number'      => 1,
-                    'is_deposit'  => false,
-                    'due_date'    => $due->toDateString(),
-                    'amount'      => round($residual, 2),
-                    'status'      => 'unpaid',
-                ]);
+                $residual = max(0, $total - $deposit);
+                if ($residual <= 0) {
+                    return;
+                }
+
+                if (($contract->payment_mode ?? 'single') === 'installments') {
+                    $count = max(1, (int) ($contract->installments_count ?? 1));
+
+                    $first = $contract->first_installment_date
+                        ? Carbon::parse($contract->first_installment_date)
+                        : $baseDate->copy()->addDays(15);
+
+                    $base = floor(($residual / $count) * 100) / 100;
+                    $sum  = 0.0;
+
+                    $firstInstallmentNumber = $nextNumber;
+                    $lastInstallmentNumber  = $firstInstallmentNumber + ($count - 1);
+
+                    for ($i = 0; $i < $count; $i++) {
+                        $sum += $base;
+
+                        Installment::create([
+                            'contract_id' => $contract->id,
+                            'number'      => $firstInstallmentNumber + $i,
+                            'is_deposit'  => false,
+                            'due_date'    => $first->copy()->addMonths($i)->toDateString(),
+                            'amount'      => $base,
+                            'status'      => 'unpaid',
+                        ]);
+                    }
+
+                    $diff = round($residual - $sum, 2);
+                    if ($diff !== 0.0) {
+                        $last = Installment::query()
+                            ->where('contract_id', $contract->id)
+                            ->where('number', $lastInstallmentNumber)
+                            ->first();
+
+                        if ($last) {
+                            $last->amount = round(((float) $last->amount + $diff), 2);
+                            $last->save();
+                        }
+                    }
+                } else {
+                    $due = $contract->first_installment_date
+                        ? Carbon::parse($contract->first_installment_date)
+                        : $baseDate->copy()->addDays(15);
+
+                    Installment::create([
+                        'contract_id' => $contract->id,
+                        'number'      => $nextNumber,
+                        'is_deposit'  => false,
+                        'due_date'    => $due->toDateString(),
+                        'amount'      => round($residual, 2),
+                        'status'      => 'unpaid',
+                    ]);
+                }
+            } catch (QueryException $e) {
+                report($e);
+
+                Notification::make()
+                    ->title('Errore nella generazione dei pagamenti')
+                    ->body('Non è stato possibile salvare tassa/acconto/rate. Controlla i valori inseriti e riprova.')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+
+                throw $e;
+            } catch (\Throwable $e) {
+                report($e);
+
+                Notification::make()
+                    ->title('Errore nella generazione dei pagamenti')
+                    ->body('Si è verificato un errore inatteso durante la creazione delle rate.')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+
+                throw $e;
             }
         });
 
-        // 3) Slot (come già facevi)
+        // 3) Slot (after commit)
         $contractId = (int) $contract->id;
 
         DB::afterCommit(function () use ($contractId) {
             try {
-                $contract = Contract::query()->with(['beneficiaries'])->findOrFail($contractId);
+                $contract = Contract::query()
+                    ->with(['beneficiaries'])
+                    ->findOrFail($contractId);
 
                 foreach ($contract->beneficiaries as $cs) {
                     if (! $cs->student_id) continue;
@@ -209,7 +270,9 @@ class CreateContract extends CreateRecord
                             'teacher_id'       => $cs->teacher_id,
                             'duration_minutes' => 60,
                             'is_active'        => true,
-                            'starts_at'        => $contract->starts_at ? Carbon::parse($contract->starts_at)->toDateString() : null,
+                            'starts_at'        => $contract->starts_at
+                                ? Carbon::parse($contract->starts_at)->toDateString()
+                                : null,
                             'ends_at'          => null,
                             'meet_url'         => $cs->meet_url,
                         ]
@@ -227,9 +290,88 @@ class CreateContract extends CreateRecord
         });
     }
 
+    /**
+     * ✅ Crea/riusa BillingProfile privato e assegna billing_profile_id
+     */
+    private function attachOrCreateBillingProfileForPrivate(array $data): array
+    {
+        if (! empty($data['billing_profile_id'])) {
+            return $data;
+        }
+
+        $first = trim((string) ($data['billing_first_name'] ?? ''));
+        $last  = trim((string) ($data['billing_last_name'] ?? ''));
+        $email = Str::lower(trim((string) ($data['billing_email'] ?? '')));
+        $cf    = Str::upper(preg_replace('/\s+/', '', (string) ($data['billing_tax_code'] ?? '')));
+
+        // Se non ho dati minimi, non creo nulla
+        if ($first === '' && $last === '' && $email === '' && $cf === '') {
+            return $data;
+        }
+
+        $q = BillingProfile::query()->where('type', 'private');
+
+        // dedup: prima CF, poi email
+        if ($cf !== '') {
+            $q->whereRaw('UPPER(COALESCE(fiscal_code,"")) = ?', [$cf]);
+        } elseif ($email !== '') {
+            $q->whereRaw('LOWER(COALESCE(email,"")) = ?', [$email]);
+        } else {
+            // fallback: nome+cognome (meno affidabile)
+            $q->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
+              ->whereRaw('LOWER(COALESCE(last_name,""))  = ?', [Str::lower($last)]);
+        }
+
+        $profile = $q->first();
+
+        if (! $profile) {
+            $profile = BillingProfile::create([
+                'type'       => 'private',
+                'first_name' => $first ?: null,
+                'last_name'  => $last ?: null,
+                'email'      => $email !== '' ? $email : null,
+                'phone'      => $data['billing_phone'] ?? null,
+
+                'fiscal_code'=> $cf !== '' ? $cf : null,
+                'vat_number' => $data['billing_vat_number'] ?? null,
+                'sdi_code'   => $data['billing_sdi'] ?? null,
+                'pec'        => $data['billing_pec'] ?? null,
+
+                'address'    => $data['billing_address'] ?? null,
+                'city'       => $data['billing_city'] ?? null,
+                'zip'        => $data['billing_zip'] ?? null,
+                'province'   => $data['billing_province'] ?? null,
+                'country'    => $data['billing_country'] ?? null,
+            ]);
+        } else {
+            // aggiorna campi mancanti (soft)
+            $dirty = false;
+
+            foreach ([
+                'first_name' => $first,
+                'last_name'  => $last,
+                'email'      => $email,
+                'phone'      => (string) ($data['billing_phone'] ?? ''),
+                'fiscal_code'=> $cf,
+            ] as $k => $v) {
+                $v = trim((string) $v);
+                if ($v !== '' && empty($profile->{$k})) {
+                    $profile->{$k} = $v;
+                    $dirty = true;
+                }
+            }
+
+            if ($dirty) $profile->save();
+        }
+
+        $data['billing_profile_id'] = (int) $profile->id;
+
+        return $data;
+    }
+
     private function upsertStudentFromBeneficiary(array $data): ?int
     {
-        $email = strtolower(trim((string) ($data['email'] ?? '')));
+        $email = Str::lower(trim((string) ($data['email'] ?? '')));
         $phone = preg_replace('/\s+/', '', (string) ($data['phone'] ?? ''));
 
         if ($email !== '') {
@@ -247,7 +389,9 @@ class CreateContract extends CreateRecord
         $first = trim((string) ($data['first_name'] ?? ''));
         $last  = trim((string) ($data['last_name'] ?? ''));
 
-        if ($first === '' && $last === '') return null;
+        if ($first === '' && $last === '') {
+            return null;
+        }
 
         $s = Student::create([
             'first_name'     => $first ?: null,
@@ -262,21 +406,4 @@ class CreateContract extends CreateRecord
 
         return (int) $s->id;
     }
-
-    protected function mutateFormDataBeforeCreate(array $data): array
-{
-    $this->beneficiariesData = $data['beneficiaries'] ?? [];
-    unset($data['beneficiaries']);
-
-    // mapping compatibilità
-    $data['billing_is_beneficiary'] = (int) ($data['billing_is_student'] ?? 0);
-
-    if (($data['billing_type'] ?? 'private') === 'company') {
-        $data['billing_is_student'] = 0;
-        $data['billing_is_beneficiary'] = 0;
-    }
-
-    ...
-    return $data;
-}
 }

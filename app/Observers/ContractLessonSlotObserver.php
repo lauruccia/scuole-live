@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Contract;
 use App\Models\ContractLessonSlot;
+use App\Models\Lesson;
 use App\Services\LessonGeneratorService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -47,7 +48,15 @@ class ContractLessonSlotObserver
                     return;
                 }
 
-                app(LessonGeneratorService::class)->generateForContract($contract, false);
+                // ✅ se non esistono lezioni per il contratto, è “prima generazione”:
+                // vogliamo partire da starts_at (anche se nel passato)
+                $hasAnyLesson = Lesson::query()
+                    ->where('contract_id', $contractId)
+                    ->exists();
+
+                $force = ! $hasAnyLesson;
+
+                app(LessonGeneratorService::class)->generateForContract($contract, $force);
             } finally {
                 optional($lock)->release();
             }

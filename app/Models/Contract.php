@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\BillingProfile;
+use App\Models\Company;
 use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Course;
@@ -24,6 +26,7 @@ class Contract extends Model
     protected $fillable = [
         'billing_type',
         'billing_is_beneficiary',
+        'billing_is_student',
 
         // Privato
         'billing_first_name',
@@ -44,7 +47,7 @@ class Contract extends Model
         'billing_sdi',
         'billing_pec',
 
-        // Azienda
+        // Azienda (campi "storici" su contracts)
         'company_name',
         'vat_number',
         'sdi',
@@ -79,16 +82,14 @@ class Contract extends Model
 
         'notes',
 
+        // Nuovo sistema
         'company_id',
-'billing_profile_id',
-
-'billing_is_student',
-
+        'billing_profile_id',
     ];
 
     protected $casts = [
         'billing_is_beneficiary' => 'boolean',
-        'billing_is_student' => 'boolean',
+        'billing_is_student'     => 'boolean',
 
         'billing_birth_date'     => 'date',
         'admission_date'         => 'date',
@@ -170,24 +171,14 @@ class Contract extends Model
     }
 
     public function company(): BelongsTo
-{
-    return $this->belongsTo(Company::class);
-}
+    {
+        return $this->belongsTo(Company::class);
+    }
 
-public function billingProfile(): BelongsTo
-{
-    return $this->belongsTo(BillingProfile::class);
-}
-
-public function company(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(\App\Models\Company::class);
-}
-
-public function billingProfile(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-{
-    return $this->belongsTo(\App\Models\BillingProfile::class);
-}
+    public function billingProfile(): BelongsTo
+    {
+        return $this->belongsTo(BillingProfile::class);
+    }
 
     /* -----------------------------------------------------------------
      |  COMPUTED
@@ -209,23 +200,21 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
     }
 
     public function getBillingDisplayNameAttribute(): string
-{
-    // Se abbiamo un profilo collegato, usiamo quello (nuovo sistema)
-    if ($this->billingProfile) {
-        return $this->billingProfile->display_name;
+    {
+        if ($this->relationLoaded('billingProfile') ? $this->billingProfile : $this->billingProfile()->exists()) {
+            return (string) ($this->billingProfile?->display_name ?? '—');
+        }
+
+        if (($this->billing_type ?? 'private') === 'company') {
+            return (string) ($this->company_name ?: '—');
+        }
+
+        $first = trim((string) ($this->billing_first_name ?? ''));
+        $last  = trim((string) ($this->billing_last_name ?? ''));
+
+        $full = trim($last . ' ' . $first);
+        return $full !== '' ? $full : '—';
     }
-
-    // Fallback: vecchio sistema dentro contracts (il tuo attuale)
-    if (($this->billing_type ?? 'private') === 'company') {
-        return (string) ($this->company_name ?: '—');
-    }
-
-    $first = trim((string) ($this->billing_first_name ?? ''));
-    $last  = trim((string) ($this->billing_last_name ?? ''));
-
-    $full = trim($last . ' ' . $first);
-    return $full !== '' ? $full : '—';
-}
 
     public function isPrivate(): bool
     {
@@ -244,7 +233,9 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
     {
         DB::transaction(function () use ($contractId) {
             $contract = self::query()->lockForUpdate()->find($contractId);
-            if (! $contract) return;
+            if (! $contract) {
+                return;
+            }
 
             $lessons = Lesson::query()
                 ->where('contract_id', $contractId)
@@ -279,13 +270,25 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
 
     protected static function booted(): void
     {
+        // ✅ Allinea i due flag per evitare incoerenze (retrocompatibilità)
+        static::saving(function (self $contract) {
+            if ($contract->isCompany()) {
+                $contract->billing_is_student = false;
+                $contract->billing_is_beneficiary = false;
+                return;
+            }
+
+            // Se l’interfaccia usa billing_is_student, teniamo billing_is_beneficiary coerente
+            if (! is_null($contract->billing_is_student)) {
+                $contract->billing_is_beneficiary = (bool) $contract->billing_is_student;
+            }
+        });
+
         static::saved(function (self $contract) {
             DB::afterCommit(function () use ($contract) {
                 $contractId = (int) $contract->getKey();
 
-                // evita loop / doppie esecuzioni
                 $lock = Cache::lock("contract_post_save_pipeline:{$contractId}", 30);
-
                 if (! $lock->get()) {
                     return;
                 }
@@ -293,10 +296,15 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
                 try {
                     /** @var self|null $fresh */
                     $fresh = self::query()->with('beneficiaries')->find($contractId);
-                    if (! $fresh) return;
+                    if (! $fresh) {
+                        return;
+                    }
 
-                    // 1) se privato + intestatario è beneficiario
-                    if ($fresh->isPrivate() && (bool) $fresh->billing_is_beneficiary) {
+                    // ✅ 1) PRIVATO + intestatario coincide con studente
+                    // (usa billing_is_student, e accetta anche billing_is_beneficiary per retro)
+                    $isBillingStudent = (bool) ($fresh->billing_is_student ?? false) || (bool) ($fresh->billing_is_beneficiary ?? false);
+
+                    if ($fresh->isPrivate() && $isBillingStudent) {
                         retry(3, function () use ($fresh) {
                             self::syncBillingBeneficiaryStudent($fresh);
                         }, 250);
@@ -333,22 +341,23 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
      */
     protected static function normalizeTime(mixed $value): ?string
     {
-        if ($value === null) return null;
+        if ($value === null) {
+            return null;
+        }
 
         $t = trim((string) $value);
-        if ($t === '') return null;
+        if ($t === '') {
+            return null;
+        }
 
-        // già HH:MM:SS
         if (preg_match('/^\d{1,2}:\d{2}:\d{2}$/', $t)) {
             return Carbon::createFromFormat('H:i:s', $t)->format('H:i:s');
         }
 
-        // HH:MM
         if (preg_match('/^\d{1,2}:\d{2}$/', $t)) {
             return Carbon::createFromFormat('H:i', $t)->format('H:i:s');
         }
 
-        // fallback: prova Carbon
         try {
             return Carbon::parse($t)->format('H:i:s');
         } catch (\Throwable) {
@@ -360,13 +369,18 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
     {
         $contract->loadMissing(['beneficiaries']);
 
-        // 1) upsert slot presenti nel wizard
         foreach ($contract->beneficiaries as $cs) {
-            if (! $cs->student_id) continue;
-            if (! $cs->weekly_day || ! $cs->weekly_time) continue;
+            if (! $cs->student_id) {
+                continue;
+            }
+            if (! $cs->weekly_day || ! $cs->weekly_time) {
+                continue;
+            }
 
             $time = self::normalizeTime($cs->weekly_time);
-            if (! $time) continue;
+            if (! $time) {
+                continue;
+            }
 
             ContractLessonSlot::updateOrCreate(
                 [
@@ -386,36 +400,36 @@ public function billingProfile(): \Illuminate\Database\Eloquent\Relations\Belong
             );
         }
 
-        // 2) disattiva slot non più presenti nei beneficiari (solo se keep NON è vuoto)
-$keep = $contract->beneficiaries
-    ->filter(fn ($cs) => $cs->student_id && $cs->weekly_day && $cs->weekly_time)
-    ->map(function ($cs) {
-        $time = self::normalizeTime($cs->weekly_time);
-        if (! $time) return null;
-        return (int) $cs->student_id . '|' . (int) $cs->weekly_day . '|' . $time;
-    })
-    ->filter()
-    ->values()
-    ->all();
+        $keep = $contract->beneficiaries
+            ->filter(fn ($cs) => $cs->student_id && $cs->weekly_day && $cs->weekly_time)
+            ->map(function ($cs) {
+                $time = self::normalizeTime($cs->weekly_time);
+                if (! $time) {
+                    return null;
+                }
+                return (int) $cs->student_id . '|' . (int) $cs->weekly_day . '|' . $time;
+            })
+            ->filter()
+            ->values()
+            ->all();
 
-// ✅ se non ho schedule complete nei beneficiari, NON toccare gli slot esistenti
-if (empty($keep)) {
-    return;
-}
+        if (empty($keep)) {
+            return;
+        }
 
-$slots = ContractLessonSlot::query()
-    ->where('contract_id', $contract->id)
-    ->get();
+        $slots = ContractLessonSlot::query()
+            ->where('contract_id', $contract->id)
+            ->get();
 
-foreach ($slots as $slot) {
-    $time = self::normalizeTime($slot->weekly_time);
-    $key  = (int) $slot->student_id . '|' . (int) $slot->weekly_day . '|' . ($time ?? '');
+        foreach ($slots as $slot) {
+            $time = self::normalizeTime($slot->weekly_time);
+            $key  = (int) $slot->student_id . '|' . (int) $slot->weekly_day . '|' . ($time ?? '');
 
-    if (! in_array($key, $keep, true)) {
-        $slot->is_active = false;
-        $slot->save();
-    }
-}
+            if (! in_array($key, $keep, true)) {
+                $slot->is_active = false;
+                $slot->save();
+            }
+        }
     }
 
     /**
@@ -497,7 +511,9 @@ foreach ($slots as $slot) {
                 $student->birth_country = $contract->billing_country; $dirty = true;
             }
 
-            if ($dirty) $student->save();
+            if ($dirty) {
+                $student->save();
+            }
         }
 
         $cs = ContractStudent::query()
