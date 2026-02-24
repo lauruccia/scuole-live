@@ -101,8 +101,8 @@ class Contract extends Model
         'enrollment_fee'         => 'decimal:2',
         'deposit'                => 'decimal:2',
 
-        'hours_purchased'        => 'decimal:2',
-        'hours_consumed'         => 'decimal:2',
+        'hours_purchased'        => 'integer',
+        'hours_consumed'         => 'integer',
     ];
 
     protected $appends = [

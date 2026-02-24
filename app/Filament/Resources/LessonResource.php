@@ -52,17 +52,16 @@ class LessonResource extends Resource
                 'recoveryLesson',
             ]);
 
-        $u = auth()->user();
-
-        if ($u?->hasRole('Docente')) {
-            $q->where('teacher_id', (int) $u->id);
-        }
+        if (static::isTeacherPanel()) {
+    $q->where('teacher_id', (int) auth()->id());
+}
 
         return $q;
     }
 
     public static function form(Form $form): Form
     {
+        $isTeacher = static::isTeacherPanel();
         return $form->schema([
             Section::make('Dettagli lezione')
                 ->columns(3)
@@ -113,6 +112,7 @@ class LessonResource extends Resource
                         ->label('Docente')
                         ->required()
                         ->searchable()
+                        ->disabled($isTeacher)
                         ->preload()
                         ->options(function () {
                             return User::query()
@@ -137,6 +137,7 @@ class LessonResource extends Resource
                         ->label('Inizio')
                         ->required()
                         ->seconds(false)
+                        ->disabled($isTeacher)
                         ->live()
                         ->afterStateUpdated(function (Get $get, Set $set) {
                             $start = $get('starts_at');
@@ -148,6 +149,7 @@ class LessonResource extends Resource
                         }),
 
                     DateTimePicker::make('ends_at')
+                    ->disabled($isTeacher)
                         ->label('Fine')
                         ->required()
                         ->seconds(false)
@@ -247,6 +249,12 @@ class LessonResource extends Resource
                         ->label('Note')
                         ->rows(4)
                         ->columnSpanFull(),
+
+                    Textarea::make('homework')
+    ->label('Compiti per casa')
+    ->rows(4)
+    ->columnSpanFull(),
+
 
                     Placeholder::make('consumption_preview')
                         ->label('Ore (durata)')
@@ -609,4 +617,9 @@ class LessonResource extends Resource
             'edit'  => Pages\EditLesson::route('/{record}/edit'),
         ];
     }
+
+    protected static function isTeacherPanel(): bool
+{
+    return filament()->getCurrentPanel()?->getId() === 'docente';
+}
 }

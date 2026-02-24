@@ -175,8 +175,11 @@ class LessonGeneratorService
                             continue;
                         }
 
+
+
+
                         // conflitto studente
-                        $studentOverlap = Lesson::query()
+                       $studentOverlap = Lesson::query()
                             ->where('student_id', (int) $studentId)
                             ->whereNull('cancelled_at')
                             ->where('starts_at', '<', $endAt)
@@ -188,8 +191,11 @@ class LessonGeneratorService
                             continue;
                         }
 
+
+                        // ✅ nessun conflitto docente: permettiamo sovrapposizioni
+
                         // conflitto docente
-                        if ($slot->teacher_id) {
+                       /*  if ($slot->teacher_id) {
                             $teacherOverlap = Lesson::query()
                                 ->where('teacher_id', (int) $slot->teacher_id)
                                 ->whereNull('cancelled_at')
@@ -201,7 +207,7 @@ class LessonGeneratorService
                                 $nextBySlot[$slot->id] = $startAt->copy()->addWeek();
                                 continue;
                             }
-                        }
+                        }*/
 
                         Lesson::create([
                             'contract_id'         => $contract->id,

@@ -25,13 +25,19 @@ class TeacherPanelProvider extends PanelProvider
         return $panel
             ->id('docente')
             ->path('docente')
+
+            // usa la guard standard
             ->authGuard('web')
+
+            // pagine auth filament
             ->login()
             ->passwordReset()
-            ->colors(['primary' => Color::Blue])
 
+            ->colors([
+                'primary' => Color::Blue,
+            ])
 
-
+            // branding
             ->brandLogo(asset('images/logo-scuola.png'))
             ->brandLogoHeight('5rem')
             ->brandName('')
@@ -56,13 +62,9 @@ class TeacherPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
 
-            ->authMiddleware([Authenticate::class])
-
-            ->bootUsing(function () {
-                // Durante password reset non c'è login: non bloccare.
-                if (! auth()->check()) return;
-
-                abort_unless(auth()->user()->hasRole('Docente'), 403);
-            });
+            // protezione rotte filament
+            ->authMiddleware([
+                Authenticate::class,
+            ]);
     }
 }

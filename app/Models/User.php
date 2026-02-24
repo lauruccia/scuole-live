@@ -10,7 +10,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements CanResetPasswordContract
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
+class User extends Authenticatable implements CanResetPasswordContract, FilamentUser
 {
     use HasRoles, HasFactory, Notifiable, CanResetPasswordTrait;
 
@@ -18,7 +21,6 @@ class User extends Authenticatable implements CanResetPasswordContract
         'name',
         'email',
         'password',
-
         'first_name',
         'last_name',
         'phone',
@@ -55,17 +57,33 @@ class User extends Authenticatable implements CanResetPasswordContract
         'remember_token',
     ];
 
-    // ✅ compatibile con entrambi i nomi (se ti capita di averli in giro)
+    /* public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->hasAnyRole(['superadmin', 'super_admin', 'Amministrazione', 'Segreteria']);
+    } */
+
+
+
+public function canAccessPanel(Panel $panel): bool
+{
+    return match ($panel->getId()) {
+        'superadmin' => $this->hasAnyRole(['superadmin', 'super_admin']),
+        'admin'      => $this->hasAnyRole(['superadmin', 'super_admin', 'Amministrazione', 'Segreteria']),
+        'docente'    => $this->hasRole('Docente'),
+        'studente'   => $this->hasRole('Studente'), // quando lo aggiungi
+        default      => false,
+    };
+}
+
+
+
     public function isSuperAdmin(): bool
     {
         return $this->hasAnyRole(['superadmin', 'super_admin']);
     }
 
-
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordBrandNotification($token));
     }
-
-
 }

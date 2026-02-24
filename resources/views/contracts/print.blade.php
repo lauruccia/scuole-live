@@ -139,6 +139,31 @@
     // Beneficiari
     $beneficiaries = $contract->beneficiaries ?? collect();
     $billingIsBeneficiary = (bool) ($contract->billing_is_beneficiary ?? true);
+
+
+// VALIDITÀ IN MESI (ARROTONDAMENTO PER ECCESSO)
+$validityMonths = null;
+
+if (!empty($contract->starts_at) && !empty($contract->ends_at)) {
+
+    $start = \Illuminate\Support\Carbon::parse($contract->starts_at)->startOfDay();
+    $end   = \Illuminate\Support\Carbon::parse($contract->ends_at)->startOfDay();
+
+    if ($end->greaterThan($start)) {
+
+        // mesi interi
+        $months = $start->diffInMonths($end);
+
+        // controllo giorni residui
+        $checkDate = $start->copy()->addMonths($months);
+
+        if ($checkDate->lt($end)) {
+            $months++;
+        }
+
+        $validityMonths = (int) $months;
+    }
+}
 @endphp
 
 <div class="page">
@@ -185,7 +210,7 @@
     <div class="mb10">
         a) In espressa accettazione di quanto oggi proposto da A&amp;A Language Center Srl, nel presente modulo di iscrizione definito nel
         seguito contratto, vengono messi a disposizione del sottoscrittore/a, nella lingua sopra scelta, entro e non oltre
-        <strong>1</strong> mesi a far data da oggi, i seguenti servizi che potranno essere svolti previa mia prenotazione dal
+        <strong>{{ $validityMonths !== null ? $validityMonths : '—' }}</strong> mesi a far data da oggi, i seguenti servizi che potranno essere svolti previa mia prenotazione dal
         Lunedì al Venerdì dalle ore 10:00 alle ore 19:00 ed il Sabato dalle ore 9:00 alle ore 13:00 :
     </div>
 

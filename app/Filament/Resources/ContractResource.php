@@ -483,6 +483,11 @@ class ContractResource extends Resource
                             ->label('Data inizio corso')
                             ->nullable(),
 
+                        DatePicker::make('ends_at')
+                             ->label('Data fine corso')
+                                ->nullable()
+                                ->minDate(fn (Get $get) => $get('starts_at') ?: null),
+
                         TextInput::make('course_price')
                             ->label('Prezzo corso')
                             ->numeric()

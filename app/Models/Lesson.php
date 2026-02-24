@@ -30,6 +30,9 @@ class Lesson extends Model
         'google_calendar_id',
         'lesson_number',
         'notes',
+        'homework',
+'completed_at',
+'completed_by',
 
         // ✅ NUOVI
         'recovery_of_lesson_id',
@@ -44,6 +47,7 @@ class Lesson extends Model
         'is_recoverable' => 'boolean',
         'is_auto_recovery' => 'boolean',
         'duration_minutes' => 'integer',
+        'completed_at' => 'datetime',
     ];
 
     public function contract(): BelongsTo
