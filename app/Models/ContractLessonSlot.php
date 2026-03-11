@@ -27,7 +27,7 @@ class ContractLessonSlot extends Model
         'student_id'       => 'integer',
         'teacher_id'       => 'integer',
         'weekly_day'       => 'integer',
-        'weekly_time'      => 'string', // TIME DB => string "HH:MM:SS" o "HH:MM"
+        'weekly_time'      => 'string', // TIME DB
         'duration_minutes' => 'integer',
         'is_active'        => 'boolean',
         'starts_at'        => 'date',

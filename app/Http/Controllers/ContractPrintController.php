@@ -14,7 +14,7 @@ class ContractPrintController extends Controller
         $u = Auth::user();
 
         abort_unless(
-            $u && $u->hasAnyRole(['superadmin', 'amministrazione', 'segreteria', 'Amministrazione', 'Segreteria']),
+            $u && $u->hasAnyRole(['superadmin', 'amministrazione', 'Segreteria', 'Amministrazione', 'Segreteria']),
             403
         );
     }

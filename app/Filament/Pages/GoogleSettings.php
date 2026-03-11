@@ -17,10 +17,18 @@ class GoogleSettings extends Page
     protected static string $view = 'filament.pages.google-settings';
     protected static ?int $navigationSort = 999;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        $u = Auth::user();
+
+        return $u?->hasRole('superadmin') ?? false;
+    }
+
     public static function canAccess(): bool
     {
         $u = Auth::user();
-        return $u?->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']) ?? false;
+
+        return $u?->hasRole('superadmin') ?? false;
     }
 
     public ?GoogleAccount $account = null;
@@ -47,9 +55,10 @@ class GoogleSettings extends Page
                 ->icon('heroicon-o-x-mark')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->visible(fn () => !empty($this->account?->access_token))
+                ->visible(fn () => ! empty($this->account?->access_token))
                 ->action(function () {
                     $acc = GoogleAccount::query()->find(1);
+
                     if ($acc) {
                         $acc->access_token = null;
                         $acc->refresh_token = null;
@@ -58,7 +67,11 @@ class GoogleSettings extends Page
                         $acc->save();
                     }
 
-                    Notification::make()->title('Account scollegato')->success()->send();
+                    Notification::make()
+                        ->title('Account scollegato')
+                        ->success()
+                        ->send();
+
                     $this->mount();
                 }),
         ];

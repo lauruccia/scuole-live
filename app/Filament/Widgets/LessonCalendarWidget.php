@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Student;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Support\RawJs;
 use Illuminate\Support\Carbon;
@@ -18,13 +19,18 @@ class LessonCalendarWidget extends FullCalendarWidget
     public ?int $teacher_id = null;
     public ?int $course_id = null;
 
+    protected static function isTeacherPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'Docente';
+    }
+
     public function config(): array
     {
         return [
             'locale' => 'it',
             'firstDay' => 1,
 
-            // ✅ ORA VISIBILE negli eventi (quello che ti mancava)
+            // ✅ ORA VISIBILE negli eventi
             'displayEventTime' => true,
             'eventTimeFormat' => [
                 'hour' => '2-digit',
@@ -131,8 +137,10 @@ JS),
                         )
                         ->live(),
 
+                    // ✅ nel panel docente NON serve scegliere il docente
                     Forms\Components\Select::make('teacher_id')
                         ->label('Docente')
+                        ->visible(fn () => ! static::isTeacherPanel())
                         ->searchable()
                         ->preload()
                         ->options(fn () => User::query()
@@ -169,11 +177,20 @@ JS),
         $rangeStart = Carbon::parse($info['start']);
         $rangeEnd   = Carbon::parse($info['end']);
 
-        $lessons = Lesson::query()
+        $query = Lesson::query()
             ->with(['student', 'teacher', 'contract.course'])
-            ->whereBetween('starts_at', [$rangeStart, $rangeEnd])
+            ->whereBetween('starts_at', [$rangeStart, $rangeEnd]);
+
+        // ✅ Panel docente: vede SOLO le sue lezioni
+        if (static::isTeacherPanel()) {
+            $query->where('teacher_id', auth()->id());
+        } else {
+            // ✅ Panel admin: filtri liberi
+            $query->when($this->teacher_id, fn ($q) => $q->where('teacher_id', $this->teacher_id));
+        }
+
+        $lessons = $query
             ->when($this->student_id, fn ($q) => $q->where('student_id', $this->student_id))
-            ->when($this->teacher_id, fn ($q) => $q->where('teacher_id', $this->teacher_id))
             ->when($this->course_id, fn ($q) => $q->whereHas('contract', fn ($c) => $c->where('course_id', $this->course_id)))
             ->get();
 
@@ -212,23 +229,18 @@ JS),
             $start = $l->starts_at ? Carbon::parse($l->starts_at) : null;
             $end   = $end ? Carbon::parse($end) : null;
 
-            $startIso = $start?->toIso8601String();
-            $endIso   = $end?->toIso8601String();
-
-            // ✅ metto anche l'orario nel titolo (così lo “vedi” sempre)
-            $title = "{$student} • {$teacher}";
+            // ✅ titolo: nel panel docente puoi anche togliere il nome docente (è sempre lui)
+            $title = static::isTeacherPanel()
+                ? $student
+                : "{$student} • {$teacher}";
 
             return [
                 'id'    => (string) $l->id,
                 'title' => $title,
-                'start' => $startIso,
-                'end'   => $endIso,
-
-                // ✅ forza evento “non all-day”
+                'start' => $start?->toIso8601String(),
+                'end'   => $end?->toIso8601String(),
                 'allDay' => false,
-
                 'classNames' => ['lesson-event', 'lesson-' . $statusKey],
-
                 'extendedProps' => [
                     'course' => $course,
                     'meet'   => $l->meet_url,
@@ -243,8 +255,11 @@ JS),
         $id = $event['event']['id'] ?? $event['id'] ?? null;
         if (! $id) return;
 
+        // ✅ nel panel docente: usa VIEW (evita 404 su /edit se non esiste la rotta)
+        $page = static::isTeacherPanel() ? 'view' : 'edit';
+
         $this->redirect(
-            LessonResource::getUrl('edit', ['record' => $id]),
+            LessonResource::getUrl($page, ['record' => $id]),
             navigate: true
         );
     }

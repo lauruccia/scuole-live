@@ -16,7 +16,7 @@ class GoogleOAuthController extends Controller
         $u = Auth::user();
 
         abort_unless(
-            $u && $u->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']),
+            $u && $u->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']),
             403
         );
     }

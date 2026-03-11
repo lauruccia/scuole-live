@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\User;
+use Filament\Facades\Filament;
 use Filament\Pages\Page;
 
 class LessonCalendar extends Page
@@ -14,17 +15,24 @@ class LessonCalendar extends Page
 
     protected static string $view = 'filament.pages.lesson-calendar';
 
+    protected static function isTeacherPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'Docente';
+    }
+
     public static function canAccess(): bool
     {
         /** @var User|null $u */
         $u = auth()->user();
         if (! $u) return false;
 
-        // ✅ Shield super admin (config: super_admin)
-        if ($u->hasRole('super_admin')) return true;
+        // ✅ nel panel docente: basta essere Docente
+        if (static::isTeacherPanel()) {
+            return $u->hasRole('Docente');
+        }
 
-        // ✅ tuo superadmin “storico”
-        if ($u->hasRole('superadmin')) return true;
+        // ✅ admin/superadmin: logica tua
+        if ($u->hasAnyRole(['super_admin', 'superadmin', 'Superadmin'])) return true;
 
         // ✅ permesso page_LessonCalendar (Shield)
         return $u->can('page_' . class_basename(static::class));

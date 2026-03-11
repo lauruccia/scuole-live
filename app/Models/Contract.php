@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
+
 class Contract extends Model
 {
     protected $fillable = [
@@ -85,6 +86,8 @@ class Contract extends Model
         // Nuovo sistema
         'company_id',
         'billing_profile_id',
+
+        'languages',
     ];
 
     protected $casts = [
@@ -103,6 +106,8 @@ class Contract extends Model
 
         'hours_purchased'        => 'integer',
         'hours_consumed'         => 'integer',
+
+            'languages' => 'array',
     ];
 
     protected $appends = [
@@ -230,39 +235,41 @@ class Contract extends Model
      * Ricalcola ore consumate leggendo le lezioni "counts_as_consumed = 1"
      */
     public static function recalcConsumedHours(int $contractId): void
-    {
-        DB::transaction(function () use ($contractId) {
-            $contract = self::query()->lockForUpdate()->find($contractId);
-            if (! $contract) {
-                return;
+{
+    DB::transaction(function () use ($contractId) {
+
+        // Somma ore consumate: ceil(minuti/60), minimo 1 per lezione
+        $lessons = DB::table('lessons')
+            ->where('contract_id', $contractId)
+            ->where('counts_as_consumed', 1)
+            ->get(['starts_at', 'ends_at', 'duration_minutes']);
+
+        $sum = 0;
+
+        foreach ($lessons as $l) {
+            $mins = null;
+
+            if (!empty($l->starts_at) && !empty($l->ends_at)) {
+                $mins = (int) (strtotime($l->ends_at) - strtotime($l->starts_at)) / 60;
             }
 
-            $lessons = Lesson::query()
-                ->where('contract_id', $contractId)
-                ->where('counts_as_consumed', 1)
-                ->get(['starts_at', 'ends_at', 'duration_minutes']);
-
-            $sumHours = 0.0;
-
-            foreach ($lessons as $lesson) {
-                $minutes = (int) ($lesson->duration_minutes ?? 60);
-
-                if ($lesson->starts_at && $lesson->ends_at) {
-                    $diff = Carbon::parse($lesson->starts_at)
-                        ->diffInMinutes(Carbon::parse($lesson->ends_at), false);
-
-                    if ($diff > 0) {
-                        $minutes = $diff;
-                    }
-                }
-
-                $sumHours += max(1, (int) ceil($minutes / 60));
+            if ($mins === null || $mins <= 0) {
+                $mins = (int) ($l->duration_minutes ?? 60);
             }
 
-            $contract->hours_consumed = max(0, $sumHours);
-            $contract->save();
-        });
-    }
+            $mins = max(1, $mins);
+            $sum += max(1, (int) ceil($mins / 60));
+        }
+
+        // ✅ update diretto: NON scatena observer/events del Contract
+        DB::table('contracts')
+            ->where('id', $contractId)
+            ->update([
+                'hours_consumed' => $sum,
+                'updated_at'     => now(),
+            ]);
+    });
+}
 
     /* -----------------------------------------------------------------
      |  AUTO SYNC (AFTER COMMIT)
@@ -318,20 +325,55 @@ class Contract extends Model
                     }, 250);
 
                     // 3) auto-genera lezioni se ha starts_at e almeno uno slot attivo
-                    if ($fresh->starts_at) {
-                        $hasAnySlot = ContractLessonSlot::query()
-                            ->where('contract_id', $fresh->id)
-                            ->where('is_active', true)
-                            ->whereNotNull('student_id')
-                            ->exists();
+                    // 3) auto-genera lezioni SOLO se il contratto ha cambiato campi che impattano la pianificazione
+$changes = array_keys($fresh->getChanges());
 
-                        if ($hasAnySlot) {
-                            app(LessonGeneratorService::class)->generateForContract($fresh, false);
-                        }
-                    }
+// campi che NON devono mai scatenare rigenerazione
+$ignore = [
+    'hours_consumed',
+    'ends_at',
+    'updated_at',
+];
+
+// se ha cambiato solo campi ignorati, stop
+$onlyIgnored = !empty($changes) && collect($changes)->every(fn ($f) => in_array($f, $ignore, true));
+if ($onlyIgnored) {
+    return;
+}
+
+// rigenera SOLO se ha cambiato uno dei campi "schedulazione"
+$regenOn = [
+    'starts_at',
+    'course_id',
+    'language_id',
+    'lesson_type',
+    'languages', // se ti serve per lingua lezioni generate
+];
+
+$shouldRegen = collect($changes)->intersect($regenOn)->isNotEmpty();
+
+if ($shouldRegen && $fresh->starts_at) {
+    $hasAnySlot = ContractLessonSlot::query()
+        ->where('contract_id', $fresh->id)
+        ->where('is_active', true)
+        ->whereNotNull('student_id')
+        ->exists();
+
+    if ($hasAnySlot) {
+        app(LessonGeneratorService::class)->generateForContract($fresh, false);
+    }
+}
                 } finally {
                     optional($lock)->release();
                 }
+
+                // ✅ sync languages -> language_id (default = prima lingua)
+$langs = $contract->languages ?? [];
+$langs = array_values(array_unique(array_filter($langs, fn ($v) => filled($v))));
+$contract->languages = $langs;
+
+// default = prima lingua selezionata
+$contract->language_id = $langs[0] ?? $contract->language_id ?? null;
             });
         });
     }
@@ -564,4 +606,45 @@ class Contract extends Model
 
         $cs->save();
     }
+
+
+
+   public function getEnabledLanguages(): array
+{
+    $langs = $this->languages;
+
+    // Se non c'è array valido, fallback su lingua singola
+    if (!is_array($langs) || empty($langs)) {
+        return $this->language_id ? [$this->language_id] : [];
+    }
+
+    // Normalizza
+    $langs = array_values(array_unique(array_filter(array_map(function ($v) {
+        $v = is_string($v) ? trim($v) : $v;
+        return $v !== '' ? $v : null;
+    }, $langs))));
+
+    // Se array vuoto ma language_id c'è, fallback
+    if (empty($langs) && $this->language_id) {
+        return [$this->language_id];
+    }
+
+    return $langs;
+}
+
+public function getDefaultLanguage(): ?string
+{
+    $langs = $this->getEnabledLanguages();
+    return $this->language_id ?: ($langs[0] ?? null);
+}
+
+
+// opzionale ma consigliato: garantisci sempre array
+public function getLanguagesAttribute($value): array
+{
+    $arr = is_array($value) ? $value : (json_decode($value ?? '[]', true) ?: []);
+    return array_values(array_filter($arr, fn($v) => filled($v)));
+}
+
+
 }

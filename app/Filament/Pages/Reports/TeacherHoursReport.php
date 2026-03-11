@@ -113,14 +113,11 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('worked_hours_period')
-                    ->label('Lavorate')
-                    ->alignRight()
-                    ->getStateUsing(function (User $r): string {
-                        $minutes = (int) ($r->worked_minutes_period ?? 0);
-                        return number_format($minutes / 60, 2, ',', '.');
-                    })
-                    ->suffix(' h')
-                    ->sortable(),
+    ->label('Lavorate')
+    ->alignRight()
+    ->getStateUsing(fn (User $r) => (int) ($r->worked_hours_period ?? 0))
+    ->suffix(' h')
+    ->sortable(),
 
                 Tables\Columns\TextColumn::make('scheduled_count_period')->label('Programmate')->alignRight()
                     ->getStateUsing(fn (User $r) => (int) ($r->scheduled_count_period ?? 0))->sortable(),
@@ -165,60 +162,97 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
             ) AS teacher_label
         ");
 
-        $q->selectSub(
-            Lesson::query()
-                ->selectRaw('COALESCE(SUM(duration_minutes),0)')
-                ->whereColumn('teacher_id', 'users.id')
-                ->whereNull('cancelled_at')
-                ->where(function ($lq) {
-                    $lq->where(function ($x) {
-                        $x->whereNotNull('ends_at')->where('ends_at', '<', now());
-                    })->orWhere(function ($x) {
-                        $x->whereNull('ends_at')
-                            ->whereRaw("DATE_ADD(starts_at, INTERVAL COALESCE(duration_minutes,0) MINUTE) < ?", [now()]);
-                    });
-                })
-                ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
-                ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
-            'worked_minutes_period'
-        );
+$q->selectSub(
+    Lesson::query()
+        ->selectRaw("
+            COALESCE(SUM(
+                CASE
+                    WHEN (
+                        CASE
+                            WHEN ends_at IS NOT NULL
+                                THEN TIMESTAMPDIFF(MINUTE, starts_at, ends_at)
+                            ELSE COALESCE(NULLIF(duration_minutes,0), 60)
+                        END
+                    ) >= 120 THEN 2
+                    ELSE 1
+                END
+            ), 0)
+        ")
+        ->whereColumn('teacher_id', 'users.id')
+        ->whereNull('cancelled_at')
+        ->where('counts_as_consumed', 1)
+        ->whereNull('recovery_of_lesson_id')
+        ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
+    'worked_hours_period'
+);
 
-        $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('teacher_id', 'users.id')
-                ->whereNull('cancelled_at')
-                ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
-                ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
-            'scheduled_count_period'
-        );
+$q->selectSub(
+    Lesson::query()
+        ->selectRaw('COUNT(*)')
+        ->whereColumn('teacher_id', 'users.id')
+        ->whereNull('cancelled_at')
+        // "non completate": counts_as_consumed = 0 OR NULL
+        ->where(function ($lq) {
+    $lq->where(function ($x) {
+        $x->whereNull('recovery_of_lesson_id')
+          ->where(function ($y) {
+              $y->whereNull('counts_as_consumed')
+                ->orWhere('counts_as_consumed', 0);
+          });
+    })->orWhereNotNull('recovery_of_lesson_id'); // include sempre recovery
+})
+        ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
+    'scheduled_count_period'
+);
 
-        $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('teacher_id', 'users.id')
-                ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
-                ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
-            'total_count_period'
-        );
+$q->selectSub(
+    Lesson::query()
+        ->selectRaw('COUNT(*)')
+        ->whereColumn('teacher_id', 'users.id')
+        ->where(function ($lq) {
+            $lq->whereNull('cancelled_at')
+               ->orWhere(function ($x) {
+                   $x->whereNotNull('cancelled_at')
+                     ->where('is_recoverable', 0); // annullate non recuperabili
+               });
+        })
+        ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
+    'total_count_period'
+);
 
-        $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('teacher_id', 'users.id')
-                ->whereNull('cancelled_at')
-                ->where('starts_at', '>=', now()->startOfDay()),
-            'future_from_today'
-        );
+$q->selectSub(
+    Lesson::query()
+        ->selectRaw('COUNT(*)')
+        ->whereColumn('teacher_id', 'users.id')
+        ->whereNull('cancelled_at')
+        ->where('starts_at', '>=', now()->startOfDay())
+        ->where(function ($lq) {
+            $lq->where(function ($x) {
+                $x->whereNull('recovery_of_lesson_id')
+                  ->where(function ($y) {
+                      $y->whereNull('counts_as_consumed')
+                        ->orWhere('counts_as_consumed', 0);
+                  });
+            })->orWhereNotNull('recovery_of_lesson_id');
+        })
+        ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
+    'future_from_today'
+);
 
-        $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('teacher_id', 'users.id')
-                ->whereNotNull('cancelled_at')
-                ->where('is_recoverable', true),
-            'to_recover'
-        );
+$q->selectSub(
+    Lesson::query()
+        ->selectRaw('COUNT(*)')
+        ->whereColumn('teacher_id', 'users.id')
+        ->whereNull('cancelled_at')
+        ->whereNotNull('recovery_of_lesson_id')
+        ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
+    'to_recover'
+);
 
         return $q;
     }

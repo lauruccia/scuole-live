@@ -13,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Forms\Contracts\HasForms
 {
@@ -100,25 +101,17 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
         return $table
             ->query(fn () => $this->baseQuery())
             ->columns([
-                Tables\Columns\TextColumn::make('student_name_calc')
-                    ->label('Studente')
-                    ->getStateUsing(function (ContractStudent $record): string {
-                        $benef = trim(($record->beneficiary_first_name ?? '') . ' ' . ($record->beneficiary_last_name ?? ''));
-                        if ($benef !== '') return $benef;
 
-                        $calc = trim((string) ($record->student_name_calc ?? ''));
-                        if ($calc !== '') return $calc;
-
-                        if ($record->student) {
-                            $label = $record->student->full_name
-                                ?? trim(($record->student->first_name ?? '') . ' ' . ($record->student->last_name ?? ''));
-                            $label = trim((string) $label);
-                            if ($label !== '') return $label;
-                        }
-
-                        return 'Studente #' . ($record->student_id ?? $record->id);
-                    })
-                    ->sortable(),
+Tables\Columns\TextColumn::make('student_name_calc')
+    ->label('Studente')
+    ->getStateUsing(function (ContractStudent $record): string {
+        $label = trim((string) ($record->student_name_calc ?? ''));
+        return $label !== '' ? $label : ('Studente #' . ($record->student_id ?? $record->id));
+    })
+    ->sortable(query: function (Builder $query, string $direction): Builder {
+        return $query->orderBy('student_last_sort', $direction)
+                     ->orderBy('student_first_sort', $direction);
+    }),
 
                 Tables\Columns\TextColumn::make('course_name_calc')
                     ->label('Corso')
@@ -154,33 +147,61 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
                     })
                     ->sortable(),
             ])
-            ->defaultSort('id', 'desc')
-            ->paginated([25, 50, 100]);
+            ->defaultSort('student_last_sort', 'asc')
+            ->paginated([25, 50, 100, 'all']);
     }
 
     protected function baseQuery(): Builder
-    {
-        $from = $this->data['from'] ?? null;
-        $to   = $this->data['to'] ?? null;
-        $studentId = $this->data['student_id'] ?? null;
+{
+    $from = $this->data['from'] ?? null;
+    $to   = $this->data['to'] ?? null;
+    $studentId = $this->data['student_id'] ?? null;
 
-        $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
-        $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
+    $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
+    $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
 
-        $q = ContractStudent::query()
-            ->select('contract_students.*')
-            ->with(['student', 'contract.course'])
-            ->when($studentId, fn (Builder $qq) => $qq->where('student_id', (int) $studentId));
+    $q = ContractStudent::query()
+    ->leftJoin('students as s', 's.id', '=', 'contract_students.student_id')
+    ->leftJoin('contracts as ctr', 'ctr.id', '=', 'contract_students.contract_id')
+    ->leftJoin('companies as co', 'co.id', '=', 'ctr.company_id')
+    ->select('contract_students.*')
+    ->selectRaw("
+        COALESCE(
+            NULLIF(ctr.company_name, ''),
+            NULLIF(co.name, ''),
+            NULLIF(
+                TRIM(CONCAT(
+                    COALESCE(NULLIF(contract_students.beneficiary_first_name,''), NULLIF(s.first_name,''), ''),
+                    ' ',
+                    COALESCE(NULLIF(contract_students.beneficiary_last_name,''), NULLIF(s.last_name,''), '')
+                )),
+                ''
+            )
+        ) AS student_name_calc,
 
-        $q->selectSub(
-            Lesson::query()
-                ->join('students', 'students.id', '=', 'lessons.student_id')
-                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-                ->whereNotNull('lessons.student_id')
-                ->selectRaw("TRIM(CONCAT(COALESCE(students.first_name,''),' ',COALESCE(students.last_name,'')))")
-                ->limit(1),
-            'student_name_calc'
-        );
+        UPPER(
+            COALESCE(
+                NULLIF(ctr.company_name, ''),
+                NULLIF(co.name, ''),
+                NULLIF(contract_students.beneficiary_last_name,''),
+                NULLIF(s.last_name,''),
+                ''
+            )
+        ) AS student_last_sort,
+
+        UPPER(
+            CASE
+                WHEN COALESCE(NULLIF(ctr.company_name, ''), NULLIF(co.name, ''), '') <> '' THEN ''
+                ELSE COALESCE(
+                    NULLIF(contract_students.beneficiary_first_name,''),
+                    NULLIF(s.first_name,''),
+                    ''
+                )
+            END
+        ) AS student_first_sort
+    ")
+    ->with(['student', 'contract.course', 'contract.company'])
+    ->when($studentId, fn (Builder $qq) => $qq->where('contract_students.student_id', (int) $studentId));
 
         $q->selectSub(
             Lesson::query()
@@ -211,50 +232,50 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
         );
 
         $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('contract_student_id', 'contract_students.id')
-                ->where('counts_as_consumed', true),
-            'consumed_total'
-        );
+    Lesson::query()
+        ->selectRaw('count(*)')
+        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+        ->where('lessons.counts_as_consumed', true),
+    'consumed_total'
+);
 
         $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('contract_student_id', 'contract_students.id')
-                ->where('counts_as_consumed', true)
-                ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
-                ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
-            'attended_period'
-        );
+    Lesson::query()
+        ->selectRaw('count(*)')
+        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+        ->where('lessons.counts_as_consumed', true)
+        ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
+    'attended_period'
+);
 
         $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('contract_student_id', 'contract_students.id')
-                ->whereNull('cancelled_at')
-                ->when($fromDate, fn ($lq) => $lq->where('starts_at', '>=', $fromDate))
-                ->when($toDate, fn ($lq) => $lq->where('starts_at', '<=', $toDate)),
-            'scheduled_period'
-        );
+    Lesson::query()
+        ->selectRaw('count(*)')
+        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+        ->whereNull('lessons.cancelled_at')
+        ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
+        ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
+    'scheduled_period'
+);
 
         $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('contract_student_id', 'contract_students.id')
-                ->whereNull('cancelled_at')
-                ->where('starts_at', '>=', now()->startOfDay()),
-            'future_from_today'
-        );
+    Lesson::query()
+        ->selectRaw('count(*)')
+        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+        ->whereNull('lessons.cancelled_at')
+        ->where('lessons.starts_at', '>=', now()->startOfDay()),
+    'future_from_today'
+);
 
         $q->selectSub(
-            Lesson::query()
-                ->selectRaw('count(*)')
-                ->whereColumn('contract_student_id', 'contract_students.id')
-                ->whereNotNull('cancelled_at')
-                ->where('is_recoverable', true),
-            'to_recover'
-        );
+    Lesson::query()
+        ->selectRaw('count(*)')
+        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+        ->whereNotNull('lessons.cancelled_at')
+        ->where('lessons.is_recoverable', true),
+    'to_recover'
+);
 
         return $q;
     }

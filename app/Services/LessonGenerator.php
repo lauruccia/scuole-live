@@ -68,7 +68,7 @@ class LessonGenerator
                         $existsSameSlot = Lesson::query()
                             ->where('contract_id', $contract->id)
                             ->where('contract_student_id', $cs->id)
-                            ->where('starts_at', $current->copy())
+                            ->where('lessons.starts_at', $current->copy())
                             ->exists();
 
                         if (! $existsSameSlot) {
@@ -125,7 +125,7 @@ class LessonGenerator
                         ->where('contract_id', $contract->id)
                         ->where('contract_student_id', $cs->id)
                         ->whereNull('cancelled_at')
-                        ->where('starts_at', '>=', now())
+                        ->where('lessons.starts_at', '>=', now())
                         ->delete();
 
                     $startDate = Carbon::parse($contract->starts_at ?? now())->startOfDay();

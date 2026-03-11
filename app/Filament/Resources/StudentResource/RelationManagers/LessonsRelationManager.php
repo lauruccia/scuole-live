@@ -98,7 +98,7 @@ class LessonsRelationManager extends RelationManager
                 Filter::make('upcoming')
                     ->label('Da oggi')
                     ->default()
-                    ->query(fn (Builder $query) => $query->where('starts_at', '>=', Carbon::today()->startOfDay())),
+                    ->query(fn (Builder $query) => $query->where('lessons.starts_at', '>=', Carbon::today()->startOfDay())),
 
                 // ✅ range date
                 Filter::make('date_range')
@@ -187,7 +187,7 @@ class LessonsRelationManager extends RelationManager
                         if ($record->cancelled_at) return false;
 
                         $u = auth()->user();
-                        $can = $u?->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']) ?? false;
+                        $can = $u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
 
                         return $can && (bool) $record->counts_as_consumed;
                     })

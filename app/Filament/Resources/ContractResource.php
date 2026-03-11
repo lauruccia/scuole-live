@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Concerns\HasAreaPermission;
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
+use App\Models\BillingProfile;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\Course;
@@ -40,9 +41,6 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
-use App\Models\BillingProfile;
-
-
 class ContractResource extends Resource
 {
     use HasAreaPermission;
@@ -56,7 +54,7 @@ class ContractResource extends Resource
     protected static ?string $pluralModelLabel = 'Contratti';
     protected static ?int $navigationSort = 0;
 
-    protected static function subjectOptions(): array
+    public static function subjectOptions(): array
     {
         return [
             'Arabo' => 'Arabo',
@@ -105,123 +103,123 @@ class ContractResource extends Resource
                             ->live()
                             ->afterStateUpdated(function (Get $get, Set $set, $state) {
                                 if ($state === 'company') {
-                                    // azienda: mai beneficiario automatico
                                     $set('billing_is_student', 0);
-                                    // non svuoto i beneficiari automaticamente: lascio scelta utente
                                 } else {
-                                    // se torno a privato e billing_is_student = 1, riallinea
                                     static::syncSingleBeneficiaryFromBilling($get, $set);
                                 }
                             }),
 
-                            Select::make('billing_profile_id')
-    ->label('Intestatario (anagrafica)')
-    ->searchable()
-    ->preload()
-    ->options(fn () => BillingProfile::query()
-        ->where('type', 'private') // se usi type
-        ->orderBy('last_name')
-        ->orderBy('first_name')
-        ->get()
-        ->mapWithKeys(fn ($p) => [
-            $p->id => trim(($p->last_name ?? '').' '.($p->first_name ?? '')) . ($p->email ? " — {$p->email}" : ''),
-        ])->toArray()
-    )
-    ->live()
-    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-        if (! $state) return;
+                        Select::make('billing_profile_id')
+                            ->label('Intestatario (anagrafica)')
+                            ->searchable()
+                            ->preload()
+                            ->options(fn () => BillingProfile::query()
+                                ->where('type', 'private')
+                                ->orderBy('last_name')
+                                ->orderBy('first_name')
+                                ->get()
+                                ->mapWithKeys(fn ($p) => [
+                                    $p->id => trim(($p->last_name ?? '') . ' ' . ($p->first_name ?? '')) . ($p->email ? " — {$p->email}" : ''),
+                                ])->toArray()
+                            )
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                if (! $state) {
+                                    return;
+                                }
 
-        $p = BillingProfile::find((int) $state);
-        if (! $p) return;
+                                $p = BillingProfile::find((int) $state);
+                                if (! $p) {
+                                    return;
+                                }
 
-        // compila i campi billing_* del contratto (fallback/stampa)
-        $set('billing_first_name', $p->first_name);
-        $set('billing_last_name',  $p->last_name);
-        $set('billing_tax_code',   $p->fiscal_code);
-        $set('billing_vat_number', $p->vat_number);
-        $set('billing_sdi',        $p->sdi_code);
-        $set('billing_pec',        $p->pec);
-        $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
-        $set('billing_phone',      $p->phone);
-        $set('billing_address',    $p->address);
-        $set('billing_zip',        $p->zip);
-        $set('billing_city',       $p->city);
-        $set('billing_province',   $p->province);
-        $set('billing_country',    $p->country);
+                                $set('billing_first_name', $p->first_name);
+                                $set('billing_last_name',  $p->last_name);
+                                $set('billing_tax_code',   $p->fiscal_code);
+                                $set('billing_vat_number', $p->vat_number);
+                                $set('billing_sdi',        $p->sdi_code);
+                                $set('billing_pec',        $p->pec);
+                                $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
+                                $set('billing_phone',      $p->phone);
+                                $set('billing_address',    $p->address);
+                                $set('billing_zip',        $p->zip);
+                                $set('billing_city',       $p->city);
+                                $set('billing_province',   $p->province);
+                                $set('billing_country',    $p->country);
 
-        // se hai "intestatario = studente" e vuoi sync beneficiario
-        static::syncSingleBeneficiaryFromBilling($get, $set);
-    })
-    ->visible(fn (Get $get) => $get('billing_type') === 'private'),
+                                static::syncSingleBeneficiaryFromBilling($get, $set);
+                            })
+                            ->visible(fn (Get $get) => $get('billing_type') === 'private'),
 
+                        Select::make('billing_profile_from_student')
+                            ->label('Crea/aggancia intestatario da studente')
+                            ->helperText('Seleziona lo studente: verrà creato (o riutilizzato) un intestatario e collegato al contratto.')
+                            ->searchable()
+                            ->preload(false)
+                            ->dehydrated(false)
+                            ->getSearchResultsUsing(function (string $search): array {
+                                return Student::query()
+                                    ->where(function ($q) use ($search) {
+                                        $q->where('last_name', 'like', "%{$search}%")
+                                            ->orWhere('first_name', 'like', "%{$search}%")
+                                            ->orWhere('email', 'like', "%{$search}%");
+                                    })
+                                    ->orderBy('last_name')
+                                    ->orderBy('first_name')
+                                    ->limit(20)
+                                    ->get()
+                                    ->mapWithKeys(fn (Student $s) => [
+                                        $s->id => trim($s->last_name . ' ' . $s->first_name) . ($s->email ? " — {$s->email}" : ''),
+                                    ])->toArray();
+                            })
+                            ->live()
+                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                if (! $state) {
+                                    return;
+                                }
 
+                                $s = Student::find((int) $state);
+                                if (! $s) {
+                                    return;
+                                }
 
-    Select::make('billing_profile_from_student')
-    ->label('Crea/aggancia intestatario da studente')
-    ->helperText('Seleziona lo studente: verrà creato (o riutilizzato) un intestatario e collegato al contratto.')
-    ->searchable()
-    ->preload(false)
-    ->dehydrated(false)
-    ->getSearchResultsUsing(function (string $search): array {
-        return Student::query()
-            ->where(function ($q) use ($search) {
-                $q->where('last_name', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            })
-            ->orderBy('last_name')->orderBy('first_name')
-            ->limit(20)
-            ->get()
-            ->mapWithKeys(fn (Student $s) => [
-                $s->id => trim($s->last_name.' '.$s->first_name) . ($s->email ? " — {$s->email}" : ''),
-            ])->toArray();
-    })
-    ->live()
-    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-        if (! $state) return;
+                                $p = BillingProfile::query()
+                                    ->where('type', 'private')
+                                    ->when($s->email, fn ($q) => $q->whereRaw('LOWER(email)=?', [Str::lower($s->email)]))
+                                    ->first();
 
-        $s = Student::find((int) $state);
-        if (! $s) return;
+                                if (! $p) {
+                                    $p = BillingProfile::create([
+                                        'type'        => 'private',
+                                        'first_name'  => $s->first_name,
+                                        'last_name'   => $s->last_name,
+                                        'email'       => $s->email ? Str::lower(trim($s->email)) : null,
+                                        'phone'       => $s->phone,
+                                        'city'        => $s->residence_city ?? null,
+                                        'province'    => $s->residence_province ?? null,
+                                        'zip'         => $s->residence_zip ?? null,
+                                        'country'     => $s->residence_country ?? 'Italia',
+                                        'address'     => $s->residence_address ?? null,
+                                        'fiscal_code' => $s->fiscal_code ?? null,
+                                    ]);
+                                }
 
-        // cerca un billing_profile “private” per email (o nome+cognome)
-        $p = BillingProfile::query()
-            ->where('type', 'private')
-            ->when($s->email, fn ($q) => $q->whereRaw('LOWER(email)=?', [Str::lower($s->email)]))
-            ->first();
+                                $set('billing_profile_id', $p->id);
 
-        if (! $p) {
-            $p = BillingProfile::create([
-                'type'       => 'private',
-                'first_name' => $s->first_name,
-                'last_name'  => $s->last_name,
-                'email'      => $s->email ? Str::lower(trim($s->email)) : null,
-                'phone'      => $s->phone,
-                'city'       => $s->residence_city ?? null,
-                'province'   => $s->residence_province ?? null,
-                'zip'        => $s->residence_zip ?? null,
-                'country'    => $s->residence_country ?? 'Italia',
-                'address'    => $s->residence_address ?? null,
-                'fiscal_code'=> $s->fiscal_code ?? null,
-            ]);
-        }
+                                $set('billing_first_name', $p->first_name);
+                                $set('billing_last_name',  $p->last_name);
+                                $set('billing_tax_code',   $p->fiscal_code);
+                                $set('billing_email',      $p->email);
+                                $set('billing_phone',      $p->phone);
+                                $set('billing_address',    $p->address);
+                                $set('billing_city',       $p->city);
+                                $set('billing_province',   $p->province);
+                                $set('billing_zip',        $p->zip);
+                                $set('billing_country',    $p->country);
 
-        // collega il contratto al profilo e compila i campi
-        $set('billing_profile_id', $p->id);
-
-        $set('billing_first_name', $p->first_name);
-        $set('billing_last_name',  $p->last_name);
-        $set('billing_tax_code',   $p->fiscal_code);
-        $set('billing_email',      $p->email);
-        $set('billing_phone',      $p->phone);
-        $set('billing_address',    $p->address);
-        $set('billing_city',       $p->city);
-        $set('billing_province',   $p->province);
-        $set('billing_zip',        $p->zip);
-        $set('billing_country',    $p->country);
-
-        static::syncSingleBeneficiaryFromBilling($get, $set);
-    })
-    ->visible(fn (Get $get) => $get('billing_type') === 'private'),
+                                static::syncSingleBeneficiaryFromBilling($get, $set);
+                            })
+                            ->visible(fn (Get $get) => $get('billing_type') === 'private'),
 
                         Section::make('Dati privato')
                             ->columns(12)
@@ -348,11 +346,10 @@ class ContractResource extends Resource
                                     return;
                                 }
 
-                                // copia nei campi "storici" che già usi per stampa/email
                                 $set('company_name', $c->name);
                                 $set('vat_number', $c->vat_number);
                                 $set('company_tax_code', $c->tax_code);
-                                $set('sdi', $c->sdi_code); // NB: nella tabella companies lo screenshot mostra "sdi_code"
+                                $set('sdi', $c->sdi_code);
                                 $set('pec', $c->pec);
 
                                 $set('company_email', $c->email);
@@ -363,7 +360,6 @@ class ContractResource extends Resource
                                 $set('company_zip', $c->zip);
                                 $set('company_country', $c->country);
 
-                                // se esiste in Company (facoltativo)
                                 if (isset($c->billing_profile_id) && $c->billing_profile_id) {
                                     $set('billing_profile_id', $c->billing_profile_id);
                                 }
@@ -461,13 +457,31 @@ class ContractResource extends Resource
                                 $set('hours_purchased', (float) ($course->lessons_count ?? 0));
 
                                 static::recalcTotals($get, $set);
+                                static::recalcBeneficiariesAssignedHours($get, $set);
                             }),
 
-                        Select::make('language_id')
-                            ->label('Lingua')
+                        Select::make('languages')
+                            ->label('Lingue del contratto')
                             ->options(static::subjectOptions())
+                            ->multiple()
                             ->required()
-                            ->searchable(),
+                            ->searchable()
+                            ->helperText('La prima lingua selezionata sarà quella di default.')
+                            ->live()
+                            ->afterStateHydrated(function (Get $get, Set $set, $state) {
+                                if (empty($state)) {
+                                    $old = $get('language_id');
+                                    if (filled($old)) {
+                                        $set('languages', [$old]);
+                                    }
+                                }
+                            })
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                $first = is_array($state) ? ($state[0] ?? null) : null;
+                                $set('language_id', $first);
+                            }),
+
+                        \Filament\Forms\Components\Hidden::make('language_id'),
 
                         Select::make('lesson_type')
                             ->label('Tipologia lezione')
@@ -484,9 +498,9 @@ class ContractResource extends Resource
                             ->nullable(),
 
                         DatePicker::make('ends_at')
-                             ->label('Data fine corso')
-                                ->nullable()
-                                ->minDate(fn (Get $get) => $get('starts_at') ?: null),
+                            ->label('Data fine corso')
+                            ->nullable()
+                            ->minDate(fn (Get $get) => $get('starts_at') ?: null),
 
                         TextInput::make('course_price')
                             ->label('Prezzo corso')
@@ -512,7 +526,11 @@ class ContractResource extends Resource
                             ->label('Ore')
                             ->numeric()
                             ->required()
-                            ->default(0),
+                            ->default(0)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                static::recalcBeneficiariesAssignedHours($get, $set);
+                            }),
                     ]),
 
                 Step::make('Costi e pagamento')
@@ -556,6 +574,7 @@ class ContractResource extends Resource
                                         ->content(function (Get $get) {
                                             $total = (float) $get('course_price') + (float) $get('enrollment_fee');
                                             $residual = max(0, $total - (float) $get('deposit'));
+
                                             return number_format($residual, 2, ',', '.') . ' €';
                                         }),
 
@@ -636,6 +655,10 @@ class ContractResource extends Resource
                             ->addable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
                             ->deletable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
                             ->reorderable(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1)
+                            ->live()
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                static::recalcBeneficiariesAssignedHours($get, $set);
+                            })
                             ->schema([
                                 Placeholder::make('auto_match_label')
                                     ->label('')
@@ -682,7 +705,6 @@ class ContractResource extends Resource
                                         $set('beneficiary_phone', $s->phone);
                                         $set('beneficiary_birth_date', $s->birth_date);
                                         $set('beneficiary_birth_place', $s->birth_place);
-
                                         $set('auto_birth_province', $s->birth_province ?? null);
                                         $set('auto_match_label', 'Selezionato: ' . $s->full_name);
                                     })
@@ -733,6 +755,16 @@ class ContractResource extends Resource
                                                 ->maxLength(120),
                                         ]),
 
+                                        TextInput::make('assigned_hours')
+                                            ->label('Ore assegnate')
+                                            ->numeric()
+                                            ->step(1)
+                                            ->minValue(1)
+                                            ->nullable()
+                                            ->live(onBlur: true)
+                                            ->helperText('Default automatico in ore intere. Il resto viene assegnato all’ultimo studente.')
+                                            ->columnSpanFull(),
+
                                         Placeholder::make('auto_birth_province')
                                             ->label('Provincia (da anagrafica studente)')
                                             ->content(fn (Get $get) => $get('auto_birth_province') ?: '—')
@@ -763,6 +795,21 @@ class ContractResource extends Resource
                                     ->columnSpanFull(),
                             ]),
 
+                        Section::make('Ripartizione ore')
+                            ->schema([
+                                Placeholder::make('assigned_hours_summary')
+                                    ->label('Riepilogo')
+                                    ->content(function (Get $get) {
+                                        $beneficiaries = $get('beneficiaries') ?? [];
+                                        $totalAssigned = collect($beneficiaries)
+                                            ->sum(fn ($row) => (float) ($row['assigned_hours'] ?? 0));
+                                        $hoursPurchased = (float) ($get('hours_purchased') ?? 0);
+                                        $delta = $hoursPurchased - $totalAssigned;
+
+                                        return "Ore contratto: {$hoursPurchased} — Ore assegnate: {$totalAssigned} — Residuo: {$delta}";
+                                    }),
+                            ]),
+
                         Section::make('Note')
                             ->schema([
                                 Textarea::make('notes')->label('Note contratto')->rows(3),
@@ -772,11 +819,6 @@ class ContractResource extends Resource
         ]);
     }
 
-    /**
-     * Se billing_is_student = 1:
-     * - forza SEMPRE 1 solo beneficiario
-     * - lo aggiorna dai campi intestazione
-     */
     protected static function syncSingleBeneficiaryFromBilling(Get $get, Set $set): void
     {
         if (($get('billing_type') ?? 'private') === 'company') {
@@ -788,14 +830,17 @@ class ContractResource extends Resource
             return;
         }
 
+        $hoursPurchased = (int) floor((float) ($get('hours_purchased') ?? 0));
+
         $set('beneficiaries', [[
-            'student_id' => null,
-            'beneficiary_first_name' => (string) $get('billing_first_name'),
-            'beneficiary_last_name'  => (string) $get('billing_last_name'),
-            'beneficiary_email'      => (string) $get('billing_email'),
-            'beneficiary_phone'      => (string) $get('billing_phone'),
-            'beneficiary_birth_date'  => $get('billing_birth_date'),
-            'beneficiary_birth_place' => (string) $get('billing_birth_place'),
+            'student_id'               => null,
+            'beneficiary_first_name'   => (string) $get('billing_first_name'),
+            'beneficiary_last_name'    => (string) $get('billing_last_name'),
+            'beneficiary_email'        => (string) $get('billing_email'),
+            'beneficiary_phone'        => (string) $get('billing_phone'),
+            'beneficiary_birth_date'   => $get('billing_birth_date'),
+            'beneficiary_birth_place'  => (string) $get('billing_birth_place'),
+            'assigned_hours'           => $hoursPurchased > 0 ? $hoursPurchased : null,
         ]]);
     }
 
@@ -817,11 +862,56 @@ class ContractResource extends Resource
         }
     }
 
-    /**
-     * Anteprima rate:
-     * - se count=1 mostra 1 riga
-     * - se count>=2 mostra rate mensili con arrotondamento
-     */
+    protected static function recalcBeneficiariesAssignedHours(Get $get, Set $set): void
+    {
+        $beneficiaries = $get('beneficiaries') ?? [];
+        if (! is_array($beneficiaries) || count($beneficiaries) === 0) {
+            return;
+        }
+
+        $hoursPurchased = (int) floor((float) ($get('hours_purchased') ?? 0));
+        if ($hoursPurchased <= 0) {
+            return;
+        }
+
+        $filledIndexes = [];
+        $emptyIndexes = [];
+
+        foreach ($beneficiaries as $index => $row) {
+            $value = $row['assigned_hours'] ?? null;
+            if ($value === null || $value === '') {
+                $emptyIndexes[] = $index;
+            } else {
+                $filledIndexes[] = $index;
+            }
+        }
+
+        if (count($filledIndexes) === count($beneficiaries)) {
+            return;
+        }
+
+        $studentsCount = count($beneficiaries);
+        $base = intdiv($hoursPurchased, max(1, $studentsCount));
+        $remainder = $hoursPurchased - ($base * $studentsCount);
+
+        foreach ($beneficiaries as $index => &$row) {
+            if (in_array($index, $filledIndexes, true)) {
+                continue;
+            }
+
+            $row['assigned_hours'] = $base;
+        }
+        unset($row);
+
+        if (! empty($beneficiaries)) {
+            $lastIndex = array_key_last($beneficiaries);
+            $current = (int) ($beneficiaries[$lastIndex]['assigned_hours'] ?? 0);
+            $beneficiaries[$lastIndex]['assigned_hours'] = $current + $remainder;
+        }
+
+        $set('beneficiaries', $beneficiaries);
+    }
+
     protected static function installmentsPreviewHtml(Get $get): string
     {
         $paymentMode = (string) ($get('payment_mode') ?? 'single');
@@ -829,7 +919,6 @@ class ContractResource extends Resource
         $total = (float) $get('course_price') + (float) $get('enrollment_fee');
         $deposit = (float) $get('deposit');
 
-        // data acconto = data ammissione (se vuota -> oggi)
         $admission = $get('admission_date')
             ? Carbon::parse($get('admission_date'))
             : now();
@@ -840,7 +929,6 @@ class ContractResource extends Resource
 
         $rows = '';
 
-        // RATA 0 = ACCONTO (mostrala solo se > 0)
         if ($deposit > 0) {
             $rows .= '<tr>
                 <td style="padding:6px 8px;">Rata 0 (Acconto)</td>
@@ -849,11 +937,9 @@ class ContractResource extends Resource
             </tr>';
         }
 
-        // residuo da rateizzare = totale - acconto
         $residual = max(0, $total - $deposit);
 
         if ($paymentMode !== 'installments') {
-            // Pagamento unico: mostra SOLO il saldo (se c’è residuo)
             if ($residual > 0) {
                 $rows .= '<tr>
                     <td style="padding:6px 8px;">Saldo</td>
@@ -878,14 +964,12 @@ class ContractResource extends Resource
             </div>';
         }
 
-        // Rate mensili
         $count = (int) $get('installments_count');
         if ($count < 1) {
             return '<div style="color:#6b7280">Inserisci il numero di rate.</div>';
         }
 
         if ($residual <= 0) {
-            // c’è solo acconto (o totale 0)
             return '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
                 <table style="width:100%; border-collapse:collapse;">
                     <thead style="background:#f9fafb;">
@@ -900,7 +984,6 @@ class ContractResource extends Resource
             </div>';
         }
 
-        // con 1 rata: tutto il residuo in una
         if ($count === 1) {
             $rows .= '<tr>
                 <td style="padding:6px 8px;">Rata 1</td>
@@ -922,7 +1005,6 @@ class ContractResource extends Resource
             </div>';
         }
 
-        // N rate (>=2) con arrotondamento
         $base = floor(($residual / $count) * 100) / 100;
         $sum  = $base * $count;
         $diff = round($residual - $sum, 2);
@@ -1020,7 +1102,7 @@ class ContractResource extends Resource
                                 'year_current' => 'Anno corrente',
                                 'year_previous' => 'Anno precedente',
                             ])
-                            ->default('month_current')
+                            ->default('custom')
                             ->live(),
 
                         DatePicker::make('from')
@@ -1036,11 +1118,15 @@ class ContractResource extends Resource
                     ->query(function (Builder $query, array $data): Builder {
                         $preset = $data['preset'] ?? 'custom';
 
+                        if ($preset === 'custom' && empty($data['from']) && empty($data['to'])) {
+                            return $query;
+                        }
+
                         [$from, $to] = match ($preset) {
-                            'month_current' => [now()->startOfMonth(), now()->endOfMonth()],
+                            'month_current'  => [now()->startOfMonth(), now()->endOfMonth()],
                             'month_previous' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()],
-                            'year_current' => [now()->startOfYear(), now()->endOfYear()],
-                            'year_previous' => [now()->subYearNoOverflow()->startOfYear(), now()->subYearNoOverflow()->endOfYear()],
+                            'year_current'   => [now()->startOfYear(), now()->endOfYear()],
+                            'year_previous'  => [now()->subYearNoOverflow()->startOfYear(), now()->subYearNoOverflow()->endOfYear()],
                             default => [
                                 filled($data['from'] ?? null) ? Carbon::parse($data['from'])->startOfDay() : null,
                                 filled($data['to'] ?? null) ? Carbon::parse($data['to'])->endOfDay() : null,
@@ -1053,91 +1139,100 @@ class ContractResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('generate_meet')
-                    ->label('Genera Meet')
-                    ->icon('heroicon-o-video-camera')
-                    ->color('primary')
-                    ->visible(function (): bool {
-                        $u = Auth::user();
-                        return $u?->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']) ?? false;
-                    })
-                    ->requiresConfirmation()
-                    ->action(function (Contract $record) {
-                        $svc = app(GoogleCalendarService::class);
-                        $res = $svc->generateMeetForContract($record, false);
-
-                        Notification::make()
-                            ->title('Meet generato')
-                            ->body(
-                                "Beneficiari aggiornati: {$res['updated_students']}\n" .
-                                "Lezioni future aggiornate: {$res['updated_lessons']}\n" .
-                                "Eventi upsertati: {$res['upserted_events']}"
-                            )
-                            ->success()
-                            ->send();
-                    }),
+                Tables\Actions\EditAction::make()
+                    ->label('')
+                    ->icon('heroicon-o-pencil-square')
+                    ->iconButton(),
 
                 Tables\Actions\Action::make('print')
-                    ->label('Stampa')
+                    ->label('')
+                    ->tooltip('Stampa')
                     ->icon('heroicon-o-printer')
+                    ->iconButton()
                     ->url(fn (Contract $record) => route('contracts.print', $record))
                     ->openUrlInNewTab(),
 
-                Tables\Actions\Action::make('download_pdf')
-                    ->label('PDF')
-                    ->icon('heroicon-o-arrow-down-tray')
-                    ->url(fn (Contract $record) => route('contracts.download', $record))
-                    ->openUrlInNewTab(),
+                \Filament\Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('generate_meet')
+                        ->label('Genera Meet')
+                        ->icon('heroicon-o-video-camera')
+                        ->color('primary')
+                        ->visible(function (): bool {
+                            $u = Auth::user();
+                            return $u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
+                        })
+                        ->requiresConfirmation()
+                        ->action(function (Contract $record) {
+                            $svc = app(GoogleCalendarService::class);
+                            $res = $svc->generateMeetForContract($record, false);
 
-                Tables\Actions\Action::make('send_email')
-                    ->label('Email')
-                    ->icon('heroicon-o-paper-airplane')
-                    ->requiresConfirmation()
-                    ->action(function (Contract $record) {
-                        $record->loadMissing(['course', 'beneficiaries']);
+                            Notification::make()
+                                ->title('Meet generato')
+                                ->body(
+                                    "Beneficiari aggiornati: {$res['updated_students']}\n" .
+                                    "Lezioni future aggiornate: {$res['updated_lessons']}\n" .
+                                    "Eventi upsertati: {$res['upserted_events']}"
+                                )
+                                ->success()
+                                ->send();
+                        }),
 
-                        $to = [];
+                    Tables\Actions\Action::make('download_pdf')
+                        ->label('Scarica PDF')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->url(fn (Contract $record) => route('contracts.download', $record))
+                        ->openUrlInNewTab(),
 
-                        if (($record->billing_type ?? 'private') === 'company') {
-                            $to[] = $record->company_email ?: $record->pec;
-                        } else {
-                            $to[] = $record->billing_email;
-                        }
+                    Tables\Actions\Action::make('send_email')
+                        ->label('Invia Email')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->requiresConfirmation()
+                        ->action(function (Contract $record) {
+                            $record->loadMissing(['course', 'beneficiaries']);
 
-                        foreach (($record->beneficiaries ?? []) as $b) {
-                            if (! empty($b->beneficiary_email)) {
-                                $to[] = $b->beneficiary_email;
+                            $to = [];
+
+                            if (($record->billing_type ?? 'private') === 'company') {
+                                $to[] = $record->company_email ?: $record->pec;
+                            } else {
+                                $to[] = $record->billing_email;
                             }
-                        }
 
-                        $to = array_values(array_unique(array_filter($to)));
+                            foreach (($record->beneficiaries ?? []) as $b) {
+                                if (! empty($b->beneficiary_email)) {
+                                    $to[] = $b->beneficiary_email;
+                                }
+                            }
 
-                        $pdfBinary = \Barryvdh\DomPDF\Facade\Pdf::loadView('contracts.print', [
-                            'contract' => $record,
-                            'mode' => 'pdf',
-                        ])->setPaper('a4', 'portrait')->output();
+                            $to = array_values(array_unique(array_filter($to)));
 
-                        $cc = array_filter([config('mail.from.address')]);
+                            $pdfBinary = \Barryvdh\DomPDF\Facade\Pdf::loadView('contracts.print', [
+                                'contract' => $record,
+                                'mode' => 'pdf',
+                            ])->setPaper('a4', 'portrait')->output();
 
-                        Mail::to($to)
-                            ->cc($cc)
-                            ->send(new \App\Mail\ContractPdfMail($record, $pdfBinary));
+                            $cc = array_filter([config('mail.from.address')]);
 
-                        Notification::make()
-                            ->title('Email inviata')
-                            ->body('Contratto inviato a: ' . implode(', ', $to))
-                            ->success()
-                            ->send();
-                    }),
+                            Mail::to($to)
+                                ->cc($cc)
+                                ->send(new \App\Mail\ContractPdfMail($record, $pdfBinary));
 
-                Tables\Actions\EditAction::make()->label('Modifica'),
+                            Notification::make()
+                                ->title('Email inviata')
+                                ->body('Contratto inviato a: ' . implode(', ', $to))
+                                ->success()
+                                ->send();
+                        }),
+                ])
+                    ->label('')
+                    ->icon('heroicon-o-ellipsis-horizontal')
+                    ->iconButton(),
             ]);
     }
 
     public static function getEloquentQuery(): Builder
     {
         $q = parent::getEloquentQuery();
-
         $u = Auth::user();
 
         if ($u?->hasAnyRole(['docente', 'Docente'])) {
@@ -1162,10 +1257,6 @@ class ContractResource extends Resource
             'edit'   => Pages\EditContract::route('/{record}/edit'),
         ];
     }
-
-    // =========================
-    // AUTO-MATCH STUDENT (UX)
-    // =========================
 
     protected static function findStudentForBeneficiary(array $state): ?Student
     {

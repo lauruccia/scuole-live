@@ -27,6 +27,10 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use Filament\Facades\Filament;
+use Filament\Tables\Actions\ActionGroup;
+
+
 
 class LessonResource extends Resource
 {
@@ -41,27 +45,52 @@ class LessonResource extends Resource
     protected static ?string $pluralModelLabel = 'Lezioni';
     protected static ?int $navigationSort = 2;
 
-    public static function getEloquentQuery(): Builder
-    {
-        $q = parent::getEloquentQuery()
-            ->with([
-                'student',
-                'teacher',
-                'contract.course',
-                'originalLesson',
-                'recoveryLesson',
-            ]);
-
-        if (static::isTeacherPanel()) {
-    $q->where('teacher_id', (int) auth()->id());
+protected static function isTeacherPanel(): bool
+{
+    $id = Filament::getCurrentPanel()?->getId();
+    return is_string($id) && strcasecmp($id, 'Docente') === 0; // ✅ Docente/docente
 }
 
-        return $q;
-    }
+
+
+
+
+
+
+
+public static function getEloquentQuery(): Builder
+{
+    $q = parent::getEloquentQuery();
+
+    // ✅ Eager load leggero (solo ciò che serve in lista)
+$q->with([
+    'student:id,first_name,last_name',
+    'teacher:id,name,first_name,last_name,email',
+    'contract:id,course_id,language_id',   // ✅ aggiungi language_id
+    'contract.course:id,name',
+]);
+
+    if (Filament::getCurrentPanel()?->getId() === 'Docente') {
+    $teacherId = (int) auth()->id();
+
+    $q->where(function (Builder $qq) use ($teacherId) {
+        // 1) lezioni mie
+        $qq->where('teacher_id', $teacherId)
+
+           // 2) storico lezioni di studenti che OGGI sono assegnati a me su un contratto
+           ->orWhereHas('contract.students', function (Builder $q2) use ($teacherId) {
+               $q2->wherePivot('teacher_id', $teacherId);
+           });
+    });
+}
+
+    return $q;
+}
 
     public static function form(Form $form): Form
     {
         $isTeacher = static::isTeacherPanel();
+
         return $form->schema([
             Section::make('Dettagli lezione')
                 ->columns(3)
@@ -93,6 +122,7 @@ class LessonResource extends Resource
 
                     Placeholder::make('hours_remaining')
                         ->label('Ore rimanenti (contratto)')
+                        ->visible(! $isTeacher) // nel panel docente non serve
                         ->content(function (?Lesson $record) {
                             $c = $record?->contract;
                             if (! $c) return '—';
@@ -108,30 +138,80 @@ class LessonResource extends Resource
                             return "Residue: {$fmt}";
                         }),
 
-                    Select::make('teacher_id')
-                        ->label('Docente')
-                        ->required()
-                        ->searchable()
-                        ->disabled($isTeacher)
-                        ->preload()
-                        ->options(function () {
-                            return User::query()
-                                ->role('Docente')
-                                ->orderBy('name')
-                                ->get()
-                                ->mapWithKeys(function (User $u) {
-                                    $label = trim((string) ($u->name ?? ''));
-                                    if ($label === '') {
-                                        $label = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
-                                    }
-                                    if ($label === '') {
-                                        $label = $u->email ?: ('Docente #' . $u->id);
-                                    }
-                                    return [$u->id => $label];
-                                })
-                                ->toArray();
-                        })
-                        ->live(),
+Select::make('language_id')
+    ->label('Lingua lezione')
+    ->options(function (Get $get, ?\App\Models\Lesson $record) {
+        // prendo contract_id dal record o dallo state
+        $contractId = $record?->contract_id ?: $get('contract_id');
+
+        $all = \App\Filament\Resources\ContractResource::subjectOptions();
+
+        if (!$contractId) {
+            return $all;
+        }
+
+        $contract = \App\Models\Contract::find($contractId);
+        if (!$contract) {
+            return $all;
+        }
+
+        $langs = $contract->languages ?? [];
+        $langs = array_values(array_filter($langs));
+
+        if (empty($langs)) {
+            return $all;
+        }
+
+        // mappa solo le lingue presenti nel contratto
+        return collect($all)
+            ->only($langs)
+            ->toArray();
+    })
+    ->searchable()
+    ->required()
+    ->default(function (Get $get, ?\App\Models\Lesson $record) {
+        if ($record?->language_id) return $record->language_id;
+
+        $contractId = $get('contract_id');
+        if (!$contractId) return null;
+
+        return \App\Models\Contract::whereKey($contractId)->value('language_id'); // prima lingua
+    })
+    ->helperText('Puoi modificarla in qualsiasi momento.'),
+
+
+                        Select::make('teacher_id')
+    ->label('Docente')
+    ->nullable()
+    ->searchable()
+    ->disabled($isTeacher)
+    ->preload(false) // ✅ niente preload
+    ->getSearchResultsUsing(fn (string $search) => User::query()
+        ->role('Docente')
+        ->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('first_name', 'like', "%{$search}%")
+              ->orWhere('last_name', 'like', "%{$search}%");
+        })
+        ->orderBy('name')
+        ->limit(50)
+        ->get()
+        ->mapWithKeys(function (User $u) {
+            $label = trim((string) ($u->name ?? ''));
+            if ($label === '') $label = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+            if ($label === '') $label = $u->email ?: ('Docente #' . $u->id);
+            return [$u->id => $label];
+        })
+        ->toArray()
+    )
+    ->getOptionLabelUsing(function ($value): ?string {
+        $u = User::find($value);
+        if (! $u) return null;
+        $label = trim((string) ($u->name ?? ''));
+        if ($label === '') $label = trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''));
+        return $label !== '' ? $label : ($u->email ?: ('Docente #' . $u->id));
+    })
+    ->live(),
 
                     DateTimePicker::make('starts_at')
                         ->label('Inizio')
@@ -139,7 +219,9 @@ class LessonResource extends Resource
                         ->seconds(false)
                         ->disabled($isTeacher)
                         ->live()
-                        ->afterStateUpdated(function (Get $get, Set $set) {
+                        ->afterStateUpdated(function (Get $get, Set $set) use ($isTeacher) {
+                            if ($isTeacher) return;
+
                             $start = $get('starts_at');
                             if (! $start) return;
 
@@ -149,20 +231,22 @@ class LessonResource extends Resource
                         }),
 
                     DateTimePicker::make('ends_at')
-                    ->disabled($isTeacher)
                         ->label('Fine')
                         ->required()
                         ->seconds(false)
+                        ->disabled($isTeacher)
                         ->live(),
 
+                    // Stato: nel panel docente solo lettura (disabled + opzionale hidden)
                     Select::make('status_virtual')
                         ->label('Stato')
+                        ->disabled($isTeacher)
                         ->options([
                             'programmata'       => 'Programmata',
                             'completata'        => 'Completata',
-                            'annullata_recover' => 'Annullata (da recuperare)',
+                            'annullata_recover' => 'Annullata (recupero)',
                             'annullata'         => 'Annullata',
-                            'recuperata'        => 'Recuperata',
+                            'recuperata'        => 'Da recuperare',
                         ])
                         ->dehydrated(false)
                         ->live()
@@ -181,7 +265,9 @@ class LessonResource extends Resource
 
                             $set('status_virtual', $record->counts_as_consumed ? 'completata' : 'programmata');
                         })
-                        ->afterStateUpdated(function (Get $get, Set $set, $state) {
+                        ->afterStateUpdated(function (Get $get, Set $set, $state) use ($isTeacher) {
+                            if ($isTeacher) return;
+
                             if ($state === 'recuperata') return;
 
                             if (in_array($state, ['annullata', 'annullata_recover'], true)) {
@@ -209,26 +295,25 @@ class LessonResource extends Resource
                     DateTimePicker::make('cancelled_at')
                         ->label('Annullata il')
                         ->seconds(false)
-                        ->visible(fn (Get $get) => in_array($get('status_virtual'), ['annullata', 'annullata_recover'], true)),
+                        ->visible(fn (Get $get) => ! $isTeacher && in_array($get('status_virtual'), ['annullata', 'annullata_recover'], true)),
 
                     Textarea::make('cancellation_reason')
                         ->label('Motivo annullamento')
                         ->rows(3)
-                        ->visible(fn (Get $get) => in_array($get('status_virtual'), ['annullata', 'annullata_recover'], true)),
+                        ->visible(fn (Get $get) => ! $isTeacher && in_array($get('status_virtual'), ['annullata', 'annullata_recover'], true)),
 
                     Placeholder::make('recovery_info')
                         ->label('Info recupero')
+                        ->visible(! $isTeacher)
                         ->content(function (?Lesson $record) {
                             if (! $record) return '—';
 
-                            // se è recupero
                             if ($record->recovery_of_lesson_id) {
                                 $orig = $record->originalLesson;
                                 if (! $orig) return 'Recupero (originale non trovato)';
                                 return 'Recupero di: ' . ($orig->starts_at?->format('d/m/Y H:i') ?? '—');
                             }
 
-                            // se è originale annullata con recupero
                             $rec = $record->recoveryLesson;
                             if ($rec) {
                                 $auto = $rec->is_auto_recovery ? ' (auto)' : '';
@@ -243,21 +328,23 @@ class LessonResource extends Resource
                         ->label('Google Meet URL')
                         ->url()
                         ->maxLength(500)
+                        ->disabled($isTeacher)
                         ->columnSpanFull(),
 
+                    // ✅ Docente: può compilare
                     Textarea::make('notes')
-                        ->label('Note')
+                        ->label($isTeacher ? 'Note docente' : 'Note')
                         ->rows(4)
                         ->columnSpanFull(),
 
                     Textarea::make('homework')
-    ->label('Compiti per casa')
-    ->rows(4)
-    ->columnSpanFull(),
-
+                        ->label('Compiti per casa')
+                        ->rows(4)
+                        ->columnSpanFull(),
 
                     Placeholder::make('consumption_preview')
                         ->label('Ore (durata)')
+                        ->visible(! $isTeacher)
                         ->content(function (Get $get) {
                             $start = $get('starts_at');
                             $end   = $get('ends_at');
@@ -277,6 +364,8 @@ class LessonResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $isTeacher = static::isTeacherPanel();
+
         return $table
             ->defaultSort('starts_at', 'asc')
             ->columns([
@@ -293,13 +382,13 @@ class LessonResource extends Resource
 
                         return $query->whereHas('student', function (Builder $q) use ($search) {
                             $q->where('first_name', 'like', "%{$search}%")
-                              ->orWhere('last_name', 'like', "%{$search}%");
+                                ->orWhere('last_name', 'like', "%{$search}%");
                         });
                     }),
 
                 Tables\Columns\TextColumn::make('course_label')
                     ->label('Corso')
-                        ->limit(15)
+                    ->limit(15)
                     ->getStateUsing(fn (Lesson $record) => $record->contract?->course?->name ?? '—')
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query
@@ -316,84 +405,64 @@ class LessonResource extends Resource
                         });
                     }),
 
-                Tables\Columns\TextColumn::make('teacher_last_name')
-    ->label('Docente')
+
+    Tables\Columns\TextColumn::make('language_label')
+    ->label('Lingua')
     ->getStateUsing(function (Lesson $record) {
-        $t = $record->teacher;
-        if (! $t) return '—';
-
-        // priorità: last_name
-        $last = trim((string) ($t->last_name ?? ''));
-        if ($last !== '') return mb_strtoupper($last);
-
-        // fallback: prova a derivarlo da "name"
-        $name = trim((string) ($t->name ?? ''));
-        if ($name !== '') {
-            $parts = preg_split('/\s+/', $name);
-            $maybeLast = trim((string) (end($parts) ?: ''));
-            return $maybeLast !== '' ? mb_strtoupper($maybeLast) : $name;
-        }
-
-        // fallback finale
-        return $t->email ? $t->email : ('Docente #' . $t->id);
+        return $record->language_id
+            ?? $record->contract?->language_id
+            ?? '—';
     })
-    ->sortable(query: function (Builder $query, string $direction): Builder {
-        return $query
-            ->leftJoin('users as t', 'lessons.teacher_id', '=', 't.id')
-            ->orderByRaw("COALESCE(NULLIF(t.last_name,''), t.name) {$direction}")
-            ->select('lessons.*');
-    })
-    ->searchable(query: function (Builder $query, string $search): Builder {
-        $search = trim($search);
+    ->sortable()
+    ->toggleable(),
 
-        return $query->whereHas('teacher', function (Builder $q) use ($search) {
-            $q->where('last_name', 'like', "%{$search}%")
-              ->orWhere('name', 'like', "%{$search}%");
-        });
-    }),
+                Tables\Columns\TextColumn::make('teacher_last_name')
+                    ->label('Docente')
+                    ->getStateUsing(function (Lesson $record) {
+                        $t = $record->teacher;
+                        if (! $t) return '—';
 
-                Tables\Columns\TextColumn::make('originalLesson.starts_at')
-    ->label('Recupero di')
-    ->dateTime('d/m/Y H:i')
-    ->placeholder('—')
-    ->toggleable(isToggledHiddenByDefault: true),
+                        $last = trim((string) ($t->last_name ?? ''));
+                        if ($last !== '') return mb_strtoupper($last);
 
-                Tables\Columns\TextColumn::make('recoveryLesson.starts_at')
-    ->label('Recupero programmato')
-    ->dateTime('d/m/Y H:i')
-    ->placeholder('—')
-    ->toggleable(isToggledHiddenByDefault: true),
+                        $name = trim((string) ($t->name ?? ''));
+                        if ($name !== '') {
+                            $parts = preg_split('/\s+/', $name);
+                            $maybeLast = trim((string) (end($parts) ?: ''));
+                            return $maybeLast !== '' ? mb_strtoupper($maybeLast) : $name;
+                        }
 
-                Tables\Columns\IconColumn::make('is_auto_recovery')
-                    ->label('Auto')
-                    ->boolean()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        return $t->email ? $t->email : ('Docente #' . $t->id);
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query
+                            ->leftJoin('users as t', 'lessons.teacher_id', '=', 't.id')
+                            ->orderByRaw("COALESCE(NULLIF(t.last_name,''), t.name) {$direction}")
+                            ->select('lessons.*');
+                    })
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $search = trim($search);
 
-                Tables\Columns\TextColumn::make('cancelled_at')
-                    ->label('Annullata il')
-                    ->dateTime('d/m/Y H:i')
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('cancellation_reason')
-                    ->label('Motivo')
-                    ->limit(30)
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        return $query->whereHas('teacher', function (Builder $q) use ($search) {
+                            $q->where('last_name', 'like', "%{$search}%")
+                                ->orWhere('name', 'like', "%{$search}%");
+                        });
+                    }),
 
                 Tables\Columns\BadgeColumn::make('status_virtual')
                     ->label('Stato')
                     ->getStateUsing(function (Lesson $record) {
-                        if ($record->recovery_of_lesson_id) {
-                            return 'recuperata';
-                        }
+    // ✅ RECUPERO: se svolta -> completata, altrimenti da recuperare
+    if ($record->recovery_of_lesson_id) {
+        return $record->counts_as_consumed ? 'completata' : 'recuperata';
+    }
 
-                        if ($record->cancelled_at) {
-                            return $record->is_recoverable ? 'annullata_recover' : 'annullata';
-                        }
+    if ($record->cancelled_at) {
+        return $record->is_recoverable ? 'annullata_recover' : 'annullata';
+    }
 
-                        return $record->counts_as_consumed ? 'completata' : 'programmata';
-                    })
+    return $record->counts_as_consumed ? 'completata' : 'programmata';
+})
                     ->colors([
                         'success' => 'completata',
                         'danger'  => 'annullata',
@@ -404,19 +473,30 @@ class LessonResource extends Resource
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (da recuperare)',
+                        'annullata_recover' => 'Annullata (recupero)',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Recuperata',
+                        'recuperata'        => 'Da Recuperare',
                         default             => ucfirst((string) $state),
                     }),
+
+
+
             ])
             ->filters([
-                Filter::make('upcoming')
-                    ->label('Da oggi')
-                    ->default()
-                    ->query(fn (Builder $query): Builder =>
-                        $query->where('starts_at', '>=', Carbon::today()->startOfDay())
-                    ),
+Filter::make('upcoming')
+    ->label('Da oggi')
+    ->default() // ✅ attivo di default
+    ->query(fn (Builder $query): Builder =>
+        $query->where('lessons.starts_at', '>=', Carbon::today()->startOfDay())
+    ),
+
+    Filter::make('missing_notes')
+    ->label('Senza note')
+    ->query(fn (Builder $q) => $q->whereNull('notes')->orWhere('notes', '')),
+
+Filter::make('missing_homework')
+    ->label('Senza compiti')
+    ->query(fn (Builder $q) => $q->whereNull('homework')->orWhere('homework', '')),
 
                 Filter::make('date_range')
                     ->label('Date')
@@ -439,9 +519,9 @@ class LessonResource extends Resource
                     ->options([
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (da recuperare)',
+                        'annullata_recover' => 'Annullata (recupero)',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Recuperata',
+                        'recuperata'        => 'Da Recuperare',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
@@ -457,142 +537,225 @@ class LessonResource extends Resource
                         };
                     }),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make()->label('Modifica'),
+                    ->paginated([25, 50])
+        ->defaultPaginationPageOption(25)
+           ->actions([
 
-                Action::make('mark_done')
-                    ->label('Svolta')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->visible(function (Lesson $record): bool {
-                        if ($record->cancelled_at) return false;
-                        return ! (bool) $record->counts_as_consumed;
-                    })
-                    ->action(function (Lesson $record): void {
-                        $record->counts_as_consumed = true;
-                        $record->is_recoverable = false;
-                        $record->save();
+    // ✏️ Modifica come icona compatta
+    Tables\Actions\EditAction::make()
+        ->label('')
+        ->icon('heroicon-o-pencil-square')
+        ->iconButton()
+->visible(function (Lesson $record) use ($isTeacher) {
+    if ($isTeacher) {
+        return (int) $record->teacher_id === (int) auth()->id();
+    }
+    return static::canEdit($record);
+}),
 
-                        Notification::make()
-                            ->title('Lezione segnata come svolta')
-                            ->success()
-                            ->send();
-                    }),
+    // ✅ Svolta come icona compatta
+    Action::make('mark_done')
+        ->label('')
+        ->tooltip('Segna come svolta')
+        ->icon('heroicon-o-check-circle')
+        ->iconButton()
+        ->color('success')
+        ->requiresConfirmation()
+        ->visible(function (Lesson $record) use ($isTeacher): bool {
+            if ($record->cancelled_at) return false;
+            if ((bool) $record->counts_as_consumed) return false;
 
-                Action::make('unmark_done')
-                    ->label('Togli svolta')
-                    ->icon('heroicon-o-arrow-uturn-left')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->visible(function (Lesson $record): bool {
-                        if ($record->cancelled_at) return false;
+            $u = auth()->user();
+            if ($u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria'])) {
+                return true;
+            }
 
-                        $u = auth()->user();
-                        $can = $u?->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']) ?? false;
+            return $isTeacher && ((int) $record->teacher_id === (int) auth()->id());
+        })
+        ->action(function (Lesson $record): void {
+            $record->counts_as_consumed = true;
+            $record->is_recoverable = false;
+            $record->save();
 
-                        return $can && (bool) $record->counts_as_consumed;
-                    })
-                    ->action(function (Lesson $record): void {
-                        $record->counts_as_consumed = false;
-                        $record->save();
+            Notification::make()
+                ->title('Lezione segnata come svolta')
+                ->success()
+                ->send();
+        }),
 
-                        Notification::make()
-                            ->title('Flag svolta rimosso')
-                            ->warning()
-                            ->send();
-                    }),
+    // ⋯ Menu compatto con tutte le altre azioni
+    ActionGroup::make([
 
-                Action::make('cancel')
-                    ->label('Annulla')
-                    ->color('danger')
-                    ->icon('heroicon-o-x-circle')
-                    ->requiresConfirmation()
-                    ->modalHeading('Annulla lezione')
-                    ->modalDescription('Se annulli almeno 24h prima, la lezione sarà “da recuperare” e verrà creata automaticamente una nuova lezione la settimana successiva all’ultima lezione schedulata (saltando i giorni di chiusura).')
-                    ->form([
-                        DateTimePicker::make('cancelled_at')
-                            ->label('Data e ora annullamento')
-                            ->seconds(false)
-                            ->default(fn () => now())
-                            ->required(),
+    Action::make('view_notes')
+    ->label('Leggi note')
+    ->icon('heroicon-o-eye')
+    ->modalHeading('Note e compiti')
+    ->form([
+        Textarea::make('notes')->label('Note docente')->rows(6)->disabled(),
+        Textarea::make('homework')->label('Compiti')->rows(6)->disabled(),
+    ])
+    ->fillForm(fn (Lesson $record) => [
+        'notes' => $record->notes,
+        'homework' => $record->homework,
+    ])
+    ->visible(function () use ($isTeacher) {
+        if ($isTeacher) return false;
+        return auth()->user()?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
+    }),
 
-                        Textarea::make('cancellation_reason')
-                            ->label('Motivo annullamento')
-                            ->rows(3)
-                            ->required(),
-                    ])
-                    ->visible(function (Lesson $record): bool {
-                        if ($record->cancelled_at) return false;
-                        if ($record->counts_as_consumed) return false;
-                        if ($record->recovery_of_lesson_id) return false;
-                        return true;
-                    })
-                    ->action(function (Lesson $record, array $data): void {
-                        $cancelledAt = Carbon::parse($data['cancelled_at']);
-                        $reason = (string) ($data['cancellation_reason'] ?? '');
-
-                        $record->cancelled_at = $cancelledAt;
-                        $record->cancelled_by = auth()->id();
-                        $record->cancellation_reason = $reason;
-
-                        $record->recomputeFlags($cancelledAt);
-
-                        if ($record->is_recoverable) {
-                            $record->counts_as_consumed = false;
-                        }
-
-                        $record->save();
-
-                        if ($record->is_recoverable) {
-                            try {
-                                $recovery = app(LessonRecoveryService::class)
-                                    ->cancelAndCreateAutoRecovery($record, $cancelledAt, $reason);
-
-                                $body = 'Recupero programmato per: ' . $recovery->starts_at->format('d/m/Y H:i');
-
-                                $movedReason = $recovery->getAttribute('_moved_reason');
-                                if ($movedReason) {
-                                    $body .= "\n" . $movedReason;
-                                }
-
-                                Notification::make()
-                                    ->title('Lezione annullata e recupero creato')
-                                    ->body($body)
-                                    ->success()
-                                    ->send();
-
-                                return;
-                            } catch (\Throwable $e) {
-                                Notification::make()
-                                    ->title('Lezione annullata, ma recupero NON creato')
-                                    ->body($e->getMessage())
-                                    ->warning()
-                                    ->send();
-
-                                return;
-                            }
-                        }
-
-                        Notification::make()
-                            ->title('Lezione annullata (non recuperabile)')
-                            ->body('Annullata entro 24h: secondo regola, consuma.')
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('open_recovery')
-                    ->label('Apri recupero')
-                    ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->color('info')
-                    ->visible(fn (Lesson $record) => $record->recoveryLesson()->exists())
-                    ->url(fn (Lesson $record) => static::getUrl('edit', ['record' => $record->recoveryLesson->id]))
-                    ->openUrlInNewTab(),
+        Action::make('quick_notes')
+            ->label('Note')
+            ->icon('heroicon-o-pencil-square')
+            ->modalHeading('Note docente')
+            ->form([
+                Textarea::make('notes')->label('Note docente')->rows(6),
             ])
+            ->fillForm(fn (Lesson $record) => ['notes' => $record->notes])
+            ->visible(fn (Lesson $record) => $isTeacher
+    ? ((int) $record->teacher_id === (int) auth()->id())
+    : static::canEdit($record)
+)
+            ->action(function (Lesson $record, array $data): void {
+                $record->notes = $data['notes'] ?? null;
+                $record->save();
+                Notification::make()->title('Note salvate')->success()->send();
+            }),
+
+        Action::make('quick_homework')
+            ->label('Compiti')
+            ->icon('heroicon-o-document-text')
+            ->modalHeading('Compiti per casa')
+            ->form([
+                Textarea::make('homework')->label('Compiti per casa')->rows(6),
+            ])
+            ->fillForm(fn (Lesson $record) => ['homework' => $record->homework])
+->visible(fn (Lesson $record) => $isTeacher
+    ? ((int) $record->teacher_id === (int) auth()->id())
+    : static::canEdit($record)
+)
+            ->action(function (Lesson $record, array $data): void {
+                $record->homework = $data['homework'] ?? null;
+                $record->save();
+                Notification::make()->title('Compiti salvati')->success()->send();
+            }),
+
+        Action::make('unmark_done')
+            ->label('Togli svolta')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->visible(function (Lesson $record) use ($isTeacher): bool {
+                if ($isTeacher) return false;
+                if ($record->cancelled_at) return false;
+
+                $u = auth()->user();
+                $can = $u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
+
+                return $can && (bool) $record->counts_as_consumed;
+            })
+            ->action(function (Lesson $record): void {
+                $record->counts_as_consumed = false;
+                $record->save();
+
+                Notification::make()
+                    ->title('Flag svolta rimosso')
+                    ->warning()
+                    ->send();
+            }),
+
+        Action::make('cancel')
+            ->label('Annulla')
+            ->color('danger')
+            ->icon('heroicon-o-x-circle')
+            ->requiresConfirmation()
+            ->modalHeading('Annulla lezione')
+            ->form([
+                DateTimePicker::make('cancelled_at')
+                    ->label('Data e ora annullamento')
+                    ->seconds(false)
+                    ->default(fn () => now())
+                    ->required(),
+
+                Textarea::make('cancellation_reason')
+                    ->label('Motivo annullamento')
+                    ->rows(3)
+                    ->required(),
+            ])
+            ->visible(function (Lesson $record) use ($isTeacher): bool {
+                if ($isTeacher) return false;
+                if ($record->cancelled_at) return false;
+                if ($record->counts_as_consumed) return false;
+                if ($record->recovery_of_lesson_id) return false;
+                return true;
+            })
+->action(function (Lesson $record, array $data): void {
+    $cancelledAt = Carbon::parse($data['cancelled_at']);
+    $reason = (string) ($data['cancellation_reason'] ?? '');
+
+    $record->cancelled_at = $cancelledAt;
+    $record->cancelled_by = auth()->id();
+    $record->cancellation_reason = $reason;
+
+    $record->recomputeFlags($cancelledAt);
+
+    if ($record->is_recoverable) {
+        $record->counts_as_consumed = false;
+    }
+
+    $record->save();
+
+    // ✅ CREA RECUPERO AUTOMATICO (se recuperabile)
+    if ($record->is_recoverable) {
+        // evita duplicati
+        if (! $record->recoveryLesson()->exists()) {
+            try {
+                $recovery = app(\App\Services\LessonRecoveryService::class)
+                    ->cancelAndCreateAutoRecovery($record, $cancelledAt, $reason);
+
+                Notification::make()
+                    ->title('Lezione annullata + recupero creato')
+                    ->body('Recupero: ' . $recovery->starts_at->format('d/m/Y H:i'))
+                    ->success()
+                    ->send();
+
+                return;
+            } catch (\Throwable $e) {
+                Notification::make()
+                    ->title('Lezione annullata, ma recupero non creato')
+                    ->body($e->getMessage())
+                    ->warning()
+                    ->send();
+
+                return;
+            }
+        }
+    }
+
+    Notification::make()
+        ->title('Lezione annullata')
+        ->success()
+        ->send();
+}),
+
+        Action::make('open_recovery')
+            ->label('Apri recupero')
+            ->icon('heroicon-o-arrow-top-right-on-square')
+            ->color('info')
+            ->visible(fn (Lesson $record) => ! $isTeacher && ! empty($record->recovery_lesson_id))
+            ->url(fn (Lesson $record) => static::getUrl('edit', ['record' => $record->recoveryLesson->id]))
+            ->openUrlInNewTab(),
+
+    ])
+        ->label('')
+        ->icon('heroicon-o-ellipsis-horizontal')
+        ->iconButton(),
+
+])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
                         ->label('Elimina')
+                        ->visible(fn () => ! $isTeacher)
                         ->before(function ($records) {
                             $hasDone = $records->contains(fn (Lesson $l) => (bool) $l->counts_as_consumed);
 
@@ -610,16 +773,42 @@ class LessonResource extends Resource
             ]);
     }
 
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListLessons::route('/'),
-            'edit'  => Pages\EditLesson::route('/{record}/edit'),
-        ];
+
+    public static function shouldRegisterNavigation(): bool
+{
+    // ✅ nel panel docente vogliamo SEMPRE la voce in sidebar
+    if (Filament::getCurrentPanel()?->getId() === 'docente') {
+        return true;
     }
 
-    protected static function isTeacherPanel(): bool
+    return parent::shouldRegisterNavigation();
+}
+
+public static function canViewAny(): bool
 {
-    return filament()->getCurrentPanel()?->getId() === 'docente';
+    // ✅ nel panel docente può vedere la lista (poi la query filtra)
+    if (Filament::getCurrentPanel()?->getId() === 'Docente') {
+        return true;
+    }
+
+    return parent::canViewAny();
+}
+
+public static function canEdit($record): bool
+{
+    if (Filament::getCurrentPanel()?->getId() === 'Docente') {
+        return (int) $record->teacher_id === (int) auth()->id();
+    }
+
+    return parent::canEdit($record);
+}
+
+    public static function getPages(): array
+{
+    return [
+        'index' => Pages\ListLessons::route('/'),
+        'view'  => Pages\ViewLesson::route('/{record}'),
+        'edit'  => Pages\EditLesson::route('/{record}/edit'),
+    ];
 }
 }

@@ -120,10 +120,10 @@ class EditLesson extends EditRecord
         return $data;
     }
 
-    protected function afterSave(): void
+/*    protected function afterSave(): void
 {
     if ($this->contractId) {
         \App\Models\Contract::recalcConsumedHours($this->contractId);
     }
-}
+}*/
 }

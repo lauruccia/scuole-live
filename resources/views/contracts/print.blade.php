@@ -5,9 +5,10 @@
     <title>Contratto #{{ $contract->id }}</title>
     <style>
         * { font-family: DejaVu Sans, sans-serif; }
-        body { font-size: 11px; line-height: 1.15; }
+        /* 1) recupero spazio globale */
+@page { size: A4; margin: 5mm; }       /* prima 6mm */
+body { font-size: 10px; line-height: 1.08; }  /* prima 11 / 1.15 */
 
-        @page { size: A4; margin: 6mm; }
         html, body { margin: 0 !important; padding: 0 !important; }
 
         .page {
@@ -19,7 +20,7 @@
 
         .title {
             text-align:center;
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 800;
             letter-spacing: .5px;
             margin: 0 0 10px 0;
@@ -29,13 +30,16 @@
         table { width:100%; border-collapse:collapse; }
         .header td { vertical-align: top; }
 
-        .h-small { font-size: 12px; }
+        /* 3) riduci un pelo la testata (se serve) */
+.h-small { font-size: 11px; }            /* prima 12 */
+
         .right { text-align:right; }
         .center { text-align:center; }
 
         .label-blue { color:#1e3a8a; font-weight: 800; }
-        .mb10 { margin-bottom: 4px !important; }
-        .mt18 { margin-top: 8px !important; }
+/* 2) riduci un filo spaziature */
+.mb10 { margin-bottom: 2px !important; }  /* prima 4 */
+.mt18 { margin-top: 4px !important; }     /* prima 8 */
         .indent { margin-left: 22px; }
 
         .line { display:inline-block; border-bottom:1px solid #000; height: 10px !important; vertical-align: bottom; }
@@ -44,11 +48,16 @@
         .w90 { width: 90mm; }
 
         .sigline { height: 10px !important; }
-        .siglbl { font-size: 11px; padding-top: 2px !important; }
+
 
         .col3 td { width:33.33%; vertical-align: bottom; }
         .bottom3 td { vertical-align: top; padding-top: 6px !important; }
         .field { font-weight: 700; }
+
+        /* 4) firma: stessa leggibilità ma meno “altezza sprecata” */
+.sigwrap { height: 100px; }               /* non troppo alta */
+.sigimg  { height: 100px; width:auto; display:block; }
+.siglbl  { font-size: 10px; padding-top: 1px !important; }
 
         table, tr, td { page-break-inside: avoid !important; }
     </style>
@@ -60,9 +69,32 @@
 
     $isCompany = (($contract->billing_type ?? 'private') === 'company');
 
-    // Lingua
-    $language = trim((string) ($contract->language_id ?? $contract->language ?? ''));
-    $language = $language !== '' ? $language : '—';
+    // Lingue (array) + fallback vecchio
+    $langs = $contract->languages ?? [];
+
+    if (!is_array($langs)) {
+        $langs = json_decode($langs ?? '[]', true) ?: [];
+    }
+
+    $langs = array_values(array_unique(array_filter(array_map(function ($v) {
+        $v = is_string($v) ? trim($v) : $v;
+        return $v !== '' ? $v : null;
+    }, $langs))));
+
+    if (empty($langs)) {
+        $old = trim((string) ($contract->language_id ?? $contract->language ?? ''));
+        if ($old !== '') {
+            $langs = [$old];
+        }
+    }
+
+    $language = !empty($langs) ? implode(', ', $langs) : '—';
+
+    // Firma scuola (BASE64 - compatibile DOMPDF)
+    $firmaPath = public_path('images/firma-scuola.png');
+    $firmaBase64 = file_exists($firmaPath)
+        ? 'data:image/jpeg;base64,' . base64_encode(file_get_contents($firmaPath))
+        : null;
 
     // Intestatario (privato)
     $firstName = trim((string) ($contract->billing_first_name ?? ''));
@@ -136,34 +168,20 @@
     $isFullImm     = str_contains($lessonTypeNorm, 'full immersion') || str_contains($lessonTypeNorm, 'immersion');
     $isTextExam    = str_contains($lessonTypeNorm, 'test') || str_contains($lessonTypeNorm, 'exam');
 
-    // Beneficiari
-    $beneficiaries = $contract->beneficiaries ?? collect();
-    $billingIsBeneficiary = (bool) ($contract->billing_is_beneficiary ?? true);
+    // VALIDITÀ IN MESI (ARROTONDAMENTO PER ECCESSO)
+    $validityMonths = null;
 
+    if (!empty($contract->starts_at) && !empty($contract->ends_at)) {
+        $start = \Illuminate\Support\Carbon::parse($contract->starts_at)->startOfDay();
+        $end   = \Illuminate\Support\Carbon::parse($contract->ends_at)->startOfDay();
 
-// VALIDITÀ IN MESI (ARROTONDAMENTO PER ECCESSO)
-$validityMonths = null;
-
-if (!empty($contract->starts_at) && !empty($contract->ends_at)) {
-
-    $start = \Illuminate\Support\Carbon::parse($contract->starts_at)->startOfDay();
-    $end   = \Illuminate\Support\Carbon::parse($contract->ends_at)->startOfDay();
-
-    if ($end->greaterThan($start)) {
-
-        // mesi interi
-        $months = $start->diffInMonths($end);
-
-        // controllo giorni residui
-        $checkDate = $start->copy()->addMonths($months);
-
-        if ($checkDate->lt($end)) {
-            $months++;
+        if ($end->greaterThan($start)) {
+            $months = $start->diffInMonths($end);
+            $checkDate = $start->copy()->addMonths($months);
+            if ($checkDate->lt($end)) { $months++; }
+            $validityMonths = (int) $months;
         }
-
-        $validityMonths = (int) $months;
     }
-}
 @endphp
 
 <div class="page">
@@ -291,15 +309,21 @@ if (!empty($contract->starts_at) && !empty($contract->ends_at)) {
     <table class="col3 mb10">
         <tr>
             <td>
-                <div class="sigline"></div>
+                <div class="sigwrap">
+                    @if($firmaBase64)
+                        <img src="{{ $firmaBase64 }}" class="sigimg" alt="Firma scuola">
+                    @endif
+                </div>
                 <div class="siglbl">firma del preponente</div>
             </td>
+
             <td style="padding:0 10px;">
-                <div class="sigline"></div>
+                <div class="sigwrap"></div>
                 <div class="siglbl">firma per ricevuta dell'acconto</div>
             </td>
+
             <td>
-                <div class="sigline"></div>
+                <div class="sigwrap"></div>
                 <div class="siglbl">firma del sottoscrittore</div>
             </td>
         </tr>
@@ -315,84 +339,80 @@ if (!empty($contract->starts_at) && !empty($contract->ends_at)) {
         <div class="siglbl">firma del sottoscrittore</div>
     </div>
 
-
-
     {{-- BLOCCO BASSO: intestatario (privato) con nato/a il + nato/a a --}}
     <table class="bottom3">
-    <tr>
-        <td style="width:40%;">
-            @if(!$isCompany)
-                <div class="field">Nome</div>
-                {{ mb_strtoupper($firstName ?: '—') }}<br><br>
+        <tr>
+            <td style="width:40%;">
+                @if(!$isCompany)
+                    <div class="field">Nome</div>
+                    {{ mb_strtoupper($firstName ?: '—') }}<br><br>
 
-                <div class="field">Nato/a il:</div>
-                {{ $birthDateLabel }}<br><br>
+                    <div class="field">Nato/a il:</div>
+                    {{ $birthDateLabel }}<br><br>
 
-                <div class="field">Residente in:</div>
-                {{ $residence }}<br><br>
+                    <div class="field">Residente in:</div>
+                    {{ $residence }}<br><br>
 
-                <div class="field">e-mail:</div>
-                {{ $email }}
-            @else
-                <div class="field">Azienda</div>
-                {{ mb_strtoupper((string)($contract->company_name ?? '—')) }}<br><br>
+                    <div class="field">e-mail:</div>
+                    {{ $email }}
+                @else
+                    <div class="field">Azienda</div>
+                    {{ mb_strtoupper((string)($contract->company_name ?? '—')) }}<br><br>
 
-                <div class="field">Sede</div>
-                @php
-                    $cAddr = trim((string)($contract->company_address ?? ''));
-                    $cZip  = trim((string)($contract->company_zip ?? ''));
-                    $cCity = trim((string)($contract->company_city ?? ''));
-                    $cCtry = trim((string)($contract->company_country ?? ''));
-                    $cRes  = trim($cAddr.' '.$cZip.' '.$cCity.(($cCtry!=='')? ', '.$cCtry:''));
-                @endphp
-                {{ $cRes !== '' ? $cRes : '—' }}<br><br>
+                    <div class="field">Sede</div>
+                    @php
+                        $cAddr = trim((string)($contract->company_address ?? ''));
+                        $cZip  = trim((string)($contract->company_zip ?? ''));
+                        $cCity = trim((string)($contract->company_city ?? ''));
+                        $cCtry = trim((string)($contract->company_country ?? ''));
+                        $cRes  = trim($cAddr.' '.$cZip.' '.$cCity.(($cCtry!=='')? ', '.$cCtry:''));
+                    @endphp
+                    {{ $cRes !== '' ? $cRes : '—' }}<br><br>
 
-                <div class="field">PEC / Email</div>
-                {{ trim((string)($contract->pec ?? '')) ?: (trim((string)($contract->company_email ?? '')) ?: '—') }}
-            @endif
-        </td>
+                    <div class="field">PEC / Email</div>
+                    {{ trim((string)($contract->pec ?? '')) ?: (trim((string)($contract->company_email ?? '')) ?: '—') }}
+                @endif
+            </td>
 
-        <td style="width:30%;">
-            @if(!$isCompany)
-                <div class="field">Cognome</div>
-                {{ mb_strtoupper($lastName ?: '—') }}<br><br>
+            <td style="width:30%;">
+                @if(!$isCompany)
+                    <div class="field">Cognome</div>
+                    {{ mb_strtoupper($lastName ?: '—') }}<br><br>
 
-                <div class="field">Nato/a a:</div>
-                {{ $birthPlaceLabel }}
-            @else
-                <div class="field">SDI</div>
-                {{ trim((string)($contract->sdi ?? '')) ?: '—' }}<br><br>
+                    <div class="field">Nato/a a:</div>
+                    {{ $birthPlaceLabel }}
+                @else
+                    <div class="field">SDI</div>
+                    {{ trim((string)($contract->sdi ?? '')) ?: '—' }}<br><br>
 
-                <div class="field">Referente</div>
-                {{-- se non hai un referente aziendale nel DB, metti trattino --}}
-                —
-            @endif
-        </td>
+                    <div class="field">Referente</div>
+                    —
+                @endif
+            </td>
 
-        <td style="width:30%;">
-            @if(!$isCompany)
-                <div class="field">C.F.</div>
-                {{ $taxCode }}<br><br>
+            <td style="width:30%;">
+                @if(!$isCompany)
+                    <div class="field">C.F.</div>
+                    {{ $taxCode }}<br><br>
 
-                <div class="field">Tel</div>
-                {{ $phone }}
-            @else
-                <div class="field">P.IVA</div>
-                {{ trim((string)($contract->vat_number ?? '')) ?: '—' }}<br><br>
+                    <div class="field">Tel</div>
+                    {{ $phone }}
+                @else
+                    <div class="field">P.IVA</div>
+                    {{ trim((string)($contract->vat_number ?? '')) ?: '—' }}<br><br>
 
-                <div class="field">Tel</div>
-                {{ trim((string)($contract->company_phone ?? '')) ?: '—' }}
-            @endif
-        </td>
-    </tr>
-</table>
+                    <div class="field">Tel</div>
+                    {{ trim((string)($contract->company_phone ?? '')) ?: '—' }}
+                @endif
+            </td>
+        </tr>
+    </table>
 
-{{-- Riga IBAN + contatti come nel modello cliente --}}
-<div class="mb10" style="margin-top:8px;">
-    <strong>IBAN:</strong> IT 39 Q 03440 03218 0000 0017 6700 - Banco Desio<br>
-    <strong>Tel.:</strong> +39 06 5743734 - <strong>Tel./Fax</strong> +39 06 57301261 - <strong>Mobile</strong> +39 346 3836175<br>
-    <strong>website:</strong> www.aealanguagecenter.it
-</div>
+    <div class="mb10" style="margin-top:8px;">
+        <strong>IBAN:</strong> IT 39 Q 03440 03218 0000 0017 6700 - Banco Desio<br>
+        <strong>Tel.:</strong> +39 06 5743734 - <strong>Tel./Fax</strong> +39 06 57301261 - <strong>Mobile</strong> +39 346 3836175<br>
+        <strong>website:</strong> www.aealanguagecenter.it
+    </div>
 
 </div>
 </body>

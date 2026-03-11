@@ -12,6 +12,6 @@ class ReportLinks extends Widget
     {
         $u = auth()->user();
 
-        return $u?->hasAnyRole(['superadmin', 'amministrazione', 'segreteria']) ?? false;
+        return $u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
     }
 }

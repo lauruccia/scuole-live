@@ -39,7 +39,7 @@ public static function shouldRegisterNavigation(): bool
 {
     $u = Filament::auth()->user();
 
-    return ! $u || ! $u->hasRole('Docente');
+    return $u && $u->hasRole('superadmin');
 }
 
     public static function form(Form $form): Form

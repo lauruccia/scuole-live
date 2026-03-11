@@ -18,12 +18,10 @@ class LessonSlotsRelationManager extends RelationManager
 {
     protected static string $relationship = 'lessonSlots';
 
-    /**
-     * Ritorna gli ID studenti collegati al contratto (ContractStudent.student_id)
-     */
     protected function getContractStudentIds(?int $includeStudentId = null): array
     {
         $contract = $this->getOwnerRecord();
+
         if (! $contract) {
             return [];
         }
@@ -37,7 +35,6 @@ class LessonSlotsRelationManager extends RelationManager
             ->values()
             ->all();
 
-        // include sempre lo studente già presente nello slot (edit)
         if ($includeStudentId) {
             $ids[] = (int) $includeStudentId;
             $ids = array_values(array_unique($ids));
@@ -73,7 +70,6 @@ class LessonSlotsRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form->schema([
-            // ✅ starts_at dello slot = starts_at del contratto (se non impostato)
             Hidden::make('starts_at')
                 ->default(function (?Model $record) {
                     if ($record?->starts_at) {
@@ -132,6 +128,7 @@ class LessonSlotsRelationManager extends RelationManager
                 ->options(function (?Model $record): array {
                     $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
                     $ids = $this->getContractStudentIds($currentStudentId);
+
                     return $this->getStudentOptions($ids);
                 })
                 ->getSearchResultsUsing(function (string $search, ?Model $record): array {
@@ -161,16 +158,23 @@ class LessonSlotsRelationManager extends RelationManager
                         ->get()
                         ->mapWithKeys(function (Student $st) {
                             $label = $st->full_name
-                                ?? trim(($st->last_name ?? '') . ' ' . ($st->first_name ?? ''))
-                                ?: ('Studente #' . $st->id);
+                                ?? trim(($st->last_name ?? '') . ' ' . ($st->first_name ?? ''));
+
+                            if ($label === '') {
+                                $label = 'Studente #' . $st->id;
+                            }
 
                             return [(int) $st->id => $label];
                         })
                         ->toArray();
                 })
                 ->getOptionLabelUsing(function ($value): ?string {
-                    if (! $value) return null;
+                    if (! $value) {
+                        return null;
+                    }
+
                     $s = Student::find((int) $value);
+
                     return $s?->full_name
                         ?? trim(($s?->last_name ?? '') . ' ' . ($s?->first_name ?? ''))
                         ?: ('Studente #' . (int) $value);
@@ -179,6 +183,7 @@ class LessonSlotsRelationManager extends RelationManager
                 ->visible(function (?Model $record) {
                     $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
                     $ids = $this->getContractStudentIds($currentStudentId);
+
                     return count($ids) !== 1;
                 }),
 
@@ -222,11 +227,13 @@ class LessonSlotsRelationManager extends RelationManager
                 ->seconds(false)
                 ->required(),
 
-            Forms\Components\TextInput::make('duration_minutes')
-                ->label('Durata (minuti)')
-                ->numeric()
-                ->minValue(15)
-                ->step(5)
+            Forms\Components\Select::make('duration_minutes')
+                ->label('Durata lezione')
+                ->options([
+                    60 => '1 ora',
+                    90 => '1 ora e 30',
+                    120 => '2 ore',
+                ])
                 ->default(60)
                 ->required(),
 
@@ -245,8 +252,7 @@ class LessonSlotsRelationManager extends RelationManager
                     ->label('Studente')
                     ->getStateUsing(fn ($record) => $record->student?->full_name
                         ?? trim(($record->student?->last_name ?? '') . ' ' . ($record->student?->first_name ?? ''))
-                        ?: '—'
-                    )
+                        ?: '—')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('weekly_day')
@@ -263,23 +269,38 @@ class LessonSlotsRelationManager extends RelationManager
                     })
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('weekly_time')->label('Orario')->sortable(),
+                Tables\Columns\TextColumn::make('weekly_time')
+                    ->label('Orario')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('duration_minutes')
+                    ->label('Durata')
+                    ->formatStateUsing(fn ($state) => match ((int) $state) {
+                        60 => '1 ora',
+                        90 => '1h 30m',
+                        120 => '2 ore',
+                        default => ((int) $state) . ' min',
+                    })
+                    ->sortable(),
 
                 Tables\Columns\TextColumn::make('teacher.name')
                     ->label('Docente')
                     ->getStateUsing(fn ($record) => trim((string) ($record->teacher?->name ?? '')) ?: ($record->teacher?->email ?? '—'))
                     ->sortable(),
 
-                Tables\Columns\IconColumn::make('is_active')->label('Attivo')->boolean(),
+                Tables\Columns\IconColumn::make('is_active')
+                    ->label('Attivo')
+                    ->boolean(),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
                     ->mutateFormDataUsing(function (array $data): array {
-                        // ✅ se non arriva starts_at, lo mettiamo uguale al contratto
                         $contract = $this->getOwnerRecord();
+
                         if (empty($data['starts_at']) && $contract?->starts_at) {
                             $data['starts_at'] = (string) $contract->starts_at;
                         }
+
                         return $data;
                     }),
             ])
