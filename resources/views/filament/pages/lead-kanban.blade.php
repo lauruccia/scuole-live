@@ -51,8 +51,8 @@
                             </a>
 
                             {{-- Corso --}}
-                            @if ($lead->course)
-                                <p class="text-xs text-gray-500 truncate mt-0.5">{{ $lead->course->name }}</p>
+                            @if ($lead->course_interest)
+                                <p class="text-xs text-gray-500 truncate mt-0.5">{{ $lead->course_interest }}</p>
                             @endif
 
                             {{-- Telefono / email --}}

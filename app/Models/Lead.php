@@ -103,6 +103,11 @@ class Lead extends Model
         return $this->hasMany(LeadActivity::class)->latest('occurred_at');
     }
 
+    public function quotes(): HasMany
+    {
+        return $this->hasMany(LeadQuote::class)->latest();
+    }
+
     // ─── Scopes ──────────────────────────────────────────────────────────────
 
     public function scopeByStatus($query, string $status)

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\LeadResource\Pages;
 use App\Filament\Resources\LeadResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ListLeads extends ListRecords
 {
@@ -14,7 +15,8 @@ class ListLeads extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Nuovo lead'),
+                ->label('Nuovo lead')
+                ->url(LeadResource::getUrl('create')),
         ];
     }
 }

@@ -3,10 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContractDocumentController;
 use App\Http\Controllers\GoogleOAuthController;
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\StudentContractPrintController;
 use App\Http\Controllers\Reports\TeacherHoursPdfController;
 
-Route::get('/', fn () => view('welcome'));
+// ─── Pagine pubbliche ─────────────────────────────────────────────────────────
+Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/iscriviti', [PublicController::class, 'iscriviti'])->name('iscrizione');
+Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])->name('iscrizione.store');
+Route::get('/grazie', [PublicController::class, 'grazie'])->name('iscrizione.grazie');
+Route::get('/privacy', [PublicController::class, 'privacy'])->name('privacy');
 
 // ✅ solo staff scuola
 Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria'])->group(function () {

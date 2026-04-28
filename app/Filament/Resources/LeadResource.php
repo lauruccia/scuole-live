@@ -139,16 +139,18 @@ class LeadResource extends Resource
                     ->searchable()
                     ->toggleable(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Stato')
                     ->formatStateUsing(fn (string $state) => Lead::STATUSES[$state] ?? $state)
-                    ->colors([
-                        'gray'    => 'new',
-                        'info'    => 'contacted',
-                        'warning' => 'proposal_sent',
-                        'success' => 'enrolled',
-                        'danger'  => 'lost',
-                    ]),
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'new'           => 'gray',
+                        'contacted'     => 'info',
+                        'proposal_sent' => 'warning',
+                        'enrolled'      => 'success',
+                        'lost'          => 'danger',
+                        default         => 'gray',
+                    }),
 
                 Tables\Columns\TextColumn::make('source')
                     ->label('Fonte')
@@ -214,6 +216,7 @@ class LeadResource extends Resource
     public static function getRelationManagers(): array
     {
         return [
+            RelationManagers\QuotesRelationManager::class,
             RelationManagers\ActivitiesRelationManager::class,
         ];
     }

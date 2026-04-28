@@ -32,7 +32,7 @@ class LeadKanban extends Page
     /** Lead raggruppati per stato (solo attivi + persi recenti) */
     public function getLeadsByStatus(): array
     {
-        $leads = Lead::with(['course', 'assignedTo'])
+        $leads = Lead::with(['assignedTo'])
             ->orderBy('followup_at')
             ->orderByDesc('created_at')
             ->get()
