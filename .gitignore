@@ -32,3 +32,5 @@ _server_backup/
 *.docx
 *.bat
 *.conf
+.envOLD
+.env
