@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('phone')->nullable();
 
             // Interesse
-            $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
-            $table->text('interest_notes')->nullable(); // corso libero / note interesse
+            $table->string('course_interest')->nullable(); // nome corso libero
+            $table->text('interest_notes')->nullable();
 
             // Fonte
             $table->string('source')->default('manual'); // manual, website, referral, social, google, other

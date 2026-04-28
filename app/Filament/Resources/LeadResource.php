@@ -4,7 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\LeadResource\Pages;
 use App\Filament\Resources\LeadResource\RelationManagers;
-use App\Models\Course;
 use App\Models\Lead;
 use App\Models\User;
 use Filament\Forms;
@@ -58,11 +57,11 @@ class LeadResource extends Resource
             Forms\Components\Section::make('Interesse')
                 ->columns(2)
                 ->schema([
-                    Forms\Components\Select::make('course_id')
+                    Forms\Components\TextInput::make('course_interest')
                         ->label('Corso di interesse')
-                        ->options(fn () => Course::orderBy('name')->pluck('name', 'id'))
-                        ->searchable()
-                        ->nullable(),
+                        ->maxLength(255)
+                        ->nullable()
+                        ->helperText('Inserisci il nome del corso (es. Inglese B2, Spagnolo base…)'),
 
                     Forms\Components\Select::make('source')
                         ->label('Fonte')
@@ -135,7 +134,7 @@ class LeadResource extends Resource
                     ->searchable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('course.name')
+                Tables\Columns\TextColumn::make('course_interest')
                     ->label('Corso')
                     ->searchable()
                     ->toggleable(),
@@ -186,10 +185,6 @@ class LeadResource extends Resource
                     ->label('Fonte')
                     ->options(Lead::SOURCES),
 
-                Tables\Filters\SelectFilter::make('course_id')
-                    ->label('Corso')
-                    ->options(fn () => Course::orderBy('name')->pluck('name', 'id'))
-                    ->searchable(),
 
                 Tables\Filters\SelectFilter::make('assigned_to')
                     ->label('Assegnato a')

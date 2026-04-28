@@ -16,7 +16,7 @@ class Lead extends Model
         'last_name',
         'email',
         'phone',
-        'course_id',
+        'course_interest',
         'interest_notes',
         'source',
         'status',
@@ -85,11 +85,6 @@ class Lead extends Model
     }
 
     // ─── Relazioni ───────────────────────────────────────────────────────────
-
-    public function course(): BelongsTo
-    {
-        return $this->belongsTo(Course::class);
-    }
 
     public function assignedTo(): BelongsTo
     {
