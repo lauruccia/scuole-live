@@ -26,7 +26,7 @@ class ListCourses extends ListRecords
                         ->orderBy('name')
                         ->get();
 
-                    $cols = ['#', 'Nome corso', 'Descrizione', 'N lezioni', 'Prezzo corso (euro)', 'Tassa iscrizione (euro)', 'Creato il'];
+                    $cols = ['#', 'Nome corso', 'Descrizione', 'Ore', 'Prezzo corso (euro)', 'Tassa iscrizione (euro)', 'Creato il'];
 
                     $callback = function () use ($records, $cols) {
                         $h = fopen('php://output', 'w');
@@ -37,7 +37,7 @@ class ListCourses extends ListRecords
                                 $c->id,
                                 $c->name ?? '',
                                 $c->description ?? '',
-                                $c->lessons_count ?? 0,
+                                number_format((float) ($c->hours_purchased ?? 0), 0),
                                 number_format((float) ($c->course_price ?? 0), 2, ',', '.'),
                                 number_format((float) ($c->enrollment_fee ?? 0), 2, ',', '.'),
                                 $c->created_at?->format('d/m/Y') ?? '',

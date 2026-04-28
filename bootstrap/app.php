@@ -24,6 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
         ]);
+
+        // ✅ Escludi i webhook Stripe/PayPal dalla verifica CSRF
+        $middleware->validateCsrfTokens(except: [
+            '/webhook/stripe',
+            '/webhook/paypal',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

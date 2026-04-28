@@ -564,7 +564,7 @@ $set(
 
                                 $set('course_price', (float) ($course->course_price ?? 0));
                                 $set('enrollment_fee', (float) ($course->enrollment_fee ?? 0));
-                                $set('hours_purchased', (float) ($course->lessons_count ?? 0));
+                                $set('hours_purchased', (float) ($course->hours_purchased ?? 0));
 
                                 static::recalcTotals($get, $set);
                                 static::recalcBeneficiariesAssignedHours($get, $set);

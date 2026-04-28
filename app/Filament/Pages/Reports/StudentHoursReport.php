@@ -304,7 +304,7 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
             Contract::query()
                 ->join('courses', 'courses.id', '=', 'contracts.course_id')
                 ->whereColumn('contracts.id', 'contract_students.contract_id')
-                ->selectRaw('COALESCE(courses.lessons_count, 0)')
+                ->selectRaw('COALESCE(contracts.hours_purchased, courses.hours_purchased, 0)')
                 ->limit(1),
             'purchased_lessons_calc'
         );

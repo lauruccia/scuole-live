@@ -31,4 +31,26 @@ return [
         'meet_fixed_url' => env('GOOGLE_MEET_FIXED_URL'),
     ],
 
+    // ── Stripe ────────────────────────────────────────────────────────────────
+    'stripe' => [
+        'key'             => env('STRIPE_KEY'),
+        'secret'          => env('STRIPE_SECRET'),
+        'webhook_secret'  => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
+    // ── PayPal ────────────────────────────────────────────────────────────────
+    'paypal' => [
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'secret'    => env('PAYPAL_SECRET'),
+        // produzione: https://api-m.paypal.com
+        // sandbox:    https://api-m.sandbox.paypal.com
+        'base_url'  => env('PAYPAL_BASE_URL', 'https://api-m.sandbox.paypal.com'),
+    ],
+
+    // ── Banca (bonifico) ──────────────────────────────────────────────────────
+    'bank' => [
+        'iban'        => env('BANK_IBAN', ''),
+        'intestatario' => env('BANK_INTESTATARIO', 'A&A Language Center Srl'),
+    ],
+
 ];

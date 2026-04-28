@@ -51,7 +51,7 @@ class RegenerateAllLessons extends Command
                         continue;
                     }
 
-                    $lessonsCount = (int) ($contract->course?->lessons_count ?? 0);
+                    $lessonsCount = (int) ($contract->hours_purchased ?? $contract->course?->hours_purchased ?? 0);
                     if ($lessonsCount <= 0) {
                         $bar->advance();
                         continue;

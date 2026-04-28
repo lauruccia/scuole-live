@@ -13,7 +13,7 @@ class LessonGenerator
 {
     public function appendMissing(Contract $contract): int
     {
-        $courseLessons = (int) ($contract->course?->lessons_count ?? 0);
+        $courseLessons = (int) ($contract->hours_purchased ?? $contract->course?->hours_purchased ?? 0);
         if ($courseLessons <= 0) return 0;
 
         $lock = Cache::lock("contract:{$contract->id}:generate_lessons_safe", 20);
@@ -101,7 +101,7 @@ class LessonGenerator
 
     public function regenerateFuture(Contract $contract): int
     {
-        $courseLessons = (int) ($contract->course?->lessons_count ?? 0);
+        $courseLessons = (int) ($contract->hours_purchased ?? $contract->course?->hours_purchased ?? 0);
         if ($courseLessons <= 0) return 0;
 
         $lock = Cache::lock("contract:{$contract->id}:generate_lessons_danger", 30);
