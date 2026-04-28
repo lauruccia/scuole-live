@@ -104,24 +104,46 @@ class Lesson extends Model
         return ! is_null($this->cancelled_at);
     }
 
-    public function consumptionHours(): int
+    public function consumptionHours(): float
     {
-        $mins = (int) ($this->duration_minutes ?? 60);
+        return static::computeLessonHours(
+            $this->duration_minutes,
+            $this->starts_at,
+            $this->ends_at
+        );
+    }
 
-        if ($this->starts_at && $this->ends_at) {
-            $diff = Carbon::parse($this->starts_at)
-                ->diffInMinutes(Carbon::parse($this->ends_at), false);
+    /**
+     * Metodo statico condiviso per calcolare le ore di una lezione.
+     * Usato sia da consumptionHours() che da Contract::recalcConsumedHours()
+     * per garantire un calcolo coerente ovunque.
+     *
+     * @param  int|null        $durationMinutes  Durata esplicita in minuti (fonte autoritativa)
+     * @param  mixed           $startsAt         DateTime inizio (Carbon, stringa o null)
+     * @param  mixed           $endsAt           DateTime fine (Carbon, stringa o null)
+     * @return float           Ore (arrotondate a 2 decimali, minimo 1 minuto)
+     */
+    public static function computeLessonHours($durationMinutes, $startsAt, $endsAt): float
+    {
+        // duration_minutes è la fonte autoritativa (configurata dallo slot).
+        $mins = (int) ($durationMinutes ?? 0);
+
+        // Fallback: calcola dalla differenza oraria reale solo se duration_minutes manca
+        if ($mins <= 0 && $startsAt && $endsAt) {
+            $diff = Carbon::parse($startsAt)
+                ->diffInMinutes(Carbon::parse($endsAt), false);
 
             if ($diff > 0) {
                 $mins = $diff;
             }
         }
 
+        // Fallback finale: 60 minuti se nessun dato disponibile
         if ($mins <= 0) {
             $mins = 60;
         }
 
-        return max(1, (int) ceil($mins / 60));
+        return round(max(1, $mins) / 60, 2);
     }
 
     public function recomputeFlags(?Carbon $cancelledAt = null): void
@@ -159,63 +181,34 @@ class Lesson extends Model
     }
 
     protected static function booted(): void
-{
-    static::saving(function (self $lesson) {
+    {
+        static::saving(function (self $lesson) {
+            // Default lingua lezione dal contratto, se non impostata
+            if (empty($lesson->language_id) && $lesson->contract_id) {
+                $contract = $lesson->relationLoaded('contract')
+                    ? $lesson->contract
+                    : \App\Models\Contract::query()->select('id', 'language_id')->find($lesson->contract_id);
 
-        // default lingua lezione dal contratto, se non impostata
-        if (empty($lesson->language_id) && $lesson->contract_id) {
-            $contract = $lesson->relationLoaded('contract')
-                ? $lesson->contract
-                : \App\Models\Contract::query()->select('id', 'language_id')->find($lesson->contract_id);
-
-            if ($contract && ! empty($contract->language_id)) {
-                $lesson->language_id = $contract->language_id;
-            }
-        }
-
-        // non possono coesistere completata + annullata
-        if ($lesson->completed_at && $lesson->cancelled_at) {
-            $lesson->cancelled_at = null;
-            $lesson->cancelled_by = null;
-            $lesson->cancellation_reason = null;
-        }
-
-        $lesson->recomputeFlags();
-    });
-
-    static::saved(function (self $lesson) {
-        DB::afterCommit(function () use ($lesson) {
-
-            if (! $lesson->contract_id) {
-                return;
+                if ($contract && ! empty($contract->language_id)) {
+                    $lesson->language_id = $contract->language_id;
+                }
             }
 
-            $dirtyRelevant =
-                $lesson->wasChanged('counts_as_consumed')
-                || $lesson->wasChanged('is_recoverable')
-                || $lesson->wasChanged('completed_at')
-                || $lesson->wasChanged('cancelled_at')
-                || $lesson->wasChanged('starts_at')
-                || $lesson->wasChanged('ends_at')
-                || $lesson->wasChanged('duration_minutes')
-                || $lesson->wasChanged('contract_id');
-
-            if (! $dirtyRelevant) {
-                return;
+            // Non possono coesistere completata + annullata
+            if ($lesson->completed_at && $lesson->cancelled_at) {
+                $lesson->cancelled_at    = null;
+                $lesson->cancelled_by    = null;
+                $lesson->cancellation_reason = null;
             }
 
-            \App\Models\Contract::recalcConsumedHours((int) $lesson->contract_id);
+            $lesson->recomputeFlags();
         });
-    });
 
-    static::deleted(function (self $lesson) {
-        DB::afterCommit(function () use ($lesson) {
-            if ($lesson->contract_id) {
-                \App\Models\Contract::recalcConsumedHours((int) $lesson->contract_id);
-            }
-        });
-    });
-}
+        // NOTA: il ricalcolo di Contract::recalcConsumedHours() è gestito esclusivamente
+        // da LessonObserver (con $afterCommit = true), che include anche il controllo
+        // sui campi rilevanti e l'invio delle email di cancellazione.
+        // NON duplicare la chiamata qui per evitare doppio ricalcolo.
+    }
 
 
 }

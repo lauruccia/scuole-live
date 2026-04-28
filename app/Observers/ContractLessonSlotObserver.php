@@ -31,8 +31,9 @@ class ContractLessonSlotObserver
                 return;
             }
 
-            // evita chiamate multiple ravvicinate
-            $lock = Cache::lock("contract:{$contractId}:auto_regen_lessons", 8);
+            // Lock per evitare rigenerazioni multiple ravvicinate dall'Observer.
+            // Usiamo get() invece di blockFor() per compatibilità con driver cache 'file'.
+            $lock = Cache::lock("contract:{$contractId}:auto_regen_lessons", 30);
             if (! $lock->get()) {
                 return;
             }
@@ -48,15 +49,21 @@ class ContractLessonSlotObserver
                     return;
                 }
 
-                // ✅ se non esistono lezioni per il contratto, è “prima generazione”:
-                // vogliamo partire da starts_at (anche se nel passato)
                 $hasAnyLesson = Lesson::query()
                     ->where('contract_id', $contractId)
                     ->exists();
 
-                $force = ! $hasAnyLesson;
-
-                app(LessonGeneratorService::class)->generateForContract($contract, $force);
+                if (! $hasAnyLesson) {
+                    // Prima generazione: parte da starts_at (anche nel passato)
+                    app(LessonGeneratorService::class)->generateForContract($contract, true, false);
+                } else {
+                    // Slot aggiunto/modificato/rimosso su contratto con lezioni esistenti:
+                    // cancella e rigenera tutte le lezioni future non completate,
+                    // ridistribuendo le ore rimanenti tra tutti gli slot aggiornati.
+                    // Esempio: 10h + 1 slot 60min = 10 lezioni;
+                    //          aggiunto 2° slot 60min = cancella future, rigenera 5+5 (alternando lunedì/mercoledì).
+                    app(LessonGeneratorService::class)->generateForContract($contract, false, true);
+                }
             } finally {
                 optional($lock)->release();
             }

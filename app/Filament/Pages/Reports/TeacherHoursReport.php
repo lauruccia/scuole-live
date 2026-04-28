@@ -47,7 +47,8 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
         $this->form->fill([
             'from' => now()->startOfMonth()->toDateString(),
             'to'   => now()->endOfMonth()->toDateString(),
-            'teacher_id' => null,
+            'teacher_id'    => null,
+            'academic_year' => null,
         ]);
     }
 
@@ -61,10 +62,23 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
         return $form
             ->schema([
                 Forms\Components\Section::make('Filtri')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
                         Forms\Components\DatePicker::make('from')->label('Da')->live(),
                         Forms\Components\DatePicker::make('to')->label('A')->live(),
+
+                        Forms\Components\Select::make('academic_year')
+                            ->label('Anno didattico')
+                            ->placeholder('Tutti gli anni')
+                            ->options(fn () => \App\Models\Contract::query()
+                                ->whereNotNull('academic_year')
+                                ->distinct()
+                                ->orderBy('academic_year')
+                                ->pluck('academic_year', 'academic_year')
+                                ->toArray()
+                            )
+                            ->nullable()
+                            ->live(),
 
                         Forms\Components\Select::make('teacher_id')
                             ->label('Docente')
@@ -137,15 +151,19 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
 
     protected function baseQuery(): Builder
     {
-        $from = $this->data['from'] ?? null;
-        $to   = $this->data['to'] ?? null;
-        $teacherId = $this->data['teacher_id'] ?? null;
+        $from         = $this->data['from'] ?? null;
+        $to           = $this->data['to'] ?? null;
+        $teacherId    = $this->data['teacher_id'] ?? null;
+        $academicYear = $this->data['academic_year'] ?? null;
 
         $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
         $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
 
         $teacherIds = Lesson::query()
             ->whereNotNull('teacher_id')
+            ->when($academicYear, fn ($q) => $q->whereHas(
+                'contract', fn ($cq) => $cq->where('academic_year', $academicYear)
+            ))
             ->distinct()
             ->pluck('teacher_id');
 

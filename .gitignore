@@ -22,3 +22,13 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+
+.env
+.env.*
+!.env.example
+_server_backup/
+*.bak
+*.docx
+*.bat
+*.conf

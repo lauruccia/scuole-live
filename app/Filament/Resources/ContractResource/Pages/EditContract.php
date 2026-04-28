@@ -5,7 +5,10 @@ namespace App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource;
 use App\Models\BillingProfile;
 use App\Models\Contract;
+use App\Services\ContractService;
+use App\Models\ContractLessonSlot;
 use App\Models\Installment;
+use App\Models\Student;
 use App\Services\LessonGeneratorService;
 use Carbon\Carbon;
 use Filament\Actions;
@@ -13,30 +16,45 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class EditContract extends EditRecord
 {
     protected static string $resource = ContractResource::class;
 
-    /**
-     * ✅ FIX: in edit, se PRIVATO e billing_profile_id vuoto ma billing_* compilati,
-     * crea/riusa BillingProfile e assegna billing_profile_id.
-     */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // normalizzo email
+        // Validazione Filament-layer: mostra errore in-form prima del salvataggio
+        if (! empty($data['starts_at']) && ! empty($data['ends_at'])) {
+            $start = \Carbon\Carbon::parse($data['starts_at'])->startOfDay();
+            $end   = \Carbon\Carbon::parse($data['ends_at'])->startOfDay();
+
+            if ($end->lt($start)) {
+                $this->addError('data.ends_at', 'La data di fine non può essere precedente alla data di inizio.');
+
+                Notification::make()
+                    ->title('Date non valide')
+                    ->body('La data di fine corso deve essere successiva alla data di inizio.')
+                    ->danger()
+                    ->send();
+
+                $this->halt();
+            }
+        }
+
         if (! empty($data['billing_email'])) {
             $data['billing_email'] = Str::lower(trim((string) $data['billing_email']));
         }
+
         if (! empty($data['pec'])) {
             $data['pec'] = Str::lower(trim((string) $data['pec']));
         }
+
         if (! empty($data['billing_pec'])) {
             $data['billing_pec'] = Str::lower(trim((string) $data['billing_pec']));
         }
 
-        // compat flags
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
 
@@ -45,7 +63,7 @@ class EditContract extends EditRecord
         }
 
         if (($data['billing_type'] ?? 'private') === 'private') {
-            $data = $this->attachOrCreateBillingProfileForPrivate($data);
+            $data = app(ContractService::class)->attachOrCreateBillingProfileForPrivate($data);
         }
 
         return $data;
@@ -67,11 +85,15 @@ class EditContract extends EditRecord
                         /** @var Contract $contract */
                         $contract = $this->record->fresh();
                         app(LessonGeneratorService::class)->generateForContract($contract, false);
+
                         return 1;
                     });
 
                     if ($ok) {
-                        Notification::make()->title('Lezioni generate correttamente')->success()->send();
+                        Notification::make()
+                            ->title('Lezioni generate correttamente')
+                            ->success()
+                            ->send();
                     }
                 }),
 
@@ -88,11 +110,15 @@ class EditContract extends EditRecord
                         /** @var Contract $contract */
                         $contract = $this->record->fresh();
                         app(LessonGeneratorService::class)->generateForContract($contract, true);
+
                         return 1;
                     });
 
                     if ($ok) {
-                        Notification::make()->title('Lezioni rigenerate correttamente')->success()->send();
+                        Notification::make()
+                            ->title('Lezioni rigenerate correttamente')
+                            ->success()
+                            ->send();
                     }
                 }),
 
@@ -103,19 +129,29 @@ class EditContract extends EditRecord
                 ->visible(fn (): bool => $this->canManagePayments())
                 ->requiresConfirmation()
                 ->modalHeading('Rigenera scadenze e pagamenti')
-                ->modalDescription('Ricrea: Tassa iscrizione, Acconto, e Saldo/Rate in base ai campi del contratto.')
+                ->modalDescription('Ricrea: Tassa iscrizione, Acconto e Saldo/Rate in base ai campi del contratto.')
                 ->action(function (): void {
-                    $created = $this->runLocked('regenerateInstallments', function (): int {
-                        /** @var Contract $contract */
-                        $contract = $this->record->fresh();
-                        return $this->rebuildInstallments($contract);
-                    });
+                    try {
+                        $created = $this->runLocked('regenerateInstallments', function (): int {
+                            /** @var Contract $contract */
+                            $contract = $this->record->fresh();
 
-                    Notification::make()
-                        ->title('Scadenze rigenerate')
-                        ->body("Create {$created} scadenze/pagamenti.")
-                        ->success()
-                        ->send();
+                            return $this->rebuildInstallments($contract);
+                        });
+
+                        Notification::make()
+                            ->title('Scadenze rigenerate')
+                            ->body("Create {$created} scadenze/pagamenti.")
+                            ->success()
+                            ->send();
+                    } catch (\RuntimeException $e) {
+                        Notification::make()
+                            ->title('Impossibile rigenerare le scadenze')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->persistent()
+                            ->send();
+                    }
                 }),
 
             Actions\DeleteAction::make()
@@ -125,65 +161,19 @@ class EditContract extends EditRecord
         ];
     }
 
-    private function attachOrCreateBillingProfileForPrivate(array $data): array
-    {
-        if (! empty($data['billing_profile_id'])) {
-            return $data;
-        }
-
-        $first = trim((string) ($data['billing_first_name'] ?? ''));
-        $last  = trim((string) ($data['billing_last_name'] ?? ''));
-        $email = Str::lower(trim((string) ($data['billing_email'] ?? '')));
-        $cf    = Str::upper(preg_replace('/\s+/', '', (string) ($data['billing_tax_code'] ?? '')));
-
-        if ($first === '' && $last === '' && $email === '' && $cf === '') {
-            return $data;
-        }
-
-        $q = BillingProfile::query()->where('type', 'private');
-
-        if ($cf !== '') {
-            $q->whereRaw('UPPER(COALESCE(fiscal_code,"")) = ?', [$cf]);
-        } elseif ($email !== '') {
-            $q->whereRaw('LOWER(COALESCE(email,"")) = ?', [$email]);
-        } else {
-            $q->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
-              ->whereRaw('LOWER(COALESCE(last_name,""))  = ?', [Str::lower($last)]);
-        }
-
-        $profile = $q->first();
-
-        if (! $profile) {
-            $profile = BillingProfile::create([
-                'type'       => 'private',
-                'first_name' => $first ?: null,
-                'last_name'  => $last ?: null,
-                'email'      => $email !== '' ? $email : null,
-                'phone'      => $data['billing_phone'] ?? null,
-                'fiscal_code'=> $cf !== '' ? $cf : null,
-                'vat_number' => $data['billing_vat_number'] ?? null,
-                'sdi_code'   => $data['billing_sdi'] ?? null,
-                'pec'        => $data['billing_pec'] ?? null,
-                'address'    => $data['billing_address'] ?? null,
-                'city'       => $data['billing_city'] ?? null,
-                'zip'        => $data['billing_zip'] ?? null,
-                'province'   => $data['billing_province'] ?? null,
-                'country'    => $data['billing_country'] ?? null,
-            ]);
-        }
-
-        $data['billing_profile_id'] = (int) $profile->id;
-
-        return $data;
-    }
+    // attachOrCreateBillingProfileForPrivate e resolveContractHoursTotal
+    // sono stati spostati in App\Services\ContractService (condivisi con CreateContract).
 
     private function canManageLessons(): bool
     {
         $u = Auth::user();
 
         return (bool) ($u?->hasAnyRole([
-            'superadmin', 'amministrazione', 'segreteria',
-            'Amministrazione', 'Segreteria',
+            'superadmin',
+            'amministrazione',
+            'segreteria',
+            'Amministrazione',
+            'Segreteria',
         ]) ?? false);
     }
 
@@ -194,7 +184,22 @@ class EditContract extends EditRecord
 
     private function rebuildInstallments(Contract $contract): int
     {
-        Installment::where('contract_id', $contract->id)->delete();
+        // Blocca la rigenerazione se esistono rate già pagate:
+        // eliminarle comporterebbe perdita irrecuperabile di dati finanziari.
+        $paidCount = Installment::where('contract_id', $contract->id)
+            ->whereNotNull('paid_at')
+            ->count();
+
+        if ($paidCount > 0) {
+            throw new \RuntimeException(
+                "Impossibile rigenerare le scadenze: {$paidCount} rata/e risultano già pagate. " .
+                "Elimina manualmente le rate pagate prima di rigenerare."
+            );
+        }
+
+        // ForceDelete permanente (bypassa SoftDeletes) per le rate non pagate,
+        // così non si accumulano record soft-deleted inutili.
+        Installment::where('contract_id', $contract->id)->forceDelete();
 
         $coursePrice   = (float) $contract->course_price;
         $enrollmentFee = (float) $contract->enrollment_fee;
@@ -245,34 +250,20 @@ class EditContract extends EditRecord
                 : $baseDate->copy()->addDays(15);
 
             $base = floor(($residual / $count) * 100) / 100;
-            $sum  = 0.0;
+            // La differenza va sulla PRIMA rata per evitare edge case con diff negativo
+            $firstAmount = round($residual - ($base * ($count - 1)), 2);
 
             for ($i = 1; $i <= $count; $i++) {
-                $sum += $base;
-
                 Installment::create([
                     'contract_id' => $contract->id,
                     'number'      => $i,
                     'is_deposit'  => false,
                     'due_date'    => $first->copy()->addMonths($i - 1)->toDateString(),
-                    'amount'      => $base,
+                    'amount'      => ($i === 1) ? $firstAmount : $base,
                     'status'      => 'unpaid',
                 ]);
 
                 $created++;
-            }
-
-            $diff = round($residual - $sum, 2);
-            if ($diff !== 0.0) {
-                $last = Installment::query()
-                    ->where('contract_id', $contract->id)
-                    ->where('number', $count)
-                    ->first();
-
-                if ($last) {
-                    $last->amount = round(((float) $last->amount + $diff), 2);
-                    $last->save();
-                }
             }
 
             return $created;
@@ -317,8 +308,8 @@ class EditContract extends EditRecord
             report($e);
 
             Notification::make()
-                ->title('Errore durante l’operazione')
-                ->body('Operazione non completata. Riprova tra qualche secondo o contatta la segreteria.')
+                ->title("Errore durante l’operazione")
+                ->body('Operazione non completata: ' . $e->getMessage() . ' - Riprova o contatta la segreteria.')
                 ->danger()
                 ->send();
 
@@ -327,4 +318,134 @@ class EditContract extends EditRecord
             $lock->release();
         }
     }
+
+    protected function afterSave(): void
+    {
+        /** @var Contract $contract */
+        $contract = $this->record->fresh();
+        $contract->load(['beneficiaries', 'course']);
+
+        $beneficiaries = $contract->beneficiaries;
+        $beneficiariesCount = max(1, $beneficiaries->count());
+        $contractHoursTotal = app(ContractService::class)->resolveContractHoursTotal($contract);
+
+        foreach ($beneficiaries as $beneficiary) {
+            $student = null;
+
+            if ($beneficiary->student_id) {
+                $student = Student::find($beneficiary->student_id);
+            }
+
+            $email = Str::lower(trim((string) ($beneficiary->beneficiary_email ?? '')));
+            $phone = preg_replace('/\s+/', '', (string) ($beneficiary->beneficiary_phone ?? ''));
+            $first = trim((string) ($beneficiary->beneficiary_first_name ?? ''));
+            $last  = trim((string) ($beneficiary->beneficiary_last_name ?? ''));
+
+            if (! $student && $email !== '') {
+                $student = Student::query()
+                    ->whereRaw('LOWER(email) = ?', [$email])
+                    ->first();
+            }
+
+            if (! $student && $phone !== '') {
+                $student = Student::query()
+                    ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
+                    ->first();
+            }
+
+            if (! $student && $first !== '' && $last !== '') {
+                $student = Student::query()
+                    ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
+                    ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)])
+                    ->first();
+            }
+
+            if (! $student) {
+                if ($first === '' && $last === '') {
+                    continue;
+                }
+
+                $student = new Student();
+            }
+
+            $fill = [];
+
+            if (Schema::hasColumn('students', 'first_name') && $first !== '') {
+                $fill['first_name'] = $first;
+            }
+
+            if (Schema::hasColumn('students', 'last_name') && $last !== '') {
+                $fill['last_name'] = $last;
+            }
+
+            if (Schema::hasColumn('students', 'email') && $email !== '') {
+                $fill['email'] = $email;
+            }
+
+            if (Schema::hasColumn('students', 'phone') && $phone !== '') {
+                $fill['phone'] = $phone;
+            }
+
+            if (Schema::hasColumn('students', 'birth_date') && ! empty($beneficiary->beneficiary_birth_date)) {
+                $fill['birth_date'] = $beneficiary->beneficiary_birth_date;
+            }
+
+            if (Schema::hasColumn('students', 'birth_place') && ! empty($beneficiary->beneficiary_birth_place)) {
+                $fill['birth_place'] = $beneficiary->beneficiary_birth_place;
+            }
+
+            $student->fill($fill);
+            $student->save();
+
+            if ((int) ($beneficiary->student_id ?? 0) !== (int) $student->id) {
+                $beneficiary->student_id = $student->id;
+            }
+
+            $assignedHours = (float) ($beneficiary->assigned_hours ?? 0);
+
+            if ($assignedHours <= 0 && $contractHoursTotal > 0) {
+                $assignedHours = $beneficiariesCount === 1
+                    ? $contractHoursTotal
+                    : round($contractHoursTotal / $beneficiariesCount, 2);
+
+                $beneficiary->assigned_hours = $assignedHours;
+            }
+
+            $beneficiary->save();
+
+            if ($beneficiary->student_id && $beneficiary->weekly_day && $beneficiary->weekly_time) {
+                ContractLessonSlot::updateOrCreate(
+                    [
+                        'contract_id' => $contract->id,
+                        'student_id'  => (int) $beneficiary->student_id,
+                        'weekly_day'  => (int) $beneficiary->weekly_day,
+                        'weekly_time' => $beneficiary->weekly_time,
+                    ],
+                        [
+                            'teacher_id'       => $beneficiary->teacher_id,
+                            'duration_minutes' => max(1, (int) ($beneficiary->duration_minutes ?? 60)),
+                            'is_active'        => true,
+                        'starts_at'        => $contract->starts_at
+                            ? Carbon::parse($contract->starts_at)->toDateString()
+                            : null,
+                        'ends_at'          => null,
+                        'meet_url'         => $beneficiary->meet_url,
+                    ]
+                );
+            }
+        }
+
+        try {
+            app(LessonGeneratorService::class)->generateForContract($contract->fresh(), true);
+        } catch (\Throwable $e) {
+            report($e);
+
+            Notification::make()
+                ->title('Contratto salvato, ma lezioni non rigenerate')
+                ->body('Controlla assigned_hours, starts_at e gli slot attivi del contratto.')
+                ->warning()
+                ->send();
+        }
+    }
+
 }

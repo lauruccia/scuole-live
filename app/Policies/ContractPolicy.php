@@ -15,7 +15,7 @@ class ContractPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_contract');
+        return $user->can('view_any_contract') || $user->students()->exists();
     }
 
     /**
@@ -23,7 +23,22 @@ class ContractPolicy
      */
     public function view(User $user, Contract $contract): bool
     {
-        return $user->can('view_contract');
+        // Staff / admin con permesso esplicito
+        if ($user->can('view_contract')) {
+            return true;
+        }
+
+        // Utente studente/genitore collegato a uno o più studenti:
+        // può vedere solo i contratti dei propri studenti
+        $studentIds = $user->students()->pluck('students.id');
+
+        if ($studentIds->isNotEmpty()) {
+            return $contract->students()
+                ->whereIn('students.id', $studentIds)
+                ->exists();
+        }
+
+        return false;
     }
 
     /**

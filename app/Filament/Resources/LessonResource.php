@@ -51,6 +51,11 @@ protected static function isTeacherPanel(): bool
     return is_string($id) && strcasecmp($id, 'Docente') === 0; // ✅ Docente/docente
 }
 
+protected static function isTableFilterActive(array $data): bool
+{
+    return filter_var($data['isActive'] ?? false, FILTER_VALIDATE_BOOLEAN);
+}
+
 
 
 
@@ -483,20 +488,41 @@ Select::make('language_id')
 
             ])
             ->filters([
+                SelectFilter::make('academic_year')
+                    ->label('Anno didattico')
+                    ->options(fn () => \App\Models\Contract::query()
+                        ->whereNotNull('academic_year')
+                        ->distinct()
+                        ->orderBy('academic_year')
+                        ->pluck('academic_year', 'academic_year')
+                        ->toArray()
+                    )
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $q, $year) => $q->whereHas('contract', fn (Builder $cq) => $cq->where('academic_year', $year))
+                    )),
+
 Filter::make('upcoming')
     ->label('Da oggi')
-    ->default() // ✅ attivo di default
-    ->query(fn (Builder $query): Builder =>
-        $query->where('lessons.starts_at', '>=', Carbon::today()->startOfDay())
-    ),
+    ->default()
+    ->query(function (Builder $query, array $data): Builder {
+        if (! static::isTableFilterActive($data)) return $query;
+        return $query->where('lessons.starts_at', '>=', Carbon::today()->startOfDay());
+    }),
 
-    Filter::make('missing_notes')
+Filter::make('missing_notes')
     ->label('Senza note')
-    ->query(fn (Builder $q) => $q->whereNull('notes')->orWhere('notes', '')),
+    ->query(function (Builder $q, array $data): Builder {
+        if (! static::isTableFilterActive($data)) return $q;
+        return $q->whereRaw("(lessons.notes IS NULL OR lessons.notes = '')");
+    }),
 
 Filter::make('missing_homework')
     ->label('Senza compiti')
-    ->query(fn (Builder $q) => $q->whereNull('homework')->orWhere('homework', '')),
+    ->query(function (Builder $q, array $data): Builder {
+        if (! static::isTableFilterActive($data)) return $q;
+        return $q->whereRaw("(lessons.homework IS NULL OR lessons.homework = '')");
+    }),
 
                 Filter::make('date_range')
                     ->label('Date')
@@ -528,14 +554,71 @@ Filter::make('missing_homework')
                         if (! $value) return $query;
 
                         return match ($value) {
-                            'recuperata' => $query->whereNotNull('recovery_of_lesson_id'),
-                            'annullata' => $query->whereNull('recovery_of_lesson_id')->whereNotNull('cancelled_at')->where('is_recoverable', false),
-                            'annullata_recover' => $query->whereNull('recovery_of_lesson_id')->whereNotNull('cancelled_at')->where('is_recoverable', true),
-                            'completata' => $query->whereNull('cancelled_at')->whereNull('recovery_of_lesson_id')->where('counts_as_consumed', true),
-                            'programmata' => $query->whereNull('cancelled_at')->whereNull('recovery_of_lesson_id')->where('counts_as_consumed', false),
+                            'recuperata' => $query->whereNotNull('lessons.recovery_of_lesson_id'),
+                            'annullata' => $query->whereNull('lessons.recovery_of_lesson_id')->whereNotNull('lessons.cancelled_at')->where('lessons.is_recoverable', false),
+                            'annullata_recover' => $query->whereNull('lessons.recovery_of_lesson_id')->whereNotNull('lessons.cancelled_at')->where('lessons.is_recoverable', true),
+                            'completata' => $query->whereNull('lessons.cancelled_at')->whereNull('lessons.recovery_of_lesson_id')->where('lessons.counts_as_consumed', true),
+                            'programmata' => $query->whereNull('lessons.cancelled_at')->whereNull('lessons.recovery_of_lesson_id')->where('lessons.counts_as_consumed', false),
                             default => $query,
                         };
                     }),
+
+                SelectFilter::make('anomaly')
+                    ->label('Anomalia')
+                    ->options([
+                        'no_duration' => 'Senza durata esplicita',
+                        'long_duration' => 'Durata superiore a 2 ore',
+                        'no_recovery_planned' => 'Da recuperare senza recupero pianificato',
+                        'future_completed' => 'Future già completate',
+                        'past_unmanaged' => 'Passate non gestite',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if (! filled($value)) {
+                            return $query;
+                        }
+
+                        return match ($value) {
+                            'no_duration' => $query
+                                ->whereNull('lessons.cancelled_at')
+                                ->whereRaw('(lessons.duration_minutes IS NULL OR lessons.duration_minutes <= 0)')
+                                ->whereNull('lessons.ends_at'),
+
+                            'long_duration' => $query
+                                ->whereNull('lessons.cancelled_at')
+                                ->whereRaw('(
+                                    lessons.duration_minutes > 120
+                                    OR (
+                                        lessons.ends_at IS NOT NULL
+                                        AND lessons.starts_at IS NOT NULL
+                                        AND TIMESTAMPDIFF(MINUTE, lessons.starts_at, lessons.ends_at) > 120
+                                    )
+                                )'),
+
+                            'no_recovery_planned' => $query
+                                ->where('lessons.is_recoverable', true)
+                                ->whereNotNull('lessons.cancelled_at')
+                                ->whereNull('lessons.recovery_of_lesson_id')
+                                ->whereNotExists(function ($sub) {
+                                    $sub->select(\Illuminate\Support\Facades\DB::raw(1))
+                                        ->from('lessons as r')
+                                        ->whereColumn('r.recovery_of_lesson_id', 'lessons.id');
+                                }),
+
+                            'future_completed' => $query
+                                ->whereNotNull('lessons.completed_at')
+                                ->where('lessons.starts_at', '>', now()),
+
+                            'past_unmanaged' => $query
+                                ->whereNull('lessons.completed_at')
+                                ->whereNull('lessons.cancelled_at')
+                                ->where('lessons.starts_at', '<', now()->subHours(2))
+                                ->whereNull('lessons.recovery_of_lesson_id'),
+
+                            default => $query,
+                        };
+                    }),
+
             ])
                     ->paginated([25, 50])
         ->defaultPaginationPageOption(25)
@@ -737,12 +820,50 @@ Filter::make('missing_homework')
         ->send();
 }),
 
+        Action::make('create_recovery')
+            ->label('Crea recupero')
+            ->icon('heroicon-o-arrow-path-rounded-square')
+            ->color('info')
+            ->requiresConfirmation()
+            ->modalHeading('Crea lezione di recupero')
+            ->modalDescription('Verrà creata automaticamente una lezione di recupero dalla settimana successiva, nello stesso giorno e orario, spostandola alla prima settimana libera se necessario.')
+            ->visible(function (Lesson $record) use ($isTeacher): bool {
+                if ($isTeacher) return false;
+                if (! $record->cancelled_at) return false;
+                if (! $record->is_recoverable) return false;
+                if ($record->recovery_of_lesson_id) return false;
+
+                return ! $record->recoveryLesson()->exists();
+            })
+            ->action(function (Lesson $record): void {
+                try {
+                    $recovery = app(LessonRecoveryService::class)
+                        ->cancelAndCreateAutoRecovery(
+                            $record,
+                            Carbon::parse($record->cancelled_at),
+                            (string) ($record->cancellation_reason ?? '')
+                        );
+
+                    Notification::make()
+                        ->title('Recupero creato')
+                        ->body('Recupero: ' . $recovery->starts_at->format('d/m/Y H:i'))
+                        ->success()
+                        ->send();
+                } catch (\Throwable $e) {
+                    Notification::make()
+                        ->title('Recupero non creato')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+                }
+            }),
+
         Action::make('open_recovery')
             ->label('Apri recupero')
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->color('info')
-            ->visible(fn (Lesson $record) => ! $isTeacher && ! empty($record->recovery_lesson_id))
-            ->url(fn (Lesson $record) => static::getUrl('edit', ['record' => $record->recoveryLesson->id]))
+            ->visible(fn (Lesson $record) => ! $isTeacher && $record->recoveryLesson()->exists())
+            ->url(fn (Lesson $record) => static::getUrl('edit', ['record' => $record->recoveryLesson()->first()?->id]))
             ->openUrlInNewTab(),
 
     ])

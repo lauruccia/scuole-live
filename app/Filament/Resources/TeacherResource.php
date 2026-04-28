@@ -31,11 +31,66 @@ class TeacherResource extends Resource
 
     /**
      * Un docente NON deve vedere la gestione docenti.
+     * Superadmin e Amministrazione sì.
      */
     public static function shouldRegisterNavigation(): bool
     {
         $u = auth()->user();
-        return ! $u || ! $u->hasRole('Docente');
+
+        if (! $u) {
+            return false;
+        }
+
+        return $u->isSuperAdmin()
+            || $u->hasRole('Amministrazione');
+    }
+
+    /**
+     * Autorizzazioni risorsa:
+     * - superadmin: tutto
+     * - amministrazione: visualizza, crea, modifica
+     * - no eliminazione
+     */
+    public static function canViewAny(): bool
+    {
+        $u = auth()->user();
+
+        return $u
+            && ($u->isSuperAdmin() || $u->hasRole('Amministrazione'));
+    }
+
+    public static function canView($record): bool
+    {
+        $u = auth()->user();
+
+        return $u
+            && ($u->isSuperAdmin() || $u->hasRole('Amministrazione'));
+    }
+
+    public static function canCreate(): bool
+    {
+        $u = auth()->user();
+
+        return $u
+            && ($u->isSuperAdmin() || $u->hasRole('Amministrazione'));
+    }
+
+    public static function canEdit($record): bool
+    {
+        $u = auth()->user();
+
+        return $u
+            && ($u->isSuperAdmin() || $u->hasRole('Amministrazione'));
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return false;
     }
 
     /**
@@ -359,10 +414,53 @@ class TeacherResource extends Resource
                         'altro' => 'Altro',
                     ])
                     ->searchable(),
+
+                SelectFilter::make('anomaly')
+                    ->label('Anomalia')
+                    ->options([
+                        'no_rate' => 'Senza tariffa oraria',
+                        'no_billing' => 'Senza modalità fatturazione',
+                        'no_contract_type' => 'Senza tipo contratto',
+                        'no_tax_code' => 'Senza codice fiscale',
+                        'no_iban' => 'Senza IBAN',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if (! filled($value)) {
+                            return $query;
+                        }
+
+                        return match ($value) {
+                            'no_rate' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('teacher_hourly_rate_gross')
+                                ->orWhere('teacher_hourly_rate_gross', '<=', 0)
+                            ),
+                            'no_billing' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('teacher_billing_mode')
+                                ->orWhere('teacher_billing_mode', '')
+                            ),
+                            'no_contract_type' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('teacher_contract_type')
+                                ->orWhere('teacher_contract_type', '')
+                            ),
+                            'no_tax_code' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('tax_code')
+                                ->orWhere('tax_code', '')
+                            ),
+                            'no_iban' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('iban')
+                                ->orWhere('iban', '')
+                            ),
+                            default => $query,
+                        };
+                    }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()->label('Modifica'),
-            ]);
+                Tables\Actions\EditAction::make()
+                    ->label('Modifica')
+                    ->visible(fn () => auth()->user()?->isSuperAdmin() || auth()->user()?->hasRole('Amministrazione')),
+            ])
+            ->bulkActions([]);
     }
 
     public static function getPages(): array

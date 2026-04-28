@@ -28,4 +28,16 @@ class Installment extends Model
     {
         return $this->belongsTo(Contract::class);
     }
+
+    protected static function booted(): void
+    {
+        // Impedisce la cancellazione di rate già pagate.
+        static::deleting(function (self $installment) {
+            if (! empty($installment->paid_at)) {
+                throw new \RuntimeException(
+                    "Impossibile eliminare la rata #{$installment->number} del contratto {$installment->contract_id}: è già stata pagata il {$installment->paid_at}."
+                );
+            }
+        });
+    }
 }

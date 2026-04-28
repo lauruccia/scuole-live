@@ -5,12 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\Contract;
 use App\Models\Lesson;
+use App\Models\User;
 
 class Student extends Model
 {
     protected $fillable = [
+        'user_id',
+
         'first_name',
         'last_name',
         'email',
@@ -48,9 +52,10 @@ class Student extends Model
 
     protected $appends = [
         'full_name',
-        'from_contract',
-        'contracts_count',
-        'hours_purchased_total',
+        // from_contract, contracts_count, hours_purchased_total rimossi da appends:
+        // eseguivano 3 query aggiuntive per ogni studente caricato in lista (N+1).
+        // Restano disponibili come attributi calcolati (es. $student->contracts_count)
+        // ma non vengono più eseguiti automaticamente ad ogni load.
     ];
 
     public function getFullNameAttribute(): string
@@ -72,21 +77,38 @@ class Student extends Model
 
     public function getFromContractAttribute(): bool
     {
+        if ($this->relationLoaded('contracts')) {
+            return $this->contracts->isNotEmpty();
+        }
+
         return $this->contracts()->exists();
     }
 
     public function getContractsCountAttribute(): int
     {
+        if ($this->relationLoaded('contracts')) {
+            return $this->contracts->unique('id')->count();
+        }
+
         return (int) $this->contracts()->distinct('contracts.id')->count('contracts.id');
     }
 
     public function getHoursPurchasedTotalAttribute(): float
     {
+        if ($this->relationLoaded('contracts')) {
+            return (float) $this->contracts->sum('hours_purchased');
+        }
+
         return (float) $this->contracts()->sum('hours_purchased');
     }
 
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

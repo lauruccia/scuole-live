@@ -165,6 +165,21 @@ class InstallmentResource extends Resource
             ])
 
             ->filters([
+                // Filtro anno didattico
+                SelectFilter::make('academic_year')
+                    ->label('Anno didattico')
+                    ->options(fn () => \App\Models\Contract::query()
+                        ->whereNotNull('academic_year')
+                        ->distinct()
+                        ->orderBy('academic_year')
+                        ->pluck('academic_year', 'academic_year')
+                        ->toArray()
+                    )
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $q, $year) => $q->whereHas('contract', fn (Builder $cq) => $cq->where('academic_year', $year))
+                    )),
+
                 // dropdown "Stato" come nel tuo screenshot
                 SelectFilter::make('status')
                     ->label('Stato')
@@ -184,8 +199,8 @@ class InstallmentResource extends Resource
                             $qq->where('status', 'paid')->orWhereNotNull('paid_at');
                         });
 
-                        $unpaidQuery = fn (Builder $q) => $q->where(function (Builder $qq) {
-                            $qq->whereNull('paid_at')->where('status', '!=', 'paid');
+                        $unpaidQuery = fn (Builder $q) => $q->whereNull('paid_at')->where(function (Builder $qq) {
+                            $qq->where('status', '!=', 'paid')->orWhereNull('status');
                         });
 
                         return match ($value) {
@@ -202,6 +217,28 @@ class InstallmentResource extends Resource
                             'due_7' => $query->tap($unpaidQuery)
                                 ->whereBetween('due_date', [now()->toDateString(), now()->copy()->addDays(7)->toDateString()]),
 
+                            default => $query,
+                        };
+                    }),
+
+                SelectFilter::make('anomaly')
+                    ->label('Anomalia')
+                    ->options([
+                        'no_amount' => 'Senza importo impostato',
+                        'no_due_date' => 'Senza data di scadenza',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if (! filled($value)) {
+                            return $query;
+                        }
+
+                        return match ($value) {
+                            'no_amount' => $query->where(fn (Builder $q) => $q
+                                ->whereNull('amount')
+                                ->orWhere('amount', '<=', 0)
+                            ),
+                            'no_due_date' => $query->whereNull('due_date'),
                             default => $query,
                         };
                     }),

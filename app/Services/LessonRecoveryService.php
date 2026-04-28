@@ -9,78 +9,73 @@ use Illuminate\Support\Facades\DB;
 
 class LessonRecoveryService
 {
-    /**
-     * Annulla la lezione (già annullata in Resource) e crea la lezione di recupero.
-     *
-     * Regola:
-     * - la nuova lezione deve essere in coda: settimana successiva all'ultima lezione schedulata
-     * - stesso giorno della settimana e stessa ora della lezione originale
-     * - se cade in giorno di chiusura -> sposta di +1 settimana (ripeti finché libero)
-     * - evita doppio recupero
-     */
     public function cancelAndCreateAutoRecovery(Lesson $lesson, Carbon $cancelledAt, string $reason = ''): Lesson
     {
         $lesson->refresh();
 
         if (! $lesson->is_recoverable) {
-            throw new \RuntimeException('Lezione non recuperabile (entro 24h).');
+            throw new \RuntimeException('Lezione non recuperabile.');
         }
 
-        // Evita doppio recupero
         if ($lesson->recoveryLesson()->exists()) {
             throw new \RuntimeException('Recupero già creato per questa lezione.');
         }
 
         if (! $lesson->starts_at || ! $lesson->ends_at) {
-            throw new \RuntimeException('Lezione originale senza date (starts_at/ends_at).');
+            throw new \RuntimeException('Lezione originale senza date.');
         }
 
         $originalStarts = Carbon::parse($lesson->starts_at);
-        $originalEnds   = Carbon::parse($lesson->ends_at);
+        $originalEnds = Carbon::parse($lesson->ends_at);
 
-        $durationMinutes = max(1, $originalStarts->diffInMinutes($originalEnds, false));
+        $durationMinutes = $originalStarts->diffInMinutes($originalEnds, false);
+
         if ($durationMinutes <= 0) {
             $durationMinutes = (int) ($lesson->duration_minutes ?: 60);
         }
 
-        // Calcola candidata in coda:
-        // "settimana successiva all'ultima lezione schedulata" ma mantenendo stesso DOW e ora dell'originale
-        $candidate = $this->computeCandidateAfterLastScheduled($lesson, $originalStarts);
+        /**
+         * REGOLA:
+         * Il recupero parte SEMPRE dalla settimana successiva
+         * rispetto alla lezione annullata, stesso giorno e stessa ora.
+         */
+        $candidate = $originalStarts->copy()->addWeek();
 
-        // Se giorno di chiusura: sposta di +1 settimana finché libero
-        [$candidate, $movedReason] = $this->moveForwardByWeeksIfClosed($candidate, $originalStarts);
+        [$candidate, $movedReason] = $this->findFirstAvailableRecoverySlot(
+            lesson: $lesson,
+            candidate: $candidate,
+            originalStarts: $originalStarts,
+        );
 
         return DB::transaction(function () use ($lesson, $candidate, $durationMinutes, $movedReason) {
-
             $recovery = Lesson::create([
-                'contract_id'            => $lesson->contract_id,
-                'contract_student_id'    => $lesson->contract_student_id,
-                'student_id'             => $lesson->student_id,
-                'teacher_id'             => $lesson->teacher_id,
+                'contract_id' => $lesson->contract_id,
+                'contract_student_id' => $lesson->contract_student_id,
+                'student_id' => $lesson->student_id,
+                'teacher_id' => $lesson->teacher_id,
+                'language_id' => $lesson->language_id,
 
-                'starts_at'              => $candidate,
-                'ends_at'                => $candidate->copy()->addMinutes($durationMinutes),
-                'duration_minutes'       => $durationMinutes,
+                'starts_at' => $candidate,
+                'ends_at' => $candidate->copy()->addMinutes($durationMinutes),
+                'duration_minutes' => $durationMinutes,
 
-                // stato lezione recupero (è programmata, non annullata)
-                'cancelled_at'           => null,
-                'cancelled_by'           => null,
-                'cancellation_reason'    => null,
-                'is_recoverable'         => false,
-                'counts_as_consumed'     => false,
+                'cancelled_at' => null,
+                'cancelled_by' => null,
+                'cancellation_reason' => null,
+                'is_recoverable' => false,
+                'counts_as_consumed' => false,
 
-                // riferimenti
-                'recovery_of_lesson_id'  => $lesson->id,
-                'is_auto_recovery'       => true,
+                'recovery_of_lesson_id' => $lesson->id,
+                'is_auto_recovery' => true,
 
-                // copia eventuali dati utili
-                'meet_url'               => $lesson->meet_url,
-                'google_calendar_id'     => $lesson->google_calendar_id,
-                'google_event_id'        => null, // nuovo evento
-                'notes'                  => null,
+                'meet_url' => $lesson->meet_url,
+                'google_calendar_id' => null,
+                'google_event_id' => null,
+
+                'notes' => $movedReason,
+                'homework' => null,
             ]);
 
-            // Info UX da mostrare nella notifica
             if ($movedReason) {
                 $recovery->setAttribute('_moved_reason', $movedReason);
             }
@@ -89,87 +84,84 @@ class LessonRecoveryService
         });
     }
 
-    /**
-     * Candidata:
-     * - prende l'ultima lezione schedulata (non annullata) per lo stesso contratto/studente
-     * - piazza il recupero al "prossimo" stesso DOW+ora della lezione originale, ma comunque DOPO l'ultima.
-     */
-    private function computeCandidateAfterLastScheduled(Lesson $lesson, Carbon $originalStarts): Carbon
-{
-    $dow  = (int) $originalStarts->dayOfWeek;          // 0..6
-    $time = $originalStarts->format('H:i:s');          // mantieni anche i secondi se vuoi
+    private function findFirstAvailableRecoverySlot(Lesson $lesson, Carbon $candidate, Carbon $originalStarts): array
+    {
+        $originalCandidate = $candidate->copy();
+        $time = $originalStarts->format('H:i:s');
 
-    $lastStarts = Lesson::query()
-        ->where('contract_student_id', $lesson->contract_student_id)
-        ->whereNull('cancelled_at')
-        ->whereNotNull('starts_at')
-        ->max('starts_at');
+        $moves = 0;
+        $reasons = [];
 
-    $base = $lastStarts ? Carbon::parse($lastStarts) : $originalStarts->copy();
+        for ($i = 0; $i < 104; $i++) {
+            $candidate = $this->applyTime($candidate, $time);
 
-    // prendo il "prossimo" giorno della settimana dopo l'ultima lezione
-    $candidate = $base->copy()->next($dow);
+            $closure = $this->getClosureForDay($candidate);
+            $busyLesson = $this->getBusyLessonForSlot($lesson, $candidate);
 
-    // ✅ FORZA SEMPRE l’ora dell’originale
-    $candidate->setTimeFromTimeString($time);
+            if (! $closure && ! $busyLesson) {
+                if ($moves === 0) {
+                    return [$candidate, null];
+                }
 
-    // sicurezza
-    if ($candidate->lte($base)) {
-        $candidate = $candidate->copy()->addWeek();
-        $candidate->setTimeFromTimeString($time);
-    }
+                $msg = 'Recupero creato automaticamente nella prima settimana libera disponibile. '
+                    . 'La prima data proposta era '
+                    . $originalCandidate->format('d/m/Y H:i')
+                    . ', ma non era disponibile. '
+                    . 'Nuova data: '
+                    . $candidate->format('d/m/Y H:i')
+                    . '. Spostamento totale: +'
+                    . $moves
+                    . ' settimana/e.';
 
-    return $candidate;
-}
+                if (! empty($reasons)) {
+                    $msg .= ' Motivi degli spostamenti: ' . implode(' | ', $reasons);
+                }
 
-    /**
-     * Se la candidata cade in un periodo di chiusura:
-     * - sposta di +1 settimana (stesso giorno/ora) finché non è libero
-     * - MAX 52 tentativi
-     *
-     * end_date può essere NULL: vale start_date.
-     */
-    private function moveForwardByWeeksIfClosed(Carbon $candidate, Carbon $originalStarts): array
-{
-    $original = $candidate->copy();
-    $moves = 0;
-    $firstReason = null;
-
-    $time = $originalStarts->format('H:i:s');
-
-    for ($i = 0; $i < 52; $i++) {
-        // ✅ forza l’ora anche prima del check
-        $candidate->setTimeFromTimeString($time);
-
-        $closure = $this->getClosureForDay($candidate);
-
-        if (! $closure) {
-            if ($moves === 0) {
-                return [$candidate, null];
+                return [$candidate, $msg];
             }
 
-            $msg = 'Data recupero cadeva in un giorno di chiusura'
-                . ($firstReason ? " ({$firstReason})" : '')
-                . ". Spostata di +{$moves} settimana/e: "
-                . $original->format('d/m/Y') . ' → ' . $candidate->format('d/m/Y')
-                . ' alle ' . $candidate->format('H:i') . '.';
+            $reasonParts = [];
 
-            return [$candidate, $msg];
+            if ($closure) {
+                $reasonParts[] = 'giorno di chiusura'
+                    . (($closure->reason ?? null) ? ' - ' . $closure->reason : '');
+            }
+
+            if ($busyLesson) {
+                $reasonParts[] = 'slot già occupato dalla lezione ID '
+                    . $busyLesson->id
+                    . ' del '
+                    . Carbon::parse($busyLesson->starts_at)->format('d/m/Y H:i');
+            }
+
+            $reasons[] = $candidate->format('d/m/Y H:i') . ': ' . implode(', ', $reasonParts);
+
+            $candidate->addWeek();
+            $moves++;
         }
 
-        if (! $firstReason) {
-            $firstReason = $closure->reason ?? 'Chiusura';
-        }
-
-        // ✅ regola cliente: +1 settimana, ma mantieni ora
-        $candidate->addWeek();
-        $candidate->setTimeFromTimeString($time);
-
-        $moves++;
+        throw new \RuntimeException('Impossibile creare il recupero: nessuno slot libero trovato nelle prossime 104 settimane.');
     }
 
-    return [$candidate, 'Recupero spostato automaticamente di molte settimane per giorni di chiusura.'];
-}
+    private function getBusyLessonForSlot(Lesson $lesson, Carbon $candidate): ?Lesson
+    {
+        return Lesson::query()
+            ->where('id', '!=', $lesson->id)
+            ->where('contract_student_id', $lesson->contract_student_id)
+            ->where('starts_at', $candidate->format('Y-m-d H:i:s'))
+            ->first();
+    }
+
+    private function applyTime(Carbon $dt, string $time): Carbon
+    {
+        try {
+            $dt->setTimeFromTimeString($time);
+        } catch (\Throwable) {
+            //
+        }
+
+        return $dt;
+    }
 
     private function getClosureForDay(Carbon $dateTime): ?ClosureDay
     {

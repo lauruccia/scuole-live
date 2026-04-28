@@ -6,9 +6,9 @@ use App\Models\ContractStudent;
 use App\Models\Student;
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -67,6 +67,28 @@ class LessonSlotsRelationManager extends RelationManager
             ->toArray();
     }
 
+    protected function normalizeDurationMinutes(mixed $value): int
+    {
+        $duration = (int) $value;
+
+        if (! in_array($duration, [30, 60, 90, 120], true)) {
+            $duration = 60;
+        }
+
+        return $duration;
+    }
+
+    protected function formatDurationLabel(int $minutes): string
+    {
+        return match ($minutes) {
+            30  => '30 min',
+            60  => '1 ora',
+            90  => '1 ora e 30 min',
+            120 => '2 ore',
+            default => $minutes . ' min',
+        };
+    }
+
     public function form(Form $form): Form
     {
         return $form->schema([
@@ -77,6 +99,7 @@ class LessonSlotsRelationManager extends RelationManager
                     }
 
                     $contract = $this->getOwnerRecord();
+
                     return $contract?->starts_at ? (string) $contract->starts_at : null;
                 })
                 ->dehydrated(true)
@@ -90,6 +113,7 @@ class LessonSlotsRelationManager extends RelationManager
 
                     if (count($ids) === 1) {
                         $s = Student::find((int) $ids[0]);
+
                         return $s?->full_name
                             ?? trim(($s?->last_name ?? '') . ' ' . ($s?->first_name ?? ''))
                             ?? ('Studente #' . $ids[0]);
@@ -100,6 +124,7 @@ class LessonSlotsRelationManager extends RelationManager
                 ->visible(function (?Model $record) {
                     $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
                     $ids = $this->getContractStudentIds($currentStudentId);
+
                     return count($ids) === 1;
                 })
                 ->dehydrated(false),
@@ -111,12 +136,14 @@ class LessonSlotsRelationManager extends RelationManager
                     }
 
                     $ids = $this->getContractStudentIds();
+
                     return count($ids) === 1 ? (int) $ids[0] : null;
                 })
                 ->required()
                 ->visible(function (?Model $record) {
                     $currentStudentId = $record?->student_id ? (int) $record->student_id : null;
                     $ids = $this->getContractStudentIds($currentStudentId);
+
                     return count($ids) === 1;
                 }),
 
@@ -203,6 +230,7 @@ class LessonSlotsRelationManager extends RelationManager
                         if ($label === '') {
                             $label = $u->email ?: ('Docente #' . $u->id);
                         }
+
                         return [(int) $u->id => $label];
                     })
                     ->toArray()
@@ -230,12 +258,17 @@ class LessonSlotsRelationManager extends RelationManager
             Forms\Components\Select::make('duration_minutes')
                 ->label('Durata lezione')
                 ->options([
-                    60 => '1 ora',
-                    90 => '1 ora e 30',
+                    30  => '30 min',
+                    60  => '1 ora',
+                    90  => '1 ora e 30 min',
                     120 => '2 ore',
                 ])
                 ->default(60)
-                ->required(),
+                ->required()
+                ->afterStateHydrated(function ($state, callable $set) {
+                    $set('duration_minutes', $this->normalizeDurationMinutes($state));
+                })
+                ->dehydrateStateUsing(fn ($state) => $this->normalizeDurationMinutes($state)),
 
             Forms\Components\Toggle::make('is_active')
                 ->label('Attivo')
@@ -275,12 +308,7 @@ class LessonSlotsRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('duration_minutes')
                     ->label('Durata')
-                    ->formatStateUsing(fn ($state) => match ((int) $state) {
-                        60 => '1 ora',
-                        90 => '1h 30m',
-                        120 => '2 ore',
-                        default => ((int) $state) . ' min',
-                    })
+                    ->formatStateUsing(fn ($state) => $this->formatDurationLabel((int) $state))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('teacher.name')
@@ -301,11 +329,18 @@ class LessonSlotsRelationManager extends RelationManager
                             $data['starts_at'] = (string) $contract->starts_at;
                         }
 
+                        $data['duration_minutes'] = $this->normalizeDurationMinutes($data['duration_minutes'] ?? null);
+
                         return $data;
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['duration_minutes'] = $this->normalizeDurationMinutes($data['duration_minutes'] ?? null);
+
+                        return $data;
+                    }),
                 Tables\Actions\DeleteAction::make(),
             ]);
     }

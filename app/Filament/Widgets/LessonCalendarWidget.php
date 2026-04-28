@@ -19,10 +19,11 @@ class LessonCalendarWidget extends FullCalendarWidget
     public ?int $teacher_id = null;
     public ?int $course_id = null;
 
-    protected static function isTeacherPanel(): bool
-    {
-        return Filament::getCurrentPanel()?->getId() === 'Docente';
-    }
+protected static function isTeacherPanel(): bool
+{
+    $id = Filament::getCurrentPanel()?->getId();
+    return is_string($id) && strcasecmp($id, 'Docente') === 0;
+}
 
     public function config(): array
     {
@@ -181,11 +182,25 @@ JS),
             ->with(['student', 'teacher', 'contract.course'])
             ->whereBetween('starts_at', [$rangeStart, $rangeEnd]);
 
-        // ✅ Panel docente: vede SOLO le sue lezioni
         if (static::isTeacherPanel()) {
-            $query->where('teacher_id', auth()->id());
+            $teacherId = (int) auth()->id();
+
+            $studentIds = Lesson::query()
+                ->where('teacher_id', $teacherId)
+                ->whereNotNull('student_id')
+                ->pluck('student_id')
+                ->unique()
+                ->filter()
+                ->values();
+
+            $query->where(function ($q) use ($teacherId, $studentIds) {
+                $q->where('teacher_id', $teacherId);
+
+                if ($studentIds->isNotEmpty()) {
+                    $q->orWhereIn('student_id', $studentIds->all());
+                }
+            });
         } else {
-            // ✅ Panel admin: filtri liberi
             $query->when($this->teacher_id, fn ($q) => $q->where('teacher_id', $this->teacher_id));
         }
 
@@ -230,9 +245,9 @@ JS),
             $end   = $end ? Carbon::parse($end) : null;
 
             // ✅ titolo: nel panel docente puoi anche togliere il nome docente (è sempre lui)
-            $title = static::isTeacherPanel()
-                ? $student
-                : "{$student} • {$teacher}";
+$title = static::isTeacherPanel()
+    ? "{$student} • {$teacher}"
+    : "{$student} • {$teacher}";
 
             return [
                 'id'    => (string) $l->id,
@@ -250,17 +265,38 @@ JS),
         })->values()->all();
     }
 
-    public function onEventClick(array $event): void
-    {
-        $id = $event['event']['id'] ?? $event['id'] ?? null;
-        if (! $id) return;
+public function onEventClick(array $event): void
+{
+    $id = $event['event']['id'] ?? $event['id'] ?? null;
+    if (! $id) return;
 
-        // ✅ nel panel docente: usa VIEW (evita 404 su /edit se non esiste la rotta)
-        $page = static::isTeacherPanel() ? 'view' : 'edit';
+    $lesson = Lesson::find($id);
+    if (! $lesson) return;
 
-        $this->redirect(
-            LessonResource::getUrl($page, ['record' => $id]),
-            navigate: true
-        );
+    if (static::isTeacherPanel()) {
+        $teacherId = (int) auth()->id();
+
+        $canView = false;
+
+        if ((int) $lesson->teacher_id === $teacherId) {
+            $canView = true;
+        } elseif (! empty($lesson->student_id)) {
+            $canView = Lesson::query()
+                ->where('teacher_id', $teacherId)
+                ->where('student_id', $lesson->student_id)
+                ->exists();
+        }
+
+        if (! $canView) {
+            return;
+        }
     }
+
+    $page = static::isTeacherPanel() ? 'view' : 'edit';
+
+    $this->redirect(
+        LessonResource::getUrl($page, ['record' => $id]),
+        navigate: true
+    );
+}
 }

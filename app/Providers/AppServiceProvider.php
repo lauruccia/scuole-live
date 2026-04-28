@@ -11,11 +11,10 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\ServiceProvider;
-
-use Filament\Facades\Filament;
-use Filament\Notifications\Auth\ResetPassword as FilamentResetPassword;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\ServiceProvider;
+use App\Models\Student;
+use App\Observers\StudentObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,8 +25,15 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Student::observe(StudentObserver::class);
+        
         // Forza lingua app
         App::setLocale('it');
+
+        // Forza HTTPS in produzione
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
 
         // Superadmin bypass permessi
         Gate::before(function ($user, $ability) {
@@ -44,35 +50,31 @@ class AppServiceProvider extends ServiceProvider
         ContractLessonSlot::observe(ContractLessonSlotObserver::class);
 
         /**
-         * Override globale email reset password (vale anche per Filament).
+         * Override globale email reset password.
+         * Temporaneamente forzato sul pannello docente
+         * per generare link corretti tipo /docente/password-reset/reset
          */
-       ResetPassword::toMailUsing(function ($notifiable, string $token) {
+        ResetPassword::toMailUsing(function ($notifiable, string $token) {
+            $panelId = 'docente';
 
-    $path = request()->path();
-    $firstSegment = explode('/', $path)[0] ?? 'admin';
+            $routeName = "filament.{$panelId}.auth.password-reset.reset";
 
-    $panelId = match ($firstSegment) {
-        'superadmin' => 'superadmin',
-        'docente' => 'docente',
-        'admin' => 'admin',
-        default => 'admin',
-    };
+            $url = URL::temporarySignedRoute(
+                $routeName,
+                now()->addMinutes((int) config('auth.passwords.users.expire', 60)),
+                [
+                    'token' => $token,
+                    'email' => $notifiable->getEmailForPasswordReset(),
+                ]
+            );
 
-    // Nome rotta Filament per la pagina di reset password (con token)
-    $routeName = "filament.{$panelId}.auth.password-reset.reset";
-
-    $url = url(route($routeName, [
-        'token' => $token,
-        'email' => $notifiable->getEmailForPasswordReset(),
-    ], false));
-
-    return (new MailMessage)
-        ->subject('Reimposta la password — A&A Language Center')
-        ->view('emails.reset-password-brand', [
-            'url' => $url,
-            'notifiable' => $notifiable,
-            'expire' => (int) config('auth.passwords.users.expire', 60),
-        ]);
-});
+            return (new MailMessage)
+                ->subject('Reimposta la password — A&A Language Center')
+                ->view('emails.reset-password-brand', [
+                    'url' => $url,
+                    'notifiable' => $notifiable,
+                    'expire' => (int) config('auth.passwords.users.expire', 60),
+                ]);
+        });
     }
 }

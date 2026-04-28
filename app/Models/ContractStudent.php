@@ -42,6 +42,7 @@ class ContractStudent extends Model
         // legacy / compatibilità
         'weekly_day',
         'weekly_time',
+        'duration_minutes',
         'teacher_id',
 
         'meet_url',
@@ -50,8 +51,9 @@ class ContractStudent extends Model
 
     protected $casts = [
         'weekly_day'             => 'integer',
+        'duration_minutes'       => 'integer',
         'beneficiary_birth_date' => 'date',
-        'assigned_hours'         => 'integer',
+        'assigned_hours'         => 'decimal:2',
     ];
 
     protected $appends = [
@@ -88,9 +90,18 @@ class ContractStudent extends Model
     protected static function booted(): void
     {
         static::saving(function (self $cs) {
-            // normalizza assigned_hours
+            // normalizza e valida assigned_hours lato server
             if ($cs->assigned_hours !== null && $cs->assigned_hours !== '') {
-                $cs->assigned_hours = max(0, (int) $cs->assigned_hours);
+                $value = round((float) $cs->assigned_hours, 2);
+                // Valore minimo 0.5 h (coerente con la validazione del form Filament)
+                // Null = non configurato; 0 esplicito = zero ore; valori < 0.5 vengono azzerati a null
+                if ($value <= 0) {
+                    $cs->assigned_hours = null;
+                } elseif ($value < 0.5) {
+                    $cs->assigned_hours = 0.5; // arrotonda al minimo consentito
+                } else {
+                    $cs->assigned_hours = $value;
+                }
             } else {
                 $cs->assigned_hours = null;
             }
@@ -251,7 +262,7 @@ class ContractStudent extends Model
                         ],
                         [
                             'teacher_id'       => $cs->teacher_id ?: null,
-                            'duration_minutes' => 60,
+                            'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
                             'is_active'        => true,
                             'starts_at'        => $contract?->starts_at?->toDateString(),
                             'ends_at'          => null,

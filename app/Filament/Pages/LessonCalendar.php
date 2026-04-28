@@ -15,10 +15,11 @@ class LessonCalendar extends Page
 
     protected static string $view = 'filament.pages.lesson-calendar';
 
-    protected static function isTeacherPanel(): bool
-    {
-        return Filament::getCurrentPanel()?->getId() === 'Docente';
-    }
+protected static function isTeacherPanel(): bool
+{
+    $id = Filament::getCurrentPanel()?->getId();
+    return is_string($id) && strcasecmp($id, 'Docente') === 0;
+}
 
     public static function canAccess(): bool
     {

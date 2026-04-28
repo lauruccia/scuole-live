@@ -9,62 +9,74 @@ use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Installment;
 use App\Models\Student;
+use App\Services\ContractService;
+use App\Services\LessonGeneratorService;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CreateContract extends CreateRecord
 {
     protected static string $resource = ContractResource::class;
 
-    /**
-     * Dati repeater beneficiari (salvati prima della create, poi inseriti manualmente in contract_students)
-     * @var array<int, array<string, mixed>>
-     */
     protected array $beneficiariesData = [];
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        // Validazione Filament-layer: mostra errore prima del salvataggio
+        if (! empty($data['starts_at']) && ! empty($data['ends_at'])) {
+            $start = \Carbon\Carbon::parse($data['starts_at'])->startOfDay();
+            $end   = \Carbon\Carbon::parse($data['ends_at'])->startOfDay();
+
+            if ($end->lt($start)) {
+                $this->addError('data.ends_at', 'La data di fine non può essere precedente alla data di inizio.');
+
+                \Filament\Notifications\Notification::make()
+                    ->title('Date non valide')
+                    ->body('La data di fine corso deve essere successiva alla data di inizio.')
+                    ->danger()
+                    ->send();
+
+                $this->halt();
+            }
+        }
+
         $this->beneficiariesData = $data['beneficiaries'] ?? [];
         unset($data['beneficiaries']);
 
-        // ✅ compat: non usare più billing_is_beneficiary
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
 
-        // azienda: mai "pagante = studente"
         if (($data['billing_type'] ?? 'private') === 'company') {
             $data['billing_is_student'] = 0;
         }
 
-        // default data prima rata se modalità rate
         if (($data['payment_mode'] ?? 'single') === 'installments' && empty($data['first_installment_date'])) {
             $data['first_installment_date'] = now()->toDateString();
         }
 
-        // normalizzo email
         if (! empty($data['billing_email'])) {
             $data['billing_email'] = Str::lower(trim((string) $data['billing_email']));
         }
+
         if (! empty($data['company_email'])) {
             $data['company_email'] = Str::lower(trim((string) $data['company_email']));
         }
+
         if (! empty($data['pec'])) {
             $data['pec'] = Str::lower(trim((string) $data['pec']));
         }
+
         if (! empty($data['billing_pec'])) {
             $data['billing_pec'] = Str::lower(trim((string) $data['billing_pec']));
         }
 
-        /**
-         * ✅ FIX: se PRIVATO e non scelgo billing_profile_id ma compilo billing_*,
-         * crea/riusa BillingProfile e assegna billing_profile_id
-         */
         if (($data['billing_type'] ?? 'private') === 'private') {
-            $data = $this->attachOrCreateBillingProfileForPrivate($data);
+            $data = app(ContractService::class)->attachOrCreateBillingProfileForPrivate($data);
         }
 
         return $data;
@@ -74,27 +86,40 @@ class CreateContract extends CreateRecord
     {
         /** @var Contract $contract */
         $contract = $this->record->fresh();
+        $contract->loadMissing('course');
 
         DB::transaction(function () use ($contract) {
+            $beneficiaries = $this->beneficiariesData ?? [];
+            $beneficiariesCount = max(1, count($beneficiaries));
+            $contractHoursTotal = app(ContractService::class)->resolveContractHoursTotal($contract);
 
-            // 1) Beneficiari (+ creazione automatica Student se manca)
-            foreach (($this->beneficiariesData ?? []) as $b) {
+            foreach ($beneficiaries as $b) {
                 $email = Str::lower(trim((string) ($b['beneficiary_email'] ?? '')));
                 $phone = trim((string) ($b['beneficiary_phone'] ?? ''));
 
                 $studentId = $b['student_id'] ?? null;
 
-                if (empty($studentId)) {
-                    $studentId = $this->upsertStudentFromBeneficiary([
-                        'first_name'     => $b['beneficiary_first_name'] ?? null,
-                        'last_name'      => $b['beneficiary_last_name'] ?? null,
-                        'email'          => $email !== '' ? $email : null,
-                        'phone'          => $phone !== '' ? $phone : null,
-                        'birth_date'     => $b['beneficiary_birth_date'] ?? null,
-                        'birth_place'    => $b['beneficiary_birth_place'] ?? null,
-                        'birth_province' => $b['beneficiary_birth_province'] ?? null,
-                        'birth_country'  => $b['beneficiary_birth_country'] ?? null,
-                    ]);
+                $payload = [
+                    'first_name'     => $b['beneficiary_first_name'] ?? null,
+                    'last_name'      => $b['beneficiary_last_name'] ?? null,
+                    'email'          => $email !== '' ? $email : null,
+                    'phone'          => $phone !== '' ? $phone : null,
+                    'birth_date'     => $b['beneficiary_birth_date'] ?? null,
+                    'birth_place'    => $b['beneficiary_birth_place'] ?? null,
+                    'birth_province' => $b['beneficiary_birth_province'] ?? ($b['auto_birth_province'] ?? null),
+                    'birth_country'  => $b['beneficiary_birth_country'] ?? null,
+                ];
+
+                $studentId = $this->upsertStudentFromBeneficiary($payload, $studentId);
+
+                $assignedHours = isset($b['assigned_hours']) && $b['assigned_hours'] !== ''
+                    ? (float) $b['assigned_hours']
+                    : 0.0;
+
+                if ($assignedHours <= 0 && $contractHoursTotal > 0) {
+                    $assignedHours = $beneficiariesCount === 1
+                        ? $contractHoursTotal
+                        : round($contractHoursTotal / $beneficiariesCount, 2);
                 }
 
                 ContractStudent::create([
@@ -116,16 +141,20 @@ class CreateContract extends CreateRecord
 
                     'weekly_day'  => $b['weekly_day'] ?? null,
                     'weekly_time' => $b['weekly_time'] ?? null,
+                    'duration_minutes' => max(1, (int) ($b['duration_minutes'] ?? 60)),
                     'teacher_id'  => $b['teacher_id'] ?? null,
+
+                    'assigned_hours' => $assignedHours,
 
                     'meet_url' => $b['meet_url'] ?? null,
                     'notes'    => $b['notes'] ?? null,
                 ]);
             }
 
-            // 2) Pagamenti (con error handling)
             try {
-                Installment::where('contract_id', $contract->id)->delete();
+                // ForceDelete permanente: in fase di creazione non ci sono rate pagate,
+                // ma usiamo forceDelete per pulizia consistente (bypassa SoftDeletes).
+                Installment::where('contract_id', $contract->id)->forceDelete();
 
                 $coursePrice   = (float) $contract->course_price;
                 $enrollmentFee = (float) $contract->enrollment_fee;
@@ -137,13 +166,14 @@ class CreateContract extends CreateRecord
                     ? Carbon::parse($contract->admission_date)
                     : now();
 
+                // Numerazione coerente con EditContract:
+                // -1 = tassa iscrizione, 0 = acconto, 1..n = rate ordinarie
                 $nextNumber = 1;
 
-                // Tassa iscrizione (0)
                 if ($enrollmentFee > 0) {
                     Installment::create([
                         'contract_id' => $contract->id,
-                        'number'      => 0,
+                        'number'      => -1,   // -1 = tassa iscrizione
                         'is_deposit'  => false,
                         'due_date'    => $baseDate->toDateString(),
                         'amount'      => round($enrollmentFee, 2),
@@ -151,20 +181,20 @@ class CreateContract extends CreateRecord
                     ]);
                 }
 
-                // Acconto (1)
                 if ($deposit > 0) {
                     Installment::create([
                         'contract_id' => $contract->id,
-                        'number'      => $nextNumber,
+                        'number'      => 0,    // 0 = acconto (coerente con EditContract)
                         'is_deposit'  => true,
                         'due_date'    => $baseDate->toDateString(),
                         'amount'      => round($deposit, 2),
                         'status'      => 'unpaid',
                     ]);
-                    $nextNumber++;
+                    // $nextNumber rimane 1: le rate ordinarie iniziano sempre da 1
                 }
 
                 $residual = max(0, $total - $deposit);
+
                 if ($residual <= 0) {
                     return;
                 }
@@ -176,36 +206,23 @@ class CreateContract extends CreateRecord
                         ? Carbon::parse($contract->first_installment_date)
                         : $baseDate->copy()->addDays(15);
 
+                    // floor garantisce che ogni rata non superi il dovuto
                     $base = floor(($residual / $count) * 100) / 100;
-                    $sum  = 0.0;
+                    // La differenza (max ±0.01 × n rate) va sulla PRIMA rata
+                    // per evitare che l'ultima rata risulti negativa in edge case
+                    $firstAmount = round($residual - ($base * ($count - 1)), 2);
 
                     $firstInstallmentNumber = $nextNumber;
-                    $lastInstallmentNumber  = $firstInstallmentNumber + ($count - 1);
 
                     for ($i = 0; $i < $count; $i++) {
-                        $sum += $base;
-
                         Installment::create([
                             'contract_id' => $contract->id,
                             'number'      => $firstInstallmentNumber + $i,
                             'is_deposit'  => false,
                             'due_date'    => $first->copy()->addMonths($i)->toDateString(),
-                            'amount'      => $base,
+                            'amount'      => ($i === 0) ? $firstAmount : $base,
                             'status'      => 'unpaid',
                         ]);
-                    }
-
-                    $diff = round($residual - $sum, 2);
-                    if ($diff !== 0.0) {
-                        $last = Installment::query()
-                            ->where('contract_id', $contract->id)
-                            ->where('number', $lastInstallmentNumber)
-                            ->first();
-
-                        if ($last) {
-                            $last->amount = round(((float) $last->amount + $diff), 2);
-                            $last->save();
-                        }
                     }
                 } else {
                     $due = $contract->first_installment_date
@@ -246,18 +263,22 @@ class CreateContract extends CreateRecord
             }
         });
 
-        // 3) Slot (after commit)
         $contractId = (int) $contract->id;
 
         DB::afterCommit(function () use ($contractId) {
             try {
                 $contract = Contract::query()
-                    ->with(['beneficiaries'])
+                    ->with(['beneficiaries', 'course'])
                     ->findOrFail($contractId);
 
                 foreach ($contract->beneficiaries as $cs) {
-                    if (! $cs->student_id) continue;
-                    if (! $cs->weekly_day || ! $cs->weekly_time) continue;
+                    if (! $cs->student_id) {
+                        continue;
+                    }
+
+                    if (! $cs->weekly_day || ! $cs->weekly_time) {
+                        continue;
+                    }
 
                     ContractLessonSlot::updateOrCreate(
                         [
@@ -268,7 +289,7 @@ class CreateContract extends CreateRecord
                         ],
                         [
                             'teacher_id'       => $cs->teacher_id,
-                            'duration_minutes' => 60,
+                            'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
                             'is_active'        => true,
                             'starts_at'        => $contract->starts_at
                                 ? Carbon::parse($contract->starts_at)->toDateString()
@@ -278,132 +299,100 @@ class CreateContract extends CreateRecord
                         ]
                     );
                 }
+
+                app(LessonGeneratorService::class)->generateForContract($contract->fresh(), true);
             } catch (\Throwable $e) {
                 report($e);
 
                 Notification::make()
-                    ->title('Contratto salvato, ma slot non creati')
-                    ->body('Controlla i dati dello slot e riprova. Se il problema continua, contatta la segreteria.')
+                    ->title('Contratto salvato, ma generazione lezioni non completata')
+                    ->body('Gli slot sono stati creati, ma le lezioni non sono state generate correttamente.')
                     ->warning()
                     ->send();
             }
         });
     }
 
-    /**
-     * ✅ Crea/riusa BillingProfile privato e assegna billing_profile_id
-     */
-    private function attachOrCreateBillingProfileForPrivate(array $data): array
+    // resolveContractHoursTotal e attachOrCreateBillingProfileForPrivate
+    // sono stati spostati in App\Services\ContractService (condivisi con EditContract).
+
+    private function upsertStudentFromBeneficiary(array $data, ?int $studentId = null): ?int
     {
-        if (! empty($data['billing_profile_id'])) {
-            return $data;
+        $student = null;
+
+        if (! empty($studentId)) {
+            $student = Student::find((int) $studentId);
         }
 
-        $first = trim((string) ($data['billing_first_name'] ?? ''));
-        $last  = trim((string) ($data['billing_last_name'] ?? ''));
-        $email = Str::lower(trim((string) ($data['billing_email'] ?? '')));
-        $cf    = Str::upper(preg_replace('/\s+/', '', (string) ($data['billing_tax_code'] ?? '')));
-
-        // Se non ho dati minimi, non creo nulla
-        if ($first === '' && $last === '' && $email === '' && $cf === '') {
-            return $data;
-        }
-
-        $q = BillingProfile::query()->where('type', 'private');
-
-        // dedup: prima CF, poi email
-        if ($cf !== '') {
-            $q->whereRaw('UPPER(COALESCE(fiscal_code,"")) = ?', [$cf]);
-        } elseif ($email !== '') {
-            $q->whereRaw('LOWER(COALESCE(email,"")) = ?', [$email]);
-        } else {
-            // fallback: nome+cognome (meno affidabile)
-            $q->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
-              ->whereRaw('LOWER(COALESCE(last_name,""))  = ?', [Str::lower($last)]);
-        }
-
-        $profile = $q->first();
-
-        if (! $profile) {
-            $profile = BillingProfile::create([
-                'type'       => 'private',
-                'first_name' => $first ?: null,
-                'last_name'  => $last ?: null,
-                'email'      => $email !== '' ? $email : null,
-                'phone'      => $data['billing_phone'] ?? null,
-
-                'fiscal_code'=> $cf !== '' ? $cf : null,
-                'vat_number' => $data['billing_vat_number'] ?? null,
-                'sdi_code'   => $data['billing_sdi'] ?? null,
-                'pec'        => $data['billing_pec'] ?? null,
-
-                'address'    => $data['billing_address'] ?? null,
-                'city'       => $data['billing_city'] ?? null,
-                'zip'        => $data['billing_zip'] ?? null,
-                'province'   => $data['billing_province'] ?? null,
-                'country'    => $data['billing_country'] ?? null,
-            ]);
-        } else {
-            // aggiorna campi mancanti (soft)
-            $dirty = false;
-
-            foreach ([
-                'first_name' => $first,
-                'last_name'  => $last,
-                'email'      => $email,
-                'phone'      => (string) ($data['billing_phone'] ?? ''),
-                'fiscal_code'=> $cf,
-            ] as $k => $v) {
-                $v = trim((string) $v);
-                if ($v !== '' && empty($profile->{$k})) {
-                    $profile->{$k} = $v;
-                    $dirty = true;
-                }
-            }
-
-            if ($dirty) $profile->save();
-        }
-
-        $data['billing_profile_id'] = (int) $profile->id;
-
-        return $data;
-    }
-
-    private function upsertStudentFromBeneficiary(array $data): ?int
-    {
         $email = Str::lower(trim((string) ($data['email'] ?? '')));
         $phone = preg_replace('/\s+/', '', (string) ($data['phone'] ?? ''));
-
-        if ($email !== '') {
-            $s = Student::query()->whereRaw('LOWER(email) = ?', [$email])->first();
-            if ($s) return (int) $s->id;
-        }
-
-        if ($phone !== '') {
-            $s = Student::query()
-                ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
-                ->first();
-            if ($s) return (int) $s->id;
-        }
-
         $first = trim((string) ($data['first_name'] ?? ''));
         $last  = trim((string) ($data['last_name'] ?? ''));
 
-        if ($first === '' && $last === '') {
-            return null;
+        if (! $student && $email !== '') {
+            $student = Student::query()
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->first();
         }
 
-        $s = Student::create([
-            'first_name'     => $first ?: null,
-            'last_name'      => $last ?: null,
-            'email'          => $email !== '' ? $email : null,
-            'phone'          => $phone !== '' ? $phone : null,
-            'birth_date'     => $data['birth_date'] ?? null,
-            'birth_place'    => $data['birth_place'] ?? null,
-            'birth_province' => $data['birth_province'] ?? null,
-            'birth_country'  => $data['birth_country'] ?? null,
-        ]);
+        if (! $student && $phone !== '') {
+            $student = Student::query()
+                ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
+                ->first();
+        }
 
-        return (int) $s->id;
+        if (! $student && $first !== '' && $last !== '') {
+            $student = Student::query()
+                ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
+                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)])
+                ->first();
+        }
+
+        if (! $student) {
+            if ($first === '' && $last === '') {
+                return null;
+            }
+
+            $student = new Student();
+        }
+
+        $fill = [];
+
+        if (Schema::hasColumn('students', 'first_name') && $first !== '') {
+            $fill['first_name'] = $first;
+        }
+
+        if (Schema::hasColumn('students', 'last_name') && $last !== '') {
+            $fill['last_name'] = $last;
+        }
+
+        if (Schema::hasColumn('students', 'email') && $email !== '') {
+            $fill['email'] = $email;
+        }
+
+        if (Schema::hasColumn('students', 'phone') && $phone !== '') {
+            $fill['phone'] = $phone;
+        }
+
+        if (Schema::hasColumn('students', 'birth_date') && ! empty($data['birth_date'])) {
+            $fill['birth_date'] = $data['birth_date'];
+        }
+
+        if (Schema::hasColumn('students', 'birth_place') && ! empty($data['birth_place'])) {
+            $fill['birth_place'] = $data['birth_place'];
+        }
+
+        if (Schema::hasColumn('students', 'birth_province') && ! empty($data['birth_province'])) {
+            $fill['birth_province'] = $data['birth_province'];
+        }
+
+        if (Schema::hasColumn('students', 'birth_country') && ! empty($data['birth_country'])) {
+            $fill['birth_country'] = $data['birth_country'];
+        }
+
+        $student->fill($fill);
+        $student->save();
+
+        return (int) $student->id;
     }
 }

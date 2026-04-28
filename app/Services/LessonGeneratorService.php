@@ -9,11 +9,20 @@ use App\Models\Lesson;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class LessonGeneratorService
 {
-    public function generateForContract(Contract $contract, bool $force = false): void
+    /**
+     * Genera le lezioni per un contratto.
+     *
+     * @param  bool  $force        true = rigenera tutto da starts_at (cancella passato + futuro non consumato)
+     * @param  bool  $slotChanged  true = è stata aggiunta/modificata/rimossa una slot settimanale:
+     *                             cancella TUTTE le lezioni future non completate/cancellate
+     *                             (più aggressivo di force=false, ma non tocca il passato)
+     */
+    public function generateForContract(Contract $contract, bool $force = false, bool $slotChanged = false): void
     {
         $contract->loadMissing(['course', 'beneficiaries']);
 
@@ -21,34 +30,51 @@ class LessonGeneratorService
             return;
         }
 
-        $lock = Cache::lock("contract:{$contract->id}:generate_lessons", 10);
+        // Lock da 120 s: la generazione di molte lezioni può richiedere tempo.
+        // Usiamo get() invece di blockFor() per compatibilità con driver cache 'file'
+        // (blockFor richiede Redis o Memcached).
+        $lock = Cache::lock("contract:{$contract->id}:generate_lessons", 120);
 
         if (! $lock->get()) {
             return;
         }
 
         try {
-            DB::transaction(function () use ($contract, $force) {
+            DB::transaction(function () use ($contract, $force, $slotChanged) {
                 $today = now()->startOfDay();
 
                 $defaultLanguage = method_exists($contract, 'getDefaultLanguage')
                     ? $contract->getDefaultLanguage()
                     : ($contract->language_id ?: null);
 
-                $deleteQuery = Lesson::query()
-                    ->where('contract_id', $contract->id)
-                    ->whereNull('cancelled_at')
-                    ->where(function ($q) {
-                        $q->whereNull('counts_as_consumed')
-                            ->orWhere('counts_as_consumed', 0);
-                    })
-                    ->whereColumn('updated_at', 'created_at');
+                if ($slotChanged && ! $force) {
+                    // Slot aggiunto/modificato/rimosso: cancella TUTTE le lezioni future
+                    // non ancora completate né cancellate, indipendentemente da counts_as_consumed
+                    // o da eventuali modifiche manuali. Questo garantisce che il ricalcolo
+                    // ridistribuisca correttamente le ore tra tutti gli slot attivi aggiornati.
+                    Lesson::query()
+                        ->where('contract_id', $contract->id)
+                        ->whereNull('cancelled_at')
+                        ->whereNull('completed_at')
+                        ->whereDate('starts_at', '>=', $today)
+                        ->delete();
+                } else {
+                    // Comportamento standard: cancella solo lezioni auto-generate non modificate
+                    $deleteQuery = Lesson::query()
+                        ->where('contract_id', $contract->id)
+                        ->whereNull('cancelled_at')
+                        ->where(function ($q) {
+                            $q->whereNull('counts_as_consumed')
+                                ->orWhere('counts_as_consumed', 0);
+                        })
+                        ->whereColumn('updated_at', 'created_at');
 
-                if (! $force) {
-                    $deleteQuery->whereDate('starts_at', '>=', $today);
+                    if (! $force) {
+                        $deleteQuery->whereDate('starts_at', '>=', $today);
+                    }
+
+                    $deleteQuery->delete();
                 }
-
-                $deleteQuery->delete();
 
                 $beneficiaries = DB::table('contract_students')
                     ->where('contract_id', $contract->id)
@@ -62,11 +88,31 @@ class LessonGeneratorService
 
                 $maxEnd = null;
 
+                // Pre-calcola le ore di default per i beneficiari senza assigned_hours.
+                // Se c'è un solo beneficiario → usa l'intero hours_purchased.
+                // Se ci sono più beneficiari → dividi equamente per evitare over-assignment.
+                $totalHours       = (float) ($contract->hours_purchased ?? 0);
+                $countBeneficiaries = $beneficiaries->count();
+                $nullCount         = $beneficiaries->whereNull('assigned_hours')->count();
+                $sumAssigned       = $beneficiaries->sum(fn($b) => (float) ($b->assigned_hours ?? 0));
+                $hoursLeftForNull  = max(0.0, $totalHours - $sumAssigned);
+                $defaultHoursPerNull = ($nullCount > 0)
+                    ? round($hoursLeftForNull / $nullCount, 2)
+                    : 0.0;
+
                 foreach ($beneficiaries as $contractStudent) {
                     $studentId = (int) $contractStudent->student_id;
                     $contractStudentId = (int) $contractStudent->id;
-                    $assignedHours = (float) ($contractStudent->assigned_hours ?? 0);
+                    // Usa assigned_hours del beneficiario se impostato (anche se 0 esplicito).
+                    // Fallback: distribuisce le ore rimanenti equamente tra i beneficiari non configurati.
+                    $rawHours = $contractStudent->assigned_hours;
+                    if ($rawHours === null) {
+                        $assignedHours = $defaultHoursPerNull;
+                    } else {
+                        $assignedHours = (float) $rawHours;
+                    }
 
+                    // Se ancora zero → nessuna lezione da generare per questo beneficiario
                     if ($assignedHours <= 0) {
                         continue;
                     }
@@ -106,11 +152,19 @@ class LessonGeneratorService
                         ? Carbon::parse($contract->starts_at)->startOfDay()
                         : now();
 
-                    $existingFutureHours = (float) Lesson::query()
+                    // Conta le ore già coperte da lezioni esistenti non cancellate.
+                    // Dopo la cancellazione delle lezioni future, questo valore rappresenta
+                    // solo le ore delle lezioni passate (già avvenute o consumate).
+                    $existingFutureHours = Lesson::query()
                         ->where('contract_id', $contract->id)
                         ->where('student_id', $studentId)
                         ->whereNull('cancelled_at')
-                        ->sum(DB::raw('COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, starts_at, ends_at)) / 60'));
+                        ->get(['duration_minutes', 'starts_at', 'ends_at'])
+                        ->sum(fn (Lesson $lesson): float => Lesson::computeLessonHours(
+                            $lesson->duration_minutes,
+                            $lesson->starts_at,
+                            $lesson->ends_at
+                        ));
 
                     $remainingHours = max(0, $assignedHours - $existingFutureHours);
 
@@ -231,6 +285,96 @@ class LessonGeneratorService
 
                         if ($remainingHours <= 0) {
                             break;
+                        }
+                    }
+
+                    // -------------------------------------------------------
+                    // Lezione di completamento per le ore residue
+                    // Esempio: contratto 10h / slot 1,5h → 6 lezioni (9h) +
+                    // 1 lezione da 60 min (1h residua) = 10h esatte.
+                    // Si genera solo se il residuo è ≥ 15 min.
+                    // -------------------------------------------------------
+                    $partialMinutes = (int) round($remainingHours * 60);
+
+                    if ($partialMinutes >= 1 && $partialMinutes < 15) {
+                        // Ore residue troppo piccole per generare una lezione di completamento
+                        // (< 15 min): vengono silenziosamente ignorate dal generatore.
+                        // Logghiamo il fatto per permettere alla segreteria di identificare
+                        // contratti con discrepanze minime nelle ore.
+                        Log::warning('LessonGenerator: ore residue < 15 min ignorate (data loss silenzioso)', [
+                            'contract_id'      => $contract->id,
+                            'student_id'       => $studentId,
+                            'partial_minutes'  => $partialMinutes,
+                            'assigned_hours'   => $assignedHours,
+                        ]);
+                    }
+
+                    if ($partialMinutes >= 15) {
+                        // Partenza: giorno successivo all'ultima lezione generata
+                        $partialFrom      = $maxEnd
+                            ? Carbon::parse($maxEnd)->startOfDay()
+                            : $baseStartDay;
+                        $partialNotBefore = $maxEnd ?? $notBefore;
+
+                        $partialSlot = null;
+                        $partialAt   = null;
+
+                        foreach ($slots as $candidateSlot) {
+                            $candidate = $this->nextOccurrenceForSlot(
+                                $candidateSlot,
+                                $partialFrom,
+                                $partialNotBefore
+                            );
+
+                            if (! $candidate) {
+                                continue;
+                            }
+
+                            if (! $partialAt || $candidate->lt($partialAt)) {
+                                $partialSlot = $candidateSlot;
+                                $partialAt   = $candidate;
+                            }
+                        }
+
+                        if ($partialSlot && $partialAt) {
+                            $partialAt = $this->shiftOutOfClosuresOrNull($partialAt->copy());
+
+                            if ($partialAt) {
+                                $partialEnd = $partialAt->copy()->addMinutes($partialMinutes);
+
+                                $dupPartial = Lesson::query()
+                                    ->where('contract_id', $contract->id)
+                                    ->where('student_id', $studentId)
+                                    ->where('starts_at', $partialAt->toDateTimeString())
+                                    ->exists();
+
+                                if (! $dupPartial) {
+                                    $slotStandard = (int) ($partialSlot->duration_minutes ?? 60);
+
+                                    Lesson::create([
+                                        'contract_id'         => $contract->id,
+                                        'contract_student_id' => $contractStudentId,
+                                        'student_id'          => $studentId,
+                                        'teacher_id'          => $partialSlot->teacher_id
+                                            ? (int) $partialSlot->teacher_id
+                                            : null,
+                                        'starts_at'           => $partialAt,
+                                        'ends_at'             => $partialEnd,
+                                        'meet_url'            => $partialSlot->meet_url,
+                                        'duration_minutes'    => $partialMinutes,
+                                        'lesson_number'       => $nextLessonNumber,
+                                        'counts_as_consumed'  => 0,
+                                        'is_recoverable'      => 0,
+                                        'language_id'         => $defaultLanguage,
+                                        'notes'               => "Lezione di completamento: {$partialMinutes} min "
+                                            . "(ore residue del contratto — slot standard {$slotStandard} min).",
+                                    ]);
+
+                                    $maxEnd = $maxEnd
+                                        ? Carbon::parse($maxEnd)->max($partialEnd)
+                                        : $partialEnd;
+                                }
+                            }
                         }
                     }
                 }

@@ -27,7 +27,7 @@ class ContractLessonSlot extends Model
         'student_id'       => 'integer',
         'teacher_id'       => 'integer',
         'weekly_day'       => 'integer',
-        'weekly_time'      => 'string', // TIME DB
+        'weekly_time'      => 'string',
         'duration_minutes' => 'integer',
         'is_active'        => 'boolean',
         'starts_at'        => 'date',
@@ -47,5 +47,26 @@ class ContractLessonSlot extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $slot) {
+            $duration = (int) ($slot->duration_minutes ?? 60);
+
+            if (! in_array($duration, [30, 60, 90], true)) {
+                $duration = 60;
+            }
+
+            $slot->duration_minutes = $duration;
+
+            if ($slot->weekly_time !== null) {
+                $time = trim((string) $slot->weekly_time);
+
+                if (preg_match('/^\d{1,2}:\d{2}$/', $time)) {
+                    $slot->weekly_time = $time . ':00';
+                }
+            }
+        });
     }
 }

@@ -17,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Filament\Common\Pages\ChangePasswordPage;
 
 class SuperadminPanelProvider extends PanelProvider
 {
@@ -40,10 +41,15 @@ class SuperadminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
 
-            ->pages([Pages\Dashboard::class])
+            ->pages([
+    Pages\Dashboard::class,
+    ChangePasswordPage::class,
+])
 
             ->widgets([
+                \App\Filament\Widgets\LessonsTodayWidget::class,
                 \App\Filament\Widgets\ReportLinks::class,
+                \App\Filament\Widgets\ContractStatusWidget::class,
             ])
 
             ->middleware([

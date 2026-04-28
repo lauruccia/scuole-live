@@ -56,7 +56,11 @@ class GoogleMeetService
             ['conferenceDataVersion' => 1]
         );
 
-        $meetUrl = $created->getConferenceData()?->getEntryPoints()?.[0]?->getUri();
+        // ?.[0] non è supportato in PHP — usiamo variabile intermedia
+        $entryPoints = $created->getConferenceData()?->getEntryPoints();
+        $meetUrl = (is_array($entryPoints) && isset($entryPoints[0]))
+            ? $entryPoints[0]->getUri()
+            : null;
 
         $lesson->google_calendar_id = $calendarId;
         $lesson->google_event_id = $created->getId();

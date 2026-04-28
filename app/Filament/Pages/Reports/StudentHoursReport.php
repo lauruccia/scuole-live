@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages\Reports;
 
+use App\Models\Contract;
+use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Lesson;
 use App\Models\Student;
@@ -23,23 +25,23 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?string $navigationGroup = 'Report';
     protected static ?string $navigationLabel = 'Lezioni studenti';
-
     protected static ?string $slug = 'student-hours-report';
     protected static string $view = 'filament.pages.reports.student-hours-report';
+
+    public array $data = [];
 
     public static function canAccess(): bool
     {
         $u = Filament::auth()->user();
+
         if (! $u) {
             return false;
         }
 
-        // ✅ supporta entrambi i nomi ruolo
         if ($u->hasAnyRole(['super_admin', 'superadmin'])) {
             return true;
         }
 
-        // ✅ permesso Shield per la Page
         return $u->can('page_' . class_basename(static::class));
     }
 
@@ -48,14 +50,13 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
         return static::canAccess();
     }
 
-    public array $data = [];
-
     public function mount(): void
     {
         $this->form->fill([
-            'from' => now()->startOfMonth()->toDateString(),
-            'to'   => now()->endOfMonth()->toDateString(),
-            'student_id' => null,
+            'from'          => now()->startOfMonth()->toDateString(),
+            'to'            => now()->endOfMonth()->toDateString(),
+            'student_id'    => null,
+            'academic_year' => null,
         ]);
     }
 
@@ -69,10 +70,15 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
         return $form
             ->schema([
                 Forms\Components\Section::make('Filtri')
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
-                        Forms\Components\DatePicker::make('from')->label('Da')->live(),
-                        Forms\Components\DatePicker::make('to')->label('A')->live(),
+                        Forms\Components\DatePicker::make('from')
+                            ->label('Da')
+                            ->live(),
+
+                        Forms\Components\DatePicker::make('to')
+                            ->label('A')
+                            ->live(),
 
                         Forms\Components\Select::make('student_id')
                             ->label('Studente (anagrafica)')
@@ -85,10 +91,26 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
                                 ->mapWithKeys(function (Student $s) {
                                     $label = $s->full_name ?? trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
                                     $label = trim((string) $label);
-                                    return [$s->id => $label !== '' ? $label : ('Studente #' . $s->id)];
+
+                                    return [
+                                        $s->id => $label !== '' ? $label : ('Studente #' . $s->id),
+                                    ];
                                 })
-                                ->toArray()
-                            )
+                                ->toArray())
+                            ->placeholder('Tutti')
+                            ->live(),
+
+                        Forms\Components\Select::make('academic_year')
+                            ->label('Anno scolastico')
+                            ->options(function () {
+                                return \App\Models\Contract::query()
+                                    ->whereNotNull('academic_year')
+                                    ->where('academic_year', '!=', '')
+                                    ->distinct()
+                                    ->orderByDesc('academic_year')
+                                    ->pluck('academic_year', 'academic_year')
+                                    ->toArray();
+                            })
                             ->placeholder('Tutti')
                             ->live(),
                     ]),
@@ -101,17 +123,20 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
         return $table
             ->query(fn () => $this->baseQuery())
             ->columns([
+                Tables\Columns\TextColumn::make('student_name_calc')
+                    ->label('Studente')
+                    ->getStateUsing(function (ContractStudent $record): string {
+                        $label = trim((string) ($record->student_name_calc ?? ''));
 
-Tables\Columns\TextColumn::make('student_name_calc')
-    ->label('Studente')
-    ->getStateUsing(function (ContractStudent $record): string {
-        $label = trim((string) ($record->student_name_calc ?? ''));
-        return $label !== '' ? $label : ('Studente #' . ($record->student_id ?? $record->id));
-    })
-    ->sortable(query: function (Builder $query, string $direction): Builder {
-        return $query->orderBy('student_last_sort', $direction)
-                     ->orderBy('student_first_sort', $direction);
-    }),
+                        return $label !== ''
+                            ? $label
+                            : ('Studente #' . ($record->student_id ?? $record->id));
+                    })
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query
+                            ->orderBy('student_last_sort', $direction)
+                            ->orderBy('student_first_sort', $direction);
+                    }),
 
                 Tables\Columns\TextColumn::make('course_name_calc')
                     ->label('Corso')
@@ -124,25 +149,43 @@ Tables\Columns\TextColumn::make('student_name_calc')
                     ->getStateUsing(fn (ContractStudent $record) => trim((string) ($record->teacher_name_calc ?? '')) ?: '—')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('purchased_lessons_calc')->label('Acquistate')->alignRight()
-                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->purchased_lessons_calc ?? 0))->sortable(),
+                Tables\Columns\TextColumn::make('purchased_lessons_calc')
+                    ->label('Acquistate')
+                    ->alignRight()
+                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->purchased_lessons_calc ?? 0))
+                    ->sortable(),
 
-                Tables\Columns\TextColumn::make('attended_period')->label('Fruite')->alignRight()
-                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->attended_period ?? 0))->sortable(),
+                Tables\Columns\TextColumn::make('attended_period')
+                    ->label('Fruite')
+                    ->alignRight()
+                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->attended_period ?? 0))
+                    ->sortable(),
 
-                Tables\Columns\TextColumn::make('scheduled_period')->label('Programmate')->alignRight()
-                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->scheduled_period ?? 0))->sortable(),
+                Tables\Columns\TextColumn::make('scheduled_period')
+                    ->label('Programmate')
+                    ->alignRight()
+                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->scheduled_period ?? 0))
+                    ->sortable(),
 
-                Tables\Columns\TextColumn::make('future_from_today')->label('Future (da oggi)')->alignRight()
-                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->future_from_today ?? 0))->sortable(),
+                Tables\Columns\TextColumn::make('future_from_today')
+                    ->label('Future (da oggi)')
+                    ->alignRight()
+                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->future_from_today ?? 0))
+                    ->sortable(),
 
-                Tables\Columns\TextColumn::make('to_recover')->label('Da recuperare')->alignRight()
-                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->to_recover ?? 0))->sortable(),
+                Tables\Columns\TextColumn::make('to_recover')
+                    ->label('Da recuperare')
+                    ->alignRight()
+                    ->getStateUsing(fn (ContractStudent $record) => (int) ($record->to_recover ?? 0))
+                    ->sortable(),
 
-                Tables\Columns\TextColumn::make('remaining_total')->label('Residue')->alignRight()
+                Tables\Columns\TextColumn::make('remaining_total')
+                    ->label('Residue')
+                    ->alignRight()
                     ->getStateUsing(function (ContractStudent $record): int {
                         $purchased = (int) ($record->purchased_lessons_calc ?? 0);
-                        $consumed  = (int) ($record->consumed_total ?? 0);
+                        $consumed = (int) ($record->consumed_total ?? 0);
+
                         return max(0, $purchased - $consumed);
                     })
                     ->sortable(),
@@ -152,69 +195,104 @@ Tables\Columns\TextColumn::make('student_name_calc')
     }
 
     protected function baseQuery(): Builder
-{
-    $from = $this->data['from'] ?? null;
-    $to   = $this->data['to'] ?? null;
-    $studentId = $this->data['student_id'] ?? null;
+    {
+        $from         = $this->data['from'] ?? null;
+        $to           = $this->data['to'] ?? null;
+        $studentId    = $this->data['student_id'] ?? null;
+        $academicYear = $this->data['academic_year'] ?? null;
 
-    $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
-    $toDate   = $to ? Carbon::parse($to)->endOfDay() : null;
+        $fromDate = $from ? Carbon::parse($from)->startOfDay() : null;
+        $toDate = $to ? Carbon::parse($to)->endOfDay() : null;
 
-    $q = ContractStudent::query()
-    ->leftJoin('students as s', 's.id', '=', 'contract_students.student_id')
-    ->leftJoin('contracts as ctr', 'ctr.id', '=', 'contract_students.contract_id')
-    ->leftJoin('companies as co', 'co.id', '=', 'ctr.company_id')
-    ->select('contract_students.*')
-    ->selectRaw("
-        COALESCE(
-            NULLIF(ctr.company_name, ''),
-            NULLIF(co.name, ''),
-            NULLIF(
-                TRIM(CONCAT(
-                    COALESCE(NULLIF(contract_students.beneficiary_first_name,''), NULLIF(s.first_name,''), ''),
-                    ' ',
-                    COALESCE(NULLIF(contract_students.beneficiary_last_name,''), NULLIF(s.last_name,''), '')
-                )),
-                ''
-            )
-        ) AS student_name_calc,
+        $q = ContractStudent::query()
+            ->leftJoin('students as s', 's.id', '=', 'contract_students.student_id')
+            ->leftJoin('contracts as ctr', 'ctr.id', '=', 'contract_students.contract_id')
+            ->leftJoin('companies as co', 'co.id', '=', 'ctr.company_id')
 
-        UPPER(
-            COALESCE(
-                NULLIF(ctr.company_name, ''),
-                NULLIF(co.name, ''),
-                NULLIF(contract_students.beneficiary_last_name,''),
-                NULLIF(s.last_name,''),
-                ''
-            )
-        ) AS student_last_sort,
+            // Esclude record completamente vuoti/orfani
+            ->where(function ($qq) {
+                $qq->whereNotNull('contract_students.student_id')
+                    ->orWhereRaw("NULLIF(contract_students.beneficiary_first_name, '') IS NOT NULL")
+                    ->orWhereRaw("NULLIF(contract_students.beneficiary_last_name, '') IS NOT NULL")
+                    ->orWhereRaw("NULLIF(ctr.company_name, '') IS NOT NULL")
+                    ->orWhereRaw("NULLIF(co.name, '') IS NOT NULL");
+            })
 
-        UPPER(
-            CASE
-                WHEN COALESCE(NULLIF(ctr.company_name, ''), NULLIF(co.name, ''), '') <> '' THEN ''
-                ELSE COALESCE(
-                    NULLIF(contract_students.beneficiary_first_name,''),
-                    NULLIF(s.first_name,''),
-                    ''
-                )
-            END
-        ) AS student_first_sort
-    ")
-    ->with(['student', 'contract.course', 'contract.company'])
-    ->when($studentId, fn (Builder $qq) => $qq->where('contract_students.student_id', (int) $studentId));
+            // Mostra solo chi ha lezioni O slot
+            ->where(function ($qq) {
+                $qq->whereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('lessons')
+                        ->whereColumn('lessons.contract_student_id', 'contract_students.id');
+                })
+                ->orWhereExists(function ($sub) {
+                    $sub->select(DB::raw(1))
+                        ->from('contract_lesson_slots')
+                        ->whereColumn('contract_lesson_slots.contract_id', 'contract_students.contract_id')
+                        ->whereColumn('contract_lesson_slots.student_id', 'contract_students.student_id');
+                });
+            })
 
+            ->select('contract_students.*')
+            ->selectRaw("
+                COALESCE(
+                    NULLIF(ctr.company_name, ''),
+                    NULLIF(co.name, ''),
+                    NULLIF(
+                        TRIM(CONCAT(
+                            COALESCE(NULLIF(contract_students.beneficiary_first_name,''), NULLIF(s.first_name,''), ''),
+                            ' ',
+                            COALESCE(NULLIF(contract_students.beneficiary_last_name,''), NULLIF(s.last_name,''), '')
+                        )),
+                        ''
+                    )
+                ) AS student_name_calc,
+
+                UPPER(
+                    COALESCE(
+                        NULLIF(ctr.company_name, ''),
+                        NULLIF(co.name, ''),
+                        NULLIF(contract_students.beneficiary_last_name,''),
+                        NULLIF(s.last_name,''),
+                        ''
+                    )
+                ) AS student_last_sort,
+
+                UPPER(
+                    CASE
+                        WHEN COALESCE(NULLIF(ctr.company_name, ''), NULLIF(co.name, ''), '') <> '' THEN ''
+                        ELSE COALESCE(
+                            NULLIF(contract_students.beneficiary_first_name,''),
+                            NULLIF(s.first_name,''),
+                            ''
+                        )
+                    END
+                ) AS student_first_sort
+            ")
+            ->with(['student', 'contract.course', 'contract.company'])
+            ->when($studentId,    fn (Builder $qq) => $qq->where('contract_students.student_id', (int) $studentId))
+            ->when($academicYear, fn (Builder $qq) => $qq->where('ctr.academic_year', $academicYear));
+
+        // Docente da lezioni
         $q->selectSub(
             Lesson::query()
                 ->join('users', 'users.id', '=', 'lessons.teacher_id')
                 ->whereColumn('lessons.contract_student_id', 'contract_students.id')
                 ->whereNotNull('lessons.teacher_id')
-                ->selectRaw("COALESCE(NULLIF(users.name,''), NULLIF(TRIM(CONCAT(COALESCE(users.first_name,''),' ',COALESCE(users.last_name,''))),''), users.email, CONCAT('Docente #', users.id))")
+                ->selectRaw("
+                    COALESCE(
+                        NULLIF(users.name,''),
+                        NULLIF(TRIM(CONCAT(COALESCE(users.first_name,''), ' ', COALESCE(users.last_name,''))), ''),
+                        users.email,
+                        CONCAT('Docente #', users.id)
+                    )
+                ")
                 ->limit(1),
             'teacher_name_calc'
         );
 
         $q->selectSub(
-            \App\Models\Contract::query()
+            Contract::query()
                 ->join('courses', 'courses.id', '=', 'contracts.course_id')
                 ->whereColumn('contracts.id', 'contract_students.contract_id')
                 ->selectRaw('courses.name')
@@ -223,59 +301,59 @@ Tables\Columns\TextColumn::make('student_name_calc')
         );
 
         $q->selectSub(
-            \App\Models\Contract::query()
+            Contract::query()
                 ->join('courses', 'courses.id', '=', 'contracts.course_id')
                 ->whereColumn('contracts.id', 'contract_students.contract_id')
-                ->selectRaw('COALESCE(courses.lessons_count,0)')
+                ->selectRaw('COALESCE(courses.lessons_count, 0)')
                 ->limit(1),
             'purchased_lessons_calc'
         );
 
         $q->selectSub(
-    Lesson::query()
-        ->selectRaw('count(*)')
-        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-        ->where('lessons.counts_as_consumed', true),
-    'consumed_total'
-);
+            Lesson::query()
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+                ->where('lessons.counts_as_consumed', true),
+            'consumed_total'
+        );
 
         $q->selectSub(
-    Lesson::query()
-        ->selectRaw('count(*)')
-        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-        ->where('lessons.counts_as_consumed', true)
-        ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
-        ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
-    'attended_period'
-);
+            Lesson::query()
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+                ->where('lessons.counts_as_consumed', true)
+                ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
+                ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
+            'attended_period'
+        );
 
         $q->selectSub(
-    Lesson::query()
-        ->selectRaw('count(*)')
-        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-        ->whereNull('lessons.cancelled_at')
-        ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
-        ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
-    'scheduled_period'
-);
+            Lesson::query()
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+                ->whereNull('lessons.cancelled_at')
+                ->when($fromDate, fn ($lq) => $lq->where('lessons.starts_at', '>=', $fromDate))
+                ->when($toDate, fn ($lq) => $lq->where('lessons.starts_at', '<=', $toDate)),
+            'scheduled_period'
+        );
 
         $q->selectSub(
-    Lesson::query()
-        ->selectRaw('count(*)')
-        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-        ->whereNull('lessons.cancelled_at')
-        ->where('lessons.starts_at', '>=', now()->startOfDay()),
-    'future_from_today'
-);
+            Lesson::query()
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+                ->whereNull('lessons.cancelled_at')
+                ->where('lessons.starts_at', '>=', now()->startOfDay()),
+            'future_from_today'
+        );
 
         $q->selectSub(
-    Lesson::query()
-        ->selectRaw('count(*)')
-        ->whereColumn('lessons.contract_student_id', 'contract_students.id')
-        ->whereNotNull('lessons.cancelled_at')
-        ->where('lessons.is_recoverable', true),
-    'to_recover'
-);
+            Lesson::query()
+                ->selectRaw('COUNT(*)')
+                ->whereColumn('lessons.contract_student_id', 'contract_students.id')
+                ->whereNotNull('lessons.cancelled_at')
+                ->where('lessons.is_recoverable', true),
+            'to_recover'
+        );
 
         return $q;
     }

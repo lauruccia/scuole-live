@@ -32,7 +32,7 @@ class LessonsRelationManager extends RelationManager
             ->defaultSort('starts_at', 'asc')
             ->modifyQueryUsing(function (Builder $query) {
                 // ottimizza e allinea comportamento alla lista Lezioni
-                $query->with(['teacher', 'contract.course', 'recoveryLesson', 'originalLesson']);
+                $query->with(['teacher', 'contract', 'contract.course', 'recoveryLesson', 'originalLesson']);
 
                 $u = auth()->user();
                 if ($u?->hasRole('Docente')) {
@@ -53,6 +53,26 @@ class LessonsRelationManager extends RelationManager
                     ->limit(18)
                     ->wrap()
                     ->sortable(),
+
+                // Badge che mostra subito se la lezione appartiene a un contratto
+                // terminato: il cliente lamentava che le lezioni dei vecchi corsi
+                // comparissero mescolate a quelle del nuovo iscritto.
+                Tables\Columns\BadgeColumn::make('contract_status_label')
+                    ->label('Contratto')
+                    ->getStateUsing(function (Lesson $record): string {
+                        return match ($record->contract?->status ?? 'unknown') {
+                            'active'    => 'Attivo',
+                            'completed' => 'Terminato',
+                            'suspended' => 'Sospeso',
+                            'paused'    => 'In pausa',
+                            default     => '—',
+                        };
+                    })
+                    ->colors([
+                        'success' => 'Attivo',
+                        'gray'    => 'Terminato',
+                        'warning' => fn ($s) => in_array($s, ['Sospeso', 'In pausa']),
+                    ]),
 
                 Tables\Columns\TextColumn::make('teacher_label')
                     ->label('Docente')
@@ -94,6 +114,17 @@ class LessonsRelationManager extends RelationManager
                     }),
             ])
             ->filters([
+                // Nasconde le lezioni dei contratti terminati.
+                // Attivo di default: nella scheda studente si vuole vedere
+                // il corso corrente, non la storia di tutti i contratti.
+                // Disattivare per visualizzare l'intero storico.
+                Filter::make('active_contracts')
+                    ->label('Solo contratti attivi')
+                    ->default()
+                    ->query(fn (Builder $query) => $query->whereHas('contract', fn ($cq) =>
+                        $cq->whereNotIn('status', ['completed'])
+                    )),
+
                 // ✅ default: da oggi
                 Filter::make('upcoming')
                     ->label('Da oggi')

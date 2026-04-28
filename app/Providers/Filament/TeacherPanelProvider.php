@@ -20,6 +20,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
+use App\Filament\Common\Pages\ChangePasswordPage;
 
 class TeacherPanelProvider extends PanelProvider
 {
@@ -51,6 +52,7 @@ class TeacherPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 LessonCalendar::class,
+                    ChangePasswordPage::class,
             ])
 
             ->resources([

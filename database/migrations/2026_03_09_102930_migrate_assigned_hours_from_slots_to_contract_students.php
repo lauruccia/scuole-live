@@ -40,6 +40,11 @@ return new class extends Migration
 
     public function down(): void
     {
-        // nessun rollback dati
+        // Ripristina assigned_hours in contract_students a NULL.
+        // I valori originali in contract_lesson_slots sono ancora presenti
+        // (la colonna viene eliminata da una migrazione separata).
+        if (Schema::hasTable('contract_students') && Schema::hasColumn('contract_students', 'assigned_hours')) {
+            DB::table('contract_students')->update(['assigned_hours' => null]);
+        }
     }
 };

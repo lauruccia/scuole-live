@@ -7,9 +7,13 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('lessons', function (Blueprint $table) {
-            $table->unique(['contract_student_id', 'starts_at'], 'uniq_lesson_slot');
-        });
+        // Controlla se l'indice esiste già prima di crearlo
+        $indexes = collect(\DB::select("SHOW INDEX FROM lessons WHERE Key_name = 'uniq_lesson_slot'"));
+        if ($indexes->isEmpty()) {
+            Schema::table('lessons', function (Blueprint $table) {
+                $table->unique(['contract_student_id', 'starts_at'], 'uniq_lesson_slot');
+            });
+        }
     }
 
     public function down(): void

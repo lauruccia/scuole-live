@@ -162,8 +162,8 @@ class GoogleCalendarService
     }
 
     /**
-     * ✅ Genera un Google Meet (conference) creando un evento "dummy"
-     * e ritorna l'hangoutLink.
+     * ✅ Genera un Google Meet creando un evento temporaneo solo per ottenere
+     * il link conferenza, poi lo elimina subito. Il link Meet rimane valido.
      */
     public function generateMeetLink(string $title = 'Meet AEA Language'): ?string
     {
@@ -198,7 +198,26 @@ class GoogleCalendarService
             'conferenceDataVersion' => 1,
         ]);
 
+        // Recupera il link Meet prima di eliminare l'evento temporaneo
         $link = $created->getHangoutLink();
+
+        // Fallback: prova i conferenceData entry points se hangoutLink è vuoto
+        // Nota: ?.[0] non è supportato in PHP - usiamo una variabile intermedia
+        if (! $link) {
+            $entryPoints = $created->getConferenceData()?->getEntryPoints();
+            $link = (is_array($entryPoints) && isset($entryPoints[0]))
+                ? $entryPoints[0]->getUri()
+                : null;
+        }
+
+        // Elimina subito l'evento temporaneo: il calendario rimane pulito.
+        // Il link Meet rimane valido indipendentemente dall'evento.
+        try {
+            $service->events->delete($calendarId, $created->getId());
+        } catch (\Exception) {
+            // Se la delete fallisce non blocchiamo: il link è già ottenuto
+        }
+
         return $link ?: null;
     }
 
@@ -272,50 +291,54 @@ class GoogleCalendarService
     }
 
     private function clientOrNull(): ?GoogleClient
-    {
-        /** @var GoogleAccount|null $acc */
-        $acc = GoogleAccount::query()->find(1);
-        if (! $acc || empty($acc->access_token)) {
-            return null;
-        }
+{
+    /** @var GoogleAccount|null $acc */
+    $acc = GoogleAccount::query()->find(1);
 
-        $token = json_decode((string) $acc->access_token, true);
-        if (! is_array($token)) {
-            return null;
-        }
-
-        $client = new GoogleClient();
-        $client->setClientId(config('services.google.client_id'));
-        $client->setClientSecret(config('services.google.client_secret'));
-        $client->setRedirectUri(config('services.google.redirect'));
-        $client->setAccessType('offline');
-        $client->setPrompt('consent');
-        $client->addScope(Calendar::CALENDAR);
-
-        $client->setAccessToken($token);
-
-        if ($client->isAccessTokenExpired()) {
-            $refresh = $acc->refresh_token ?? ($token['refresh_token'] ?? null);
-            if (empty($refresh)) {
-                return null;
-            }
-
-            $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
-
-            if (isset($newToken['error'])) {
-                return null;
-            }
-
-            $newToken['refresh_token'] = $refresh;
-
-            $acc->access_token = json_encode($newToken);
-            $acc->refresh_token = $refresh;
-            $acc->expires_at = now()->addSeconds((int) ($newToken['expires_in'] ?? 3600));
-            $acc->save();
-
-            $client->setAccessToken($newToken);
-        }
-
-        return $client;
+    if (! $acc || empty($acc->access_token)) {
+        return null;
     }
+
+    $token = json_decode((string) $acc->access_token, true);
+
+    if (! is_array($token)) {
+        return null;
+    }
+
+    $client = new GoogleClient();
+    $client->setClientId(config('services.google.client_id'));
+    $client->setClientSecret(config('services.google.client_secret'));
+    $client->setRedirectUri(config('services.google.redirect'));
+    $client->setAccessType('offline');
+    $client->setPrompt('consent');
+    $client->addScope(Calendar::CALENDAR);
+
+    $client->setAccessToken($token);
+
+    if ($client->isAccessTokenExpired()) {
+        $refresh = $acc->refresh_token ?: ($token['refresh_token'] ?? null);
+
+        if (empty($refresh)) {
+            return null;
+        }
+
+        $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+
+        if (! empty($newToken['error'])) {
+            return null;
+        }
+
+        $newToken['refresh_token'] = $refresh;
+
+        $acc->update([
+            'access_token' => json_encode($newToken),
+            'refresh_token' => $refresh,
+            'expires_at' => now()->addSeconds((int) ($newToken['expires_in'] ?? 3600)),
+        ]);
+
+        $client->setAccessToken($newToken);
+    }
+
+    return $client;
+}
 }

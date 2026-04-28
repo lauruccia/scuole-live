@@ -54,6 +54,34 @@ class ContractResource extends Resource
     protected static ?string $pluralModelLabel = 'Contratti';
     protected static ?int $navigationSort = 0;
 
+    public static function academicYearOptions(): array
+    {
+        $thisYear = (int) now()->format('Y');
+        // Genera 4 anni: anno precedente, corrente, prossimo, successivo
+        $years = [];
+        for ($y = $thisYear - 1; $y <= $thisYear + 2; $y++) {
+            $label = $y . '/' . ($y + 1);
+            $years[$label] = $label;
+        }
+        return $years;
+    }
+
+    /**
+     * Restituisce l'anno scolastico corrente come stringa "YYYY/YYYY+1".
+     * L'anno scolastico italiano inizia a settembre:
+     *   - da settembre a dicembre → anno corrente / anno+1
+     *   - da gennaio ad agosto   → anno-1 / anno corrente
+     */
+    public static function currentAcademicYear(): string
+    {
+        $now   = now();
+        $year  = (int) $now->format('Y');
+        $month = (int) $now->format('n');
+
+        $start = ($month >= 9) ? $year : $year - 1;
+        return $start . '/' . ($start + 1);
+    }
+
     public static function subjectOptions(): array
     {
         return [
@@ -123,32 +151,72 @@ class ContractResource extends Resource
                                 ])->toArray()
                             )
                             ->live()
-                            ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                if (! $state) {
-                                    return;
-                                }
+->afterStateUpdated(function ($state, Get $get, Set $set) {
+    if (! $state) {
+        return;
+    }
 
-                                $p = BillingProfile::find((int) $state);
-                                if (! $p) {
-                                    return;
-                                }
+    $p = BillingProfile::find((int) $state);
+    if (! $p) {
+        return;
+    }
 
-                                $set('billing_first_name', $p->first_name);
-                                $set('billing_last_name',  $p->last_name);
-                                $set('billing_tax_code',   $p->fiscal_code);
-                                $set('billing_vat_number', $p->vat_number);
-                                $set('billing_sdi',        $p->sdi_code);
-                                $set('billing_pec',        $p->pec);
-                                $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
-                                $set('billing_phone',      $p->phone);
-                                $set('billing_address',    $p->address);
-                                $set('billing_zip',        $p->zip);
-                                $set('billing_city',       $p->city);
-                                $set('billing_province',   $p->province);
-                                $set('billing_country',    $p->country);
+    $set('billing_first_name', $p->first_name);
+    $set('billing_last_name',  $p->last_name);
+    $set('billing_tax_code',   $p->fiscal_code);
+    $set('billing_vat_number', $p->vat_number);
+    $set('billing_sdi',        $p->sdi_code);
+    $set('billing_pec',        $p->pec);
+    $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
+    $set('billing_phone',      $p->phone);
+    $set('billing_address',    $p->address);
+    $set('billing_zip',        $p->zip);
+    $set('billing_city',       $p->city);
+    $set('billing_province',   $p->province);
+    $set('billing_country',    $p->country);
 
-                                static::syncSingleBeneficiaryFromBilling($get, $set);
-                            })
+    $birthDate = null;
+    $birthPlace = null;
+
+    if (Schema::hasColumn('billing_profiles', 'birth_date')) {
+        $birthDate = $p->birth_date ?? null;
+    }
+
+    if (Schema::hasColumn('billing_profiles', 'birth_place')) {
+        $birthPlace = $p->birth_place ?? null;
+    }
+
+    // Se il BillingProfile non ha nascita, provo a recuperarla dallo Studente
+    if (! $birthDate || ! $birthPlace) {
+        $student = null;
+
+        if (! empty($p->email)) {
+            $student = Student::query()
+                ->whereRaw('LOWER(email) = ?', [Str::lower(trim($p->email))])
+                ->first();
+        }
+
+        if (! $student && ! empty($p->first_name) && ! empty($p->last_name)) {
+            $student = Student::query()
+                ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower(trim($p->first_name))])
+                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower(trim($p->last_name))])
+                ->first();
+        }
+
+        if ($student) {
+            $birthDate = $birthDate ?: $student->birth_date;
+            $birthPlace = $birthPlace ?: $student->birth_place;
+        }
+    }
+
+$set(
+    'billing_birth_date',
+    $birthDate ? \Illuminate\Support\Carbon::parse($birthDate)->format('Y-m-d') : null
+);
+    $set('billing_birth_place', $birthPlace);
+
+    static::syncSingleBeneficiaryFromBilling($get, $set);
+})
                             ->visible(fn (Get $get) => $get('billing_type') === 'private'),
 
                         Select::make('billing_profile_from_student')
@@ -172,7 +240,34 @@ class ContractResource extends Resource
                                         $s->id => trim($s->last_name . ' ' . $s->first_name) . ($s->email ? " — {$s->email}" : ''),
                                     ])->toArray();
                             })
+                            ->getOptionLabelUsing(fn ($value): ?string => $value ? Student::find($value)?->full_name : null)
                             ->live()
+                            ->afterStateHydrated(function ($state, Get $get, Set $set) {
+    if (! $state) {
+        return;
+    }
+
+    $s = Student::find((int) $state);
+    if (! $s) {
+        return;
+    }
+
+    $set('billing_first_name', $s->first_name);
+    $set('billing_last_name', $s->last_name);
+    $set('billing_tax_code', $s->fiscal_code);
+    $set('billing_email', $s->email ? Str::lower(trim($s->email)) : null);
+    $set('billing_phone', $s->phone);
+    $set('billing_address', $s->residence_address);
+    $set('billing_city', $s->residence_city);
+    $set('billing_province', $s->residence_province);
+    $set('billing_zip', $s->residence_zip);
+    $set('billing_country', $s->residence_country ?? 'Italia');
+    $set('billing_birth_date', $s->birth_date
+        ? \Illuminate\Support\Carbon::parse($s->birth_date)->format('Y-m-d')
+        : null
+    );
+    $set('billing_birth_place', $s->birth_place ?? null);
+})
                             ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                 if (! $state) {
                                     return;
@@ -188,21 +283,31 @@ class ContractResource extends Resource
                                     ->when($s->email, fn ($q) => $q->whereRaw('LOWER(email)=?', [Str::lower($s->email)]))
                                     ->first();
 
-                                if (! $p) {
-                                    $p = BillingProfile::create([
-                                        'type'        => 'private',
-                                        'first_name'  => $s->first_name,
-                                        'last_name'   => $s->last_name,
-                                        'email'       => $s->email ? Str::lower(trim($s->email)) : null,
-                                        'phone'       => $s->phone,
-                                        'city'        => $s->residence_city ?? null,
-                                        'province'    => $s->residence_province ?? null,
-                                        'zip'         => $s->residence_zip ?? null,
-                                        'country'     => $s->residence_country ?? 'Italia',
-                                        'address'     => $s->residence_address ?? null,
-                                        'fiscal_code' => $s->fiscal_code ?? null,
-                                    ]);
-                                }
+                               if (! $p) {
+    $payload = [
+        'type'        => 'private',
+        'first_name'  => $s->first_name,
+        'last_name'   => $s->last_name,
+        'email'       => $s->email ? Str::lower(trim($s->email)) : null,
+        'phone'       => $s->phone,
+        'city'        => $s->residence_city ?? null,
+        'province'    => $s->residence_province ?? null,
+        'zip'         => $s->residence_zip ?? null,
+        'country'     => $s->residence_country ?? 'Italia',
+        'address'     => $s->residence_address ?? null,
+        'fiscal_code' => $s->fiscal_code ?? null,
+    ];
+
+    if (Schema::hasColumn('billing_profiles', 'birth_date')) {
+        $payload['birth_date'] = $s->birth_date ?? null;
+    }
+
+    if (Schema::hasColumn('billing_profiles', 'birth_place')) {
+        $payload['birth_place'] = $s->birth_place ?? null;
+    }
+
+    $p = BillingProfile::create($payload);
+}
 
                                 $set('billing_profile_id', $p->id);
 
@@ -216,6 +321,12 @@ class ContractResource extends Resource
                                 $set('billing_province',   $p->province);
                                 $set('billing_zip',        $p->zip);
                                 $set('billing_country',    $p->country);
+                                
+                                $set('billing_birth_date', $s->birth_date
+                                    ? \Illuminate\Support\Carbon::parse($s->birth_date)->format('Y-m-d')
+                                    : null
+                                );
+                                $set('billing_birth_place', $s->birth_place ?? null);
 
                                 static::syncSingleBeneficiaryFromBilling($get, $set);
                             })
@@ -500,7 +611,16 @@ class ContractResource extends Resource
                         DatePicker::make('ends_at')
                             ->label('Data fine corso')
                             ->nullable()
-                            ->minDate(fn (Get $get) => $get('starts_at') ?: null),
+                            ->minDate(fn (Get $get) => $get('starts_at') ?: null)
+                            ->live()
+                            ->hint(function (Get $get) {
+                                if (! $get('ends_at') && $get('status') === 'active') {
+                                    return new \Illuminate\Support\HtmlString(
+                                        "<span style='color:#ca8a04;'>\xF0\x9F\x93\x8B Nessuna scadenza impostata &mdash; contratto aperto.</span>"
+                                    );
+                                }
+                                return null;
+                            }),
 
                         TextInput::make('course_price')
                             ->label('Prezzo corso')
@@ -530,6 +650,7 @@ class ContractResource extends Resource
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 static::recalcBeneficiariesAssignedHours($get, $set);
+                                static::syncSingleBeneficiaryFromBilling($get, $set);
                             }),
                     ]),
 
@@ -667,48 +788,84 @@ class ContractResource extends Resource
                                     ->dehydrated(false)
                                     ->columnSpanFull(),
 
-                                Select::make('student_id')
-                                    ->label('Studente esistente (opzionale)')
-                                    ->searchable()
-                                    ->preload(false)
-                                    ->getSearchResultsUsing(function (string $search): array {
-                                        return Student::query()
-                                            ->where(function ($q) use ($search) {
-                                                $q->where('last_name', 'like', "%{$search}%")
-                                                    ->orWhere('first_name', 'like', "%{$search}%");
-                                            })
-                                            ->orderBy('last_name')
-                                            ->orderBy('first_name')
-                                            ->limit(20)
-                                            ->get()
-                                            ->mapWithKeys(function (Student $s) {
-                                                $label = trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? ''));
-                                                return [$s->id => $label];
-                                            })
-                                            ->toArray();
-                                    })
-                                    ->getOptionLabelUsing(fn ($value): ?string => Student::find($value)?->full_name)
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                        if (! $state) {
-                                            return;
-                                        }
+Select::make('student_id')
+    ->label('Studente esistente (opzionale)')
+    ->searchable()
+    ->preload(false)
+    ->getSearchResultsUsing(function (string $search): array {
+        return Student::query()
+            ->where(function ($q) use ($search) {
+                $q->where('last_name',    'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('email',      'like', "%{$search}%")
+                  ->orWhere('phone',      'like', "%{$search}%")
+                  ->orWhere('fiscal_code','like', "%{$search}%");
+            })
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->limit(20)
+            ->get()
+            ->mapWithKeys(function (Student $s) {
+                $label = trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? ''));
+                $extra = array_filter([
+                    $s->fiscal_code ? 'CF: ' . $s->fiscal_code : null,
+                    $s->email ?: null,
+                ]);
+                if ($extra) $label .= ' — ' . implode(' · ', $extra);
+                return [$s->id => $label];
+            })
+            ->toArray();
+    })
+    ->helperText('Cerca per nome, cognome, email, telefono o codice fiscale.')
+    ->getOptionLabelUsing(fn ($value): ?string => $value ? Student::find($value)?->full_name : null)
+    ->live()
 
-                                        $s = Student::find((int) $state);
-                                        if (! $s) {
-                                            return;
-                                        }
+    ->afterStateHydrated(function ($state, Get $get, Set $set) {
+        if (! $state) {
+            return;
+        }
 
-                                        $set('beneficiary_first_name', $s->first_name);
-                                        $set('beneficiary_last_name', $s->last_name);
-                                        $set('beneficiary_email', $s->email);
-                                        $set('beneficiary_phone', $s->phone);
-                                        $set('beneficiary_birth_date', $s->birth_date);
-                                        $set('beneficiary_birth_place', $s->birth_place);
-                                        $set('auto_birth_province', $s->birth_province ?? null);
-                                        $set('auto_match_label', 'Selezionato: ' . $s->full_name);
-                                    })
-                                    ->visible(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1),
+        $s = Student::find((int) $state);
+        if (! $s) {
+            return;
+        }
+
+        static::fillBeneficiaryFormFromStudent($s, $set);
+
+        $set('auto_birth_province', $s->birth_province ?? null);
+        $set('auto_birth_country', $s->birth_country ?? null);
+        $set('auto_match_label', 'Selezionato: ' . trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')));
+    })
+
+    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+        if (! $state) {
+            $set('auto_match_label', null);
+            $set('auto_birth_province', null);
+            $set('auto_birth_country', null);
+
+            // opzionale: svuota i campi quando deselezioni
+            // $set('beneficiary_first_name', null);
+            // $set('beneficiary_last_name', null);
+            // $set('beneficiary_email', null);
+            // $set('beneficiary_phone', null);
+            // $set('beneficiary_birth_date', null);
+            // $set('beneficiary_birth_place', null);
+
+            return;
+        }
+
+        $s = Student::find((int) $state);
+        if (! $s) {
+            return;
+        }
+
+        static::fillBeneficiaryFormFromStudent($s, $set);
+
+        $set('auto_birth_province', $s->birth_province ?? null);
+        $set('auto_birth_country', $s->birth_country ?? null);
+        $set('auto_match_label', 'Selezionato: ' . trim(($s->first_name ?? '') . ' ' . ($s->last_name ?? '')));
+    })
+    ->visible(fn (Get $get) => (int) ($get('../../billing_is_student') ?? 0) !== 1),
 
                                 Section::make('Anagrafica beneficiario')
                                     ->compact()
@@ -717,13 +874,17 @@ class ContractResource extends Resource
                                         Grid::make(2)->schema([
                                             TextInput::make('beneficiary_first_name')
                                                 ->label('Nome')
-                                                ->required()
+                                                ->required(fn (Get $get) => blank($get('student_id')))
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated()
                                                 ->live(debounce: 500)
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
 
                                             TextInput::make('beneficiary_last_name')
                                                 ->label('Cognome')
-                                                ->required()
+                                                ->required(fn (Get $get) => blank($get('student_id')))
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated()
                                                 ->live(debounce: 500)
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
 
@@ -731,6 +892,8 @@ class ContractResource extends Resource
                                                 ->label('Email')
                                                 ->email()
                                                 ->nullable()
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated()
                                                 ->live(debounce: 500)
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
 
@@ -738,6 +901,8 @@ class ContractResource extends Resource
                                                 ->label('Telefono')
                                                 ->tel()
                                                 ->nullable()
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated()
                                                 ->live(debounce: 500)
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
                                         ]),
@@ -746,23 +911,27 @@ class ContractResource extends Resource
                                             DatePicker::make('beneficiary_birth_date')
                                                 ->label('Nato/a il')
                                                 ->nullable()
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated()
                                                 ->live()
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
 
                                             TextInput::make('beneficiary_birth_place')
                                                 ->label('Nato/a a')
                                                 ->nullable()
-                                                ->maxLength(120),
+                                                ->maxLength(120)
+                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                ->dehydrated(),
                                         ]),
 
                                         TextInput::make('assigned_hours')
                                             ->label('Ore assegnate')
                                             ->numeric()
-                                            ->step(1)
-                                            ->minValue(1)
+                                            ->step(0.5)
+                                            ->minValue(0.5)
                                             ->nullable()
                                             ->live(onBlur: true)
-                                            ->helperText('Default automatico in ore intere. Il resto viene assegnato all’ultimo studente.')
+                                            ->helperText('Supporta mezze ore. Default automatico distribuito sui beneficiari.')
                                             ->columnSpanFull(),
 
                                         Placeholder::make('auto_birth_province')
@@ -798,16 +967,50 @@ class ContractResource extends Resource
                         Section::make('Ripartizione ore')
                             ->schema([
                                 Placeholder::make('assigned_hours_summary')
-                                    ->label('Riepilogo')
+                                    ->label('Riepilogo ore')
                                     ->content(function (Get $get) {
-                                        $beneficiaries = $get('beneficiaries') ?? [];
-                                        $totalAssigned = collect($beneficiaries)
-                                            ->sum(fn ($row) => (float) ($row['assigned_hours'] ?? 0));
+                                        $beneficiaries  = $get('beneficiaries') ?? [];
+                                        $totalAssigned  = round(collect($beneficiaries)
+                                            ->sum(fn ($row) => (float) ($row['assigned_hours'] ?? 0)), 2);
                                         $hoursPurchased = (float) ($get('hours_purchased') ?? 0);
-                                        $delta = $hoursPurchased - $totalAssigned;
+                                        $delta          = round($hoursPurchased - $totalAssigned, 2);
 
-                                        return "Ore contratto: {$hoursPurchased} — Ore assegnate: {$totalAssigned} — Residuo: {$delta}";
+                                        [$icon, $color, $msg] = match (true) {
+                                            $delta == 0  => ['✅', '#16a34a', 'Ore distribuite correttamente.'],
+                                            $delta > 0   => ['⚠️', '#ca8a04', "{$delta} h del contratto non ancora assegnate ai beneficiari."],
+                                            default      => ['🚨', '#dc2626', 'Assegnate ' . abs($delta) . ' h in più rispetto al totale del contratto!'],
+                                        };
+
+                                        return new HtmlString(
+                                            "<span style='color:{$color};font-weight:600;'>{$icon} "
+                                            . "Contratto: <strong>{$hoursPurchased} h</strong> &nbsp;|&nbsp; "
+                                            . "Assegnate: <strong>{$totalAssigned} h</strong> &nbsp;— {$msg}"
+                                            . "</span>"
+                                        );
                                     }),
+                            ]),
+
+                        Section::make('Anno scolastico e stato')
+                            ->columns(2)
+                            ->schema([
+                                Select::make('academic_year')
+                                    ->label('Anno scolastico')
+                                    ->options(static::academicYearOptions())
+                                    ->default(static::currentAcademicYear())
+                                    ->nullable()
+                                    ->searchable()
+                                    ->helperText('Impostato automaticamente all\'anno corrente. Modificabile.'),
+
+                                Select::make('status')
+                                    ->label('Stato contratto')
+                                    ->options([
+                                        'active'    => '🟢 Attivo',
+                                        'completed' => '✅ Completato',
+                                        'suspended' => '⏸️ Sospeso',
+                                        'paused'    => '⏳ In pausa',
+                                    ])
+                                    ->default('active')
+                                    ->required(),
                             ]),
 
                         Section::make('Note')
@@ -830,17 +1033,28 @@ class ContractResource extends Resource
             return;
         }
 
-        $hoursPurchased = (int) floor((float) ($get('hours_purchased') ?? 0));
+        $hoursPurchased = round((float) ($get('hours_purchased') ?? 0), 2);
+
+        $matchedStudent = static::findStudentForBeneficiary([
+            'beneficiary_first_name' => (string) $get('billing_first_name'),
+            'beneficiary_last_name'  => (string) $get('billing_last_name'),
+            'beneficiary_email'      => (string) $get('billing_email'),
+            'beneficiary_phone'      => (string) $get('billing_phone'),
+            'beneficiary_birth_date' => $get('billing_birth_date'),
+        ]);
 
         $set('beneficiaries', [[
-            'student_id'               => null,
+            'student_id'               => $matchedStudent?->id,
             'beneficiary_first_name'   => (string) $get('billing_first_name'),
             'beneficiary_last_name'    => (string) $get('billing_last_name'),
             'beneficiary_email'        => (string) $get('billing_email'),
             'beneficiary_phone'        => (string) $get('billing_phone'),
             'beneficiary_birth_date'   => $get('billing_birth_date'),
             'beneficiary_birth_place'  => (string) $get('billing_birth_place'),
+            'duration_minutes'         => 60,
             'assigned_hours'           => $hoursPurchased > 0 ? $hoursPurchased : null,
+            'auto_birth_province'      => $matchedStudent?->birth_province,
+            'auto_match_label'         => $matchedStudent ? 'Trovato in anagrafica: ' . $matchedStudent->full_name : null,
         ]]);
     }
 
@@ -869,19 +1083,15 @@ class ContractResource extends Resource
             return;
         }
 
-        $hoursPurchased = (int) floor((float) ($get('hours_purchased') ?? 0));
+        $hoursPurchased = round((float) ($get('hours_purchased') ?? 0), 2);
         if ($hoursPurchased <= 0) {
             return;
         }
 
         $filledIndexes = [];
-        $emptyIndexes = [];
-
         foreach ($beneficiaries as $index => $row) {
             $value = $row['assigned_hours'] ?? null;
-            if ($value === null || $value === '') {
-                $emptyIndexes[] = $index;
-            } else {
+            if ($value !== null && $value !== '') {
                 $filledIndexes[] = $index;
             }
         }
@@ -891,8 +1101,8 @@ class ContractResource extends Resource
         }
 
         $studentsCount = count($beneficiaries);
-        $base = intdiv($hoursPurchased, max(1, $studentsCount));
-        $remainder = $hoursPurchased - ($base * $studentsCount);
+        $base = floor(($hoursPurchased / max(1, $studentsCount)) * 2) / 2;
+        $remainder = round($hoursPurchased - ($base * $studentsCount), 2);
 
         foreach ($beneficiaries as $index => &$row) {
             if (in_array($index, $filledIndexes, true)) {
@@ -905,8 +1115,8 @@ class ContractResource extends Resource
 
         if (! empty($beneficiaries)) {
             $lastIndex = array_key_last($beneficiaries);
-            $current = (int) ($beneficiaries[$lastIndex]['assigned_hours'] ?? 0);
-            $beneficiaries[$lastIndex]['assigned_hours'] = $current + $remainder;
+            $current = (float) ($beneficiaries[$lastIndex]['assigned_hours'] ?? 0);
+            $beneficiaries[$lastIndex]['assigned_hours'] = round($current + $remainder, 2);
         }
 
         $set('beneficiaries', $beneficiaries);
@@ -1085,11 +1295,147 @@ class ContractResource extends Resource
                     }),
 
                 Tables\Columns\TextColumn::make('course.name')->label('Corso')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('hours_purchased')->label('Ore'),
-                Tables\Columns\TextColumn::make('hours_consumed')->label('Fruite'),
+
+                Tables\Columns\TextColumn::make('academic_year')
+                    ->label('Anno')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\BadgeColumn::make('status')
+                    ->label('Stato')
+                    ->getStateUsing(fn (Contract $record) => $record->status ?? 'active')
+                    ->colors([
+                        'success' => 'active',
+                        'gray'    => 'completed',
+                        'warning' => 'suspended',
+                        'info'    => 'paused',
+                    ])
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'active'    => '🟢 Attivo',
+                        'completed' => '✅ Completato',
+                        'suspended' => '⏸️ Sospeso',
+                        'paused'    => '⏳ In pausa',
+                        default     => $state,
+                    })
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('hours_purchased')->label('Ore')->toggleable(),
+                Tables\Columns\TextColumn::make('hours_consumed')->label('Fruite')->toggleable(),
+                Tables\Columns\BadgeColumn::make('hours_remaining_badge')
+                    ->label('Residue')
+                    ->toggleable()
+                    ->getStateUsing(function (\App\Models\Contract $record): string {
+                        $rem = max(0, (float)($record->hours_purchased ?? 0) - (float)($record->hours_consumed ?? 0));
+                        return number_format($rem, 1, ',', '') . ' h';
+                    })
+                    ->color(function (\App\Models\Contract $record): string {
+                        $purchased = (float)($record->hours_purchased ?? 0);
+                        $rem       = max(0, $purchased - (float)($record->hours_consumed ?? 0));
+                        if ($rem <= 0)             return 'gray';
+                        if ($rem <= 2)             return 'danger';
+                        if ($purchased > 0 && $rem / $purchased < 0.20) return 'warning';
+                        return 'success';
+                    }),
                 Tables\Columns\TextColumn::make('created_at')->label('Data')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->filters([
+                \Filament\Tables\Filters\SelectFilter::make('academic_year')
+                    ->label('Anno scolastico')
+                    ->options(static::academicYearOptions())
+                    ->placeholder('Tutti gli anni'),
+
+                \Filament\Tables\Filters\SelectFilter::make('status')
+                    ->label('Stato contratto')
+                    ->options([
+                        'active'    => '🟢 Attivo',
+                        'completed' => '✅ Completato',
+                        'suspended' => '⏸️ Sospeso',
+                        'paused'    => '⏳ In pausa',
+                    ])
+                    ->placeholder('Tutti gli stati'),
+
+                \Filament\Tables\Filters\SelectFilter::make('anomaly')
+                    ->label('Anomalia')
+                    ->options([
+                        'no_students' => 'Attivi senza studenti',
+                        'hours_exceeded' => 'Ore consumate > acquistate',
+                        'expired_active' => 'Scaduti ancora attivi',
+                        'installments_missing' => 'A rate senza rate create',
+                        'zero_price' => 'Attivi con prezzo corso = 0',
+                        'no_course' => 'Senza corso associato',
+                        'residual_all_paid' => 'Residuo con tutte le rate pagate',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'] ?? null;
+                        if (! filled($value)) {
+                            return $query;
+                        }
+
+                        return match ($value) {
+                            'no_students' => $query
+                                ->where('contracts.status', 'active')
+                                ->whereNotExists(function ($sub) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('contract_students')
+                                        ->whereColumn('contract_students.contract_id', 'contracts.id');
+                                }),
+
+                            'hours_exceeded' => $query
+                                ->where('contracts.hours_purchased', '>', 0)
+                                ->whereColumn('contracts.hours_consumed', '>', 'contracts.hours_purchased'),
+
+                            'expired_active' => $query
+                                ->where('contracts.status', 'active')
+                                ->whereNotNull('contracts.ends_at')
+                                ->whereDate('contracts.ends_at', '<', now()->toDateString()),
+
+                            'installments_missing' => $query
+                                ->where('contracts.status', 'active')
+                                ->where('contracts.payment_mode', 'installments')
+                                ->whereNotExists(function ($sub) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('installments')
+                                        ->whereColumn('installments.contract_id', 'contracts.id');
+                                }),
+
+                            'zero_price' => $query
+                                ->where('contracts.status', 'active')
+                                ->where(fn (Builder $q) => $q
+                                    ->whereNull('contracts.course_price')
+                                    ->orWhere('contracts.course_price', '<=', 0)
+                                ),
+
+                            'no_course' => $query
+                                ->where('contracts.status', 'active')
+                                ->whereNull('contracts.course_id'),
+
+                            'residual_all_paid' => $query
+                                ->where('contracts.status', 'active')
+                                ->where('contracts.payment_mode', 'installments')
+                                ->whereRaw('(COALESCE(contracts.course_price, 0) + COALESCE(contracts.enrollment_fee, 0) - COALESCE(contracts.deposit, 0)) > 0')
+                                ->whereExists(function ($sub) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('installments')
+                                        ->whereColumn('installments.contract_id', 'contracts.id');
+                                })
+                                ->whereNotExists(function ($sub) {
+                                    $sub->select(DB::raw(1))
+                                        ->from('installments')
+                                        ->whereColumn('installments.contract_id', 'contracts.id')
+                                        ->where(function ($q) {
+                                            $q->where('installments.status', '!=', 'paid')
+                                                ->orWhereNull('installments.status');
+                                        })
+                                        ->whereNull('installments.paid_at');
+                                }),
+
+                            default => $query,
+                        };
+                    }),
+
                 Filter::make('period')
                     ->label('Periodo')
                     ->form([
@@ -1267,28 +1613,34 @@ class ContractResource extends Resource
         $birth = $state['beneficiary_birth_date'] ?? null;
 
         if ($email !== '') {
-            return Student::query()
+            $student = Student::query()
                 ->whereRaw('LOWER(email) = ?', [$email])
                 ->first();
+
+            if ($student) {
+                return $student;
+            }
         }
 
         if ($phone !== '' && Schema::hasColumn('students', 'phone')) {
-            $s = Student::query()
+            $student = Student::query()
                 ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
                 ->first();
-            if ($s) {
-                return $s;
+
+            if ($student) {
+                return $student;
             }
         }
 
         if ($first !== '' && $last !== '' && $birth && Schema::hasColumn('students', 'birth_date')) {
-            $s = Student::query()
+            $student = Student::query()
                 ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [$first])
                 ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [$last])
                 ->whereDate('birth_date', $birth)
                 ->first();
-            if ($s) {
-                return $s;
+
+            if ($student) {
+                return $student;
             }
         }
 
@@ -1319,28 +1671,120 @@ class ContractResource extends Resource
         }
 
         $student = static::findStudentForBeneficiary($state);
+
         if (! $student) {
             $set('auto_match_label', null);
+            $set('auto_birth_province', null);
             return;
         }
 
         $set('student_id', $student->id);
-
-        if (! $get('beneficiary_first_name')) {
-            $set('beneficiary_first_name', $student->first_name);
-        }
-        if (! $get('beneficiary_last_name')) {
-            $set('beneficiary_last_name', $student->last_name);
-        }
-        if (! $get('beneficiary_email')) {
-            $set('beneficiary_email', $student->email);
-        }
-        if (! $get('beneficiary_phone')) {
-            $set('beneficiary_phone', $student->phone);
-        }
+        static::fillBeneficiaryFormFromStudent($student, $set);
 
         $set('auto_birth_province', $student->birth_province ?? null);
         $set('auto_match_label', 'Trovato in anagrafica: ' . trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')));
+    }
+
+protected static function fillBeneficiaryFormFromStudent(Student $student, Set $set): void
+{
+    $set('beneficiary_first_name', $student->first_name);
+    $set('beneficiary_last_name', $student->last_name);
+    $set('beneficiary_email', $student->email);
+    $set('beneficiary_phone', $student->phone);
+
+    // birth_date è cast 'date' (Carbon) → va formattato come stringa Y-m-d per il DatePicker
+    $set('beneficiary_birth_date', $student->birth_date
+        ? \Illuminate\Support\Carbon::parse($student->birth_date)->format('Y-m-d')
+        : null
+    );
+    $set('beneficiary_birth_place', $student->birth_place ?? null);
+
+    $set('auto_birth_province', $student->birth_province ?? null);
+    $set('auto_birth_country', $student->birth_country ?? null);
+}
+
+    public static function syncStudentsRegistryForContract(Contract $contract): void
+    {
+        $contract->loadMissing('beneficiaries');
+
+        foreach ($contract->beneficiaries as $beneficiary) {
+            $payload = [
+                'student_id'             => $beneficiary->student_id,
+                'beneficiary_first_name' => $beneficiary->beneficiary_first_name,
+                'beneficiary_last_name'  => $beneficiary->beneficiary_last_name,
+                'beneficiary_email'      => $beneficiary->beneficiary_email,
+                'beneficiary_phone'      => $beneficiary->beneficiary_phone,
+                'beneficiary_birth_date' => $beneficiary->beneficiary_birth_date,
+                'beneficiary_birth_place'=> $beneficiary->beneficiary_birth_place,
+            ];
+
+            $student = null;
+
+            if ($beneficiary->student_id) {
+                $student = Student::find($beneficiary->student_id);
+            }
+
+            if (! $student) {
+                $student = static::findStudentForBeneficiary($payload);
+            }
+
+            if (! $student) {
+                $student = new Student();
+            }
+
+            static::fillStudentModelFromBeneficiary($student, $payload);
+            $student->save();
+
+            if ((int) $beneficiary->student_id !== (int) $student->id) {
+                $beneficiary->student_id = $student->id;
+                $beneficiary->save();
+            }
+        }
+    }
+
+    protected static function fillStudentModelFromBeneficiary(Student $student, array $payload): void
+    {
+        $data = [];
+
+        if (Schema::hasColumn('students', 'first_name')) {
+            $data['first_name'] = $payload['beneficiary_first_name'] ?: $student->first_name;
+        }
+
+        if (Schema::hasColumn('students', 'last_name')) {
+            $data['last_name'] = $payload['beneficiary_last_name'] ?: $student->last_name;
+        }
+
+        if (Schema::hasColumn('students', 'email')) {
+            $email = $payload['beneficiary_email'] ?? null;
+            if ($email) {
+                $data['email'] = strtolower(trim($email));
+            }
+        }
+
+        if (Schema::hasColumn('students', 'phone')) {
+            $phone = $payload['beneficiary_phone'] ?? null;
+            if ($phone) {
+                $data['phone'] = $phone;
+            }
+        }
+
+        if (Schema::hasColumn('students', 'birth_date')) {
+            $bd = $payload['beneficiary_birth_date'] ?? null;
+            if ($bd) {
+                $data['birth_date'] = $bd;
+            }
+        }
+
+        if (Schema::hasColumn('students', 'birth_place')) {
+            $bp = $payload['beneficiary_birth_place'] ?? null;
+            if ($bp) {
+                $data['birth_place'] = $bp;
+            }
+        }
+
+        if (! empty($data)) {
+            $student->fill($data);
+        }
     }
 
     public static function getRelations(): array

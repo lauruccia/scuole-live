@@ -21,7 +21,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
-
 class Contract extends Model
 {
     protected $fillable = [
@@ -82,6 +81,8 @@ class Contract extends Model
         'hours_consumed',
 
         'notes',
+        'academic_year',
+        'status',
 
         // Nuovo sistema
         'company_id',
@@ -104,10 +105,10 @@ class Contract extends Model
         'enrollment_fee'         => 'decimal:2',
         'deposit'                => 'decimal:2',
 
-        'hours_purchased'        => 'integer',
-        'hours_consumed'         => 'integer',
+        'hours_purchased'        => 'decimal:2',
+        'hours_consumed'         => 'decimal:2',
 
-            'languages' => 'array',
+        'languages'              => 'array',
     ];
 
     protected $appends = [
@@ -131,9 +132,6 @@ class Contract extends Model
         return $this->hasMany(Lesson::class, 'contract_id');
     }
 
-    /**
-     * Pivot rows (ContractStudent)
-     */
     public function beneficiaries(): HasMany
     {
         return $this->hasMany(ContractStudent::class, 'contract_id');
@@ -218,6 +216,7 @@ class Contract extends Model
         $last  = trim((string) ($this->billing_last_name ?? ''));
 
         $full = trim($last . ' ' . $first);
+
         return $full !== '' ? $full : '—';
     }
 
@@ -235,41 +234,35 @@ class Contract extends Model
      * Ricalcola ore consumate leggendo le lezioni "counts_as_consumed = 1"
      */
     public static function recalcConsumedHours(int $contractId): void
-{
-    DB::transaction(function () use ($contractId) {
-
-        // Somma ore consumate: ceil(minuti/60), minimo 1 per lezione
+    {
+        // Nessun DB::transaction(): questo metodo viene sempre invocato
+        // da callback DB::afterCommit() (in LessonObserver), quindi siamo
+        // già fuori da qualsiasi transazione aperta. Un wrapper aggiuntivo
+        // non aggiunge atomicità ma introduce overhead e potenziali lock.
         $lessons = DB::table('lessons')
             ->where('contract_id', $contractId)
             ->where('counts_as_consumed', 1)
             ->get(['starts_at', 'ends_at', 'duration_minutes']);
 
-        $sum = 0;
+        $sum = 0.0;
 
         foreach ($lessons as $l) {
-            $mins = null;
-
-            if (!empty($l->starts_at) && !empty($l->ends_at)) {
-                $mins = (int) (strtotime($l->ends_at) - strtotime($l->starts_at)) / 60;
-            }
-
-            if ($mins === null || $mins <= 0) {
-                $mins = (int) ($l->duration_minutes ?? 60);
-            }
-
-            $mins = max(1, $mins);
-            $sum += max(1, (int) ceil($mins / 60));
+            // Usa il metodo centralizzato in Lesson per garantire
+            // un calcolo identico a Lesson::consumptionHours()
+            $sum += Lesson::computeLessonHours(
+                $l->duration_minutes,
+                $l->starts_at,
+                $l->ends_at
+            );
         }
 
-        // ✅ update diretto: NON scatena observer/events del Contract
         DB::table('contracts')
             ->where('id', $contractId)
             ->update([
-                'hours_consumed' => $sum,
+                'hours_consumed' => round($sum, 2),
                 'updated_at'     => now(),
             ]);
-    });
-}
+    }
 
     /* -----------------------------------------------------------------
      |  AUTO SYNC (AFTER COMMIT)
@@ -277,39 +270,86 @@ class Contract extends Model
 
     protected static function booted(): void
     {
-        // ✅ Allinea i due flag per evitare incoerenze (retrocompatibilità)
         static::saving(function (self $contract) {
+            // Validazione server-side date: fine deve essere dopo inizio
+            // Usiamo un'eccezione generica (non ValidationException) perché
+            // siamo nel model layer — Filament e il ContractResource gestiscono
+            // questa eccezione e la mostrano come notifica di errore.
+            if ($contract->starts_at && $contract->ends_at) {
+                $start = Carbon::parse($contract->starts_at)->startOfDay();
+                $end   = Carbon::parse($contract->ends_at)->startOfDay();
+
+                if ($end->lt($start)) {
+                    throw new \InvalidArgumentException(
+                        'La data di fine corso non può essere precedente alla data di inizio.'
+                    );
+                }
+            }
+
             if ($contract->isCompany()) {
                 $contract->billing_is_student = false;
                 $contract->billing_is_beneficiary = false;
                 return;
             }
 
-            // Se l’interfaccia usa billing_is_student, teniamo billing_is_beneficiary coerente
             if (! is_null($contract->billing_is_student)) {
                 $contract->billing_is_beneficiary = (bool) $contract->billing_is_student;
+            }
+
+            // normalizza lingue già in saving
+            $langs = $contract->languages ?? [];
+            $langs = is_array($langs) ? $langs : (json_decode($langs ?: '[]', true) ?: []);
+            $langs = array_values(array_unique(array_filter($langs, fn ($v) => filled($v))));
+
+            $contract->languages = $langs;
+
+            if (! empty($langs)) {
+                $contract->language_id = $langs[0];
             }
         });
 
         static::saved(function (self $contract) {
-            DB::afterCommit(function () use ($contract) {
+            // ✅ IMPORTANTISSIMO: prendo i changes PRIMA del reload
+            $changes = array_keys($contract->getChanges());
+
+            DB::afterCommit(function () use ($contract, $changes) {
                 $contractId = (int) $contract->getKey();
 
-                $lock = Cache::lock("contract_post_save_pipeline:{$contractId}", 30);
+                $lock = Cache::lock("contract_post_save_pipeline:{$contractId}", 60);
                 if (! $lock->get()) {
                     return;
                 }
 
                 try {
                     /** @var self|null $fresh */
-                    $fresh = self::query()->with('beneficiaries')->find($contractId);
+                    $fresh = self::query()
+                        ->with('beneficiaries')
+                        ->find($contractId);
+
                     if (! $fresh) {
                         return;
                     }
 
-                    // ✅ 1) PRIVATO + intestatario coincide con studente
-                    // (usa billing_is_student, e accetta anche billing_is_beneficiary per retro)
-                    $isBillingStudent = (bool) ($fresh->billing_is_student ?? false) || (bool) ($fresh->billing_is_beneficiary ?? false);
+                    // Se il contratto è appena passato a "completato":
+                    // disattiva TUTTI gli slot attivi (nessuna lezione potrà più essere generata)
+                    // e salta la sincronizzazione + rigenerazione per evitare effetti collaterali.
+                    if (in_array('status', $changes, true) && $fresh->status === 'completed') {
+                        DB::table('contract_lesson_slots')
+                            ->where('contract_id', $contractId)
+                            ->where('is_active', true)
+                            ->update([
+                                'is_active'  => false,
+                                'ends_at'    => $fresh->ends_at ? Carbon::parse($fresh->ends_at)->toDateString() : now()->toDateString(),
+                                'updated_at' => now(),
+                            ]);
+
+                        return;
+                    }
+
+                    // 1) PRIVATO + intestatario coincide con studente
+                    $isBillingStudent =
+                        (bool) ($fresh->billing_is_student ?? false) ||
+                        (bool) ($fresh->billing_is_beneficiary ?? false);
 
                     if ($fresh->isPrivate() && $isBillingStudent) {
                         retry(3, function () use ($fresh) {
@@ -319,61 +359,51 @@ class Contract extends Model
                         $fresh->load('beneficiaries');
                     }
 
-                    // 2) SEMPRE: sync slot dai beneficiari
+                    // 2) sync slot dai beneficiari
                     retry(3, function () use ($fresh) {
                         self::syncLessonSlotsFromBeneficiaries($fresh);
                     }, 250);
 
-                    // 3) auto-genera lezioni se ha starts_at e almeno uno slot attivo
-                    // 3) auto-genera lezioni SOLO se il contratto ha cambiato campi che impattano la pianificazione
-$changes = array_keys($fresh->getChanges());
+                    // 3) genera / rigenera lezioni solo se serve davvero
+                    $ignore = [
+                        'hours_consumed',
+                        'ends_at',
+                        'updated_at',
+                    ];
 
-// campi che NON devono mai scatenare rigenerazione
-$ignore = [
-    'hours_consumed',
-    'ends_at',
-    'updated_at',
-];
+                    $onlyIgnored = ! empty($changes)
+                        && collect($changes)->every(fn ($f) => in_array($f, $ignore, true));
 
-// se ha cambiato solo campi ignorati, stop
-$onlyIgnored = !empty($changes) && collect($changes)->every(fn ($f) => in_array($f, $ignore, true));
-if ($onlyIgnored) {
-    return;
-}
+                    if ($onlyIgnored) {
+                        return;
+                    }
 
-// rigenera SOLO se ha cambiato uno dei campi "schedulazione"
-$regenOn = [
-    'starts_at',
-    'course_id',
-    'language_id',
-    'lesson_type',
-    'languages', // se ti serve per lingua lezioni generate
-];
+                    $regenOn = [
+                        'starts_at',
+                        'course_id',
+                        'language_id',
+                        'lesson_type',
+                        'languages',
+                    ];
 
-$shouldRegen = collect($changes)->intersect($regenOn)->isNotEmpty();
+                    $shouldRegen = empty($changes)
+                        ? false
+                        : collect($changes)->intersect($regenOn)->isNotEmpty();
 
-if ($shouldRegen && $fresh->starts_at) {
-    $hasAnySlot = ContractLessonSlot::query()
-        ->where('contract_id', $fresh->id)
-        ->where('is_active', true)
-        ->whereNotNull('student_id')
-        ->exists();
+                    if ($shouldRegen && $fresh->starts_at) {
+                        $hasAnySlot = ContractLessonSlot::query()
+                            ->where('contract_id', $fresh->id)
+                            ->where('is_active', true)
+                            ->whereNotNull('student_id')
+                            ->exists();
 
-    if ($hasAnySlot) {
-        app(LessonGeneratorService::class)->generateForContract($fresh, false);
-    }
-}
+                        if ($hasAnySlot) {
+                            app(LessonGeneratorService::class)->generateForContract($fresh, false);
+                        }
+                    }
                 } finally {
                     optional($lock)->release();
                 }
-
-                // ✅ sync languages -> language_id (default = prima lingua)
-$langs = $contract->languages ?? [];
-$langs = array_values(array_unique(array_filter($langs, fn ($v) => filled($v))));
-$contract->languages = $langs;
-
-// default = prima lingua selezionata
-$contract->language_id = $langs[0] ?? $contract->language_id ?? null;
             });
         });
     }
@@ -415,6 +445,7 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
             if (! $cs->student_id) {
                 continue;
             }
+
             if (! $cs->weekly_day || ! $cs->weekly_time) {
                 continue;
             }
@@ -433,7 +464,7 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
                 ],
                 [
                     'teacher_id'       => $cs->teacher_id ?: null,
-                    'duration_minutes' => 60,
+                    'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
                     'is_active'        => true,
                     'starts_at'        => $contract->starts_at ? Carbon::parse($contract->starts_at)->toDateString() : null,
                     'ends_at'          => null,
@@ -446,9 +477,11 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
             ->filter(fn ($cs) => $cs->student_id && $cs->weekly_day && $cs->weekly_time)
             ->map(function ($cs) {
                 $time = self::normalizeTime($cs->weekly_time);
+
                 if (! $time) {
                     return null;
                 }
+
                 return (int) $cs->student_id . '|' . (int) $cs->weekly_day . '|' . $time;
             })
             ->filter()
@@ -463,14 +496,21 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
             ->where('contract_id', $contract->id)
             ->get();
 
-        foreach ($slots as $slot) {
-            $time = self::normalizeTime($slot->weekly_time);
-            $key  = (int) $slot->student_id . '|' . (int) $slot->weekly_day . '|' . ($time ?? '');
+        // Batch deactivation: un solo UPDATE invece di N query in loop
+        $toDeactivate = $slots
+            ->filter(function ($slot) use ($keep) {
+                $time = self::normalizeTime($slot->weekly_time);
+                $key  = (int) $slot->student_id . '|' . (int) $slot->weekly_day . '|' . ($time ?? '');
 
-            if (! in_array($key, $keep, true)) {
-                $slot->is_active = false;
-                $slot->save();
-            }
+                return ! in_array($key, $keep, true);
+            })
+            ->pluck('id')
+            ->all();
+
+        if (! empty($toDeactivate)) {
+            DB::table('contract_lesson_slots')
+                ->whereIn('id', $toDeactivate)
+                ->update(['is_active' => false, 'updated_at' => now()]);
         }
     }
 
@@ -517,7 +557,7 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
         if (! $student) {
             $student = Student::create([
                 'first_name'     => $first !== '' ? $first : null,
-                'last_name'      => $last  !== '' ? $last  : null,
+                'last_name'      => $last !== '' ? $last : null,
                 'email'          => $email !== '' ? $email : null,
                 'phone'          => $phone !== '' ? $phone : null,
                 'birth_date'     => $contract->billing_birth_date?->toDateString(),
@@ -529,28 +569,44 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
         } else {
             $dirty = false;
 
-            if (empty($student->first_name) && $first !== '') { $student->first_name = $first; $dirty = true; }
-            if (empty($student->last_name)  && $last  !== '') { $student->last_name  = $last;  $dirty = true; }
-            if (empty($student->email)      && $email !== '') { $student->email      = $email; $dirty = true; }
+            if (empty($student->first_name) && $first !== '') {
+                $student->first_name = $first;
+                $dirty = true;
+            }
+
+            if (empty($student->last_name) && $last !== '') {
+                $student->last_name = $last;
+                $dirty = true;
+            }
+
+            if (empty($student->email) && $email !== '') {
+                $student->email = $email;
+                $dirty = true;
+            }
 
             if (Schema::hasColumn('students', 'phone') && empty($student->phone) && $phone !== '') {
-                $student->phone = $phone; $dirty = true;
+                $student->phone = $phone;
+                $dirty = true;
             }
 
             if (Schema::hasColumn('students', 'birth_date') && empty($student->birth_date) && $contract->billing_birth_date) {
-                $student->birth_date = $contract->billing_birth_date->toDateString(); $dirty = true;
+                $student->birth_date = $contract->billing_birth_date->toDateString();
+                $dirty = true;
             }
 
             if (Schema::hasColumn('students', 'birth_place') && empty($student->birth_place) && ! empty($contract->billing_birth_place)) {
-                $student->birth_place = $contract->billing_birth_place; $dirty = true;
+                $student->birth_place = $contract->billing_birth_place;
+                $dirty = true;
             }
 
             if (Schema::hasColumn('students', 'birth_province') && empty($student->birth_province) && ! empty($contract->billing_province)) {
-                $student->birth_province = $contract->billing_province; $dirty = true;
+                $student->birth_province = $contract->billing_province;
+                $dirty = true;
             }
 
             if (Schema::hasColumn('students', 'birth_country') && empty($student->birth_country) && ! empty($contract->billing_country)) {
-                $student->birth_country = $contract->billing_country; $dirty = true;
+                $student->birth_country = $contract->billing_country;
+                $dirty = true;
             }
 
             if ($dirty) {
@@ -574,19 +630,22 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
         $cs->student_id  = $student->id;
 
         $cs->beneficiary_first_name = $first !== '' ? $first : ($cs->beneficiary_first_name ?? null);
-        $cs->beneficiary_last_name  = $last  !== '' ? $last  : ($cs->beneficiary_last_name ?? null);
+        $cs->beneficiary_last_name  = $last !== '' ? $last : ($cs->beneficiary_last_name ?? null);
         $cs->beneficiary_email      = $email !== '' ? $email : ($cs->beneficiary_email ?? null);
         $cs->beneficiary_phone      = $phone !== '' ? $phone : ($cs->beneficiary_phone ?? null);
 
         if (Schema::hasColumn('contract_students', 'beneficiary_birth_date') && $contract->billing_birth_date) {
             $cs->beneficiary_birth_date = $contract->billing_birth_date->toDateString();
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_birth_place') && ! empty($contract->billing_birth_place)) {
             $cs->beneficiary_birth_place = $contract->billing_birth_place;
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_birth_province') && ! empty($contract->billing_province)) {
             $cs->beneficiary_birth_province = $contract->billing_province;
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_birth_country') && ! empty($contract->billing_country)) {
             $cs->beneficiary_birth_country = $contract->billing_country;
         }
@@ -594,12 +653,15 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
         if (Schema::hasColumn('contract_students', 'beneficiary_address') && ! empty($contract->billing_address)) {
             $cs->beneficiary_address = $contract->billing_address;
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_city') && ! empty($contract->billing_city)) {
             $cs->beneficiary_city = $contract->billing_city;
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_zip') && ! empty($contract->billing_zip)) {
             $cs->beneficiary_zip = $contract->billing_zip;
         }
+
         if (Schema::hasColumn('contract_students', 'beneficiary_country') && ! empty($contract->billing_country)) {
             $cs->beneficiary_country = $contract->billing_country;
         }
@@ -607,44 +669,35 @@ $contract->language_id = $langs[0] ?? $contract->language_id ?? null;
         $cs->save();
     }
 
+    public function getEnabledLanguages(): array
+    {
+        $langs = $this->languages;
 
+        if (! is_array($langs) || empty($langs)) {
+            return $this->language_id ? [$this->language_id] : [];
+        }
 
-   public function getEnabledLanguages(): array
-{
-    $langs = $this->languages;
+        $langs = array_values(array_unique(array_filter(array_map(function ($v) {
+            $v = is_string($v) ? trim($v) : $v;
+            return $v !== '' ? $v : null;
+        }, $langs))));
 
-    // Se non c'è array valido, fallback su lingua singola
-    if (!is_array($langs) || empty($langs)) {
-        return $this->language_id ? [$this->language_id] : [];
+        if (empty($langs) && $this->language_id) {
+            return [$this->language_id];
+        }
+
+        return $langs;
     }
 
-    // Normalizza
-    $langs = array_values(array_unique(array_filter(array_map(function ($v) {
-        $v = is_string($v) ? trim($v) : $v;
-        return $v !== '' ? $v : null;
-    }, $langs))));
-
-    // Se array vuoto ma language_id c'è, fallback
-    if (empty($langs) && $this->language_id) {
-        return [$this->language_id];
+    public function getDefaultLanguage(): ?string
+    {
+        $langs = $this->getEnabledLanguages();
+        return $this->language_id ?: ($langs[0] ?? null);
     }
 
-    return $langs;
-}
-
-public function getDefaultLanguage(): ?string
-{
-    $langs = $this->getEnabledLanguages();
-    return $this->language_id ?: ($langs[0] ?? null);
-}
-
-
-// opzionale ma consigliato: garantisci sempre array
-public function getLanguagesAttribute($value): array
-{
-    $arr = is_array($value) ? $value : (json_decode($value ?? '[]', true) ?: []);
-    return array_values(array_filter($arr, fn($v) => filled($v)));
-}
-
-
+    public function getLanguagesAttribute($value): array
+    {
+        $arr = is_array($value) ? $value : (json_decode($value ?? '[]', true) ?: []);
+        return array_values(array_filter($arr, fn ($v) => filled($v)));
+    }
 }

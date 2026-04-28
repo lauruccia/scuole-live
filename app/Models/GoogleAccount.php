@@ -17,7 +17,6 @@ class GoogleAccount extends Model
     ];
 
     protected $casts = [
-        'access_token' => 'array',
         'expires_at' => 'datetime',
     ];
 

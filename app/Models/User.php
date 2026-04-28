@@ -8,6 +8,7 @@ use Filament\Panel;
 use Illuminate\Auth\Passwords\CanResetPassword as CanResetPasswordTrait;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -48,8 +49,6 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
         'birth_date' => 'date',
         'teacher_hourly_rate_gross' => 'decimal:2',
         'teacher_subjects' => 'array',
-
-        // ✅ se assegni una stringa "Password123!" lui la hasha da solo
         'password' => 'hashed',
     ];
 
@@ -58,28 +57,16 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
         'remember_token',
     ];
 
-    /**
-     * ✅ Accesso ai panel Filament (multi-panel).
-     * Attenzione: i nomi ruolo devono combaciare ESATTAMENTE (maiuscole incluse).
-     */
     public function canAccessPanel(Panel $panel): bool
     {
-        // Superadmin: copriamo più varianti (nel tuo DB potresti averle diverse)
         $isSuperAdmin = $this->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
 
         return match ($panel->getId()) {
             'superadmin' => $isSuperAdmin,
-
-            'admin'      => $isSuperAdmin
-                || $this->hasAnyRole(['Amministrazione', 'Segreteria']),
-
-            // ✅ Panel docente: solo Docente (ma per debugging puoi lasciare anche superadmin)
-            'docente'    => $this->hasRole('Docente') || $isSuperAdmin,
-
-            // quando lo aggiungi davvero
-            'studente'   => $this->hasRole('Studente'),
-
-            default      => false,
+            'admin' => $isSuperAdmin || $this->hasAnyRole(['Amministrazione', 'Segreteria']),
+            'docente' => $this->hasRole('Docente') || $isSuperAdmin,
+            'studente' => $this->hasRole('Studente') || $isSuperAdmin,
+            default => false,
         };
     }
 
@@ -91,5 +78,10 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordBrandNotification($token));
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(\App\Models\Student::class, 'user_id');
     }
 }

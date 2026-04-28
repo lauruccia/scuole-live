@@ -47,6 +47,28 @@ return new class extends Migration {
 
     public function down(): void
     {
-        // non faccio rollback per non rischiare di cancellare slot creati dopo
+        // Rimuove gli slot in contract_lesson_slots che sono stati copiati da lesson_plans.
+        // Confronta per contract_id, student_id, weekly_day, weekly_time con starts_at e ends_at NULL
+        // (le stesse condizioni usate nell'up() per evitare duplicati).
+        $plans = DB::table('lesson_plans')->get();
+
+        foreach ($plans as $p) {
+            $cs = DB::table('contract_students')
+                ->where('id', $p->contract_student_id)
+                ->first();
+
+            if (! $cs) {
+                continue;
+            }
+
+            DB::table('contract_lesson_slots')
+                ->where('contract_id', $cs->contract_id)
+                ->where('student_id', $cs->student_id)
+                ->where('weekly_day', $p->weekly_day)
+                ->where('weekly_time', $p->weekly_time)
+                ->whereNull('starts_at')
+                ->whereNull('ends_at')
+                ->delete();
+        }
     }
 };
