@@ -2,11 +2,10 @@
 
 namespace App\Observers;
 
-use App\Mail\LessonCancelledMail;
 use App\Models\Contract;
 use App\Models\Lesson;
+use App\Services\EmailTemplateService;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class LessonObserver
 {
@@ -86,12 +85,43 @@ class LessonObserver
         $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))
             ?: $student->email;
 
+        $event = match ($type) {
+            'recoverable' => 'lesson.cancelled.recoverable',
+            'consumed'    => 'lesson.cancelled.consumed',
+            default       => 'lesson.cancelled.permanent',
+        };
+
+        // Prepara le variabili del template
+        $startsAt = $lesson->starts_at
+            ? \Illuminate\Support\Carbon::parse($lesson->starts_at)
+            : null;
+        $endsAt = $lesson->ends_at
+            ? \Illuminate\Support\Carbon::parse($lesson->ends_at)
+            : null;
+
+        $docente = '';
+        if ($lesson->teacher_id) {
+            $teacher = \App\Models\User::find($lesson->teacher_id);
+            $docente = $teacher?->name ?? '';
+        }
+
+        $variables = [
+            'nome'        => $student->first_name ?? $studentName,
+            'data_lezione' => $startsAt?->format('d/m/Y') ?? '—',
+            'ora_inizio'  => $startsAt?->format('H:i') ?? '—',
+            'ora_fine'    => $endsAt?->format('H:i') ?? '—',
+            'lingua'      => $lesson->language_id ?? '—',
+            'docente'     => $docente,
+            'motivo'      => '',
+        ];
+
         try {
-            Mail::to($student->email)->send(new LessonCancelledMail(
-                lesson:           $lesson,
-                studentName:      $studentName,
-                cancellationType: $type,
-            ));
+            app(EmailTemplateService::class)->sendByEvent(
+                $event,
+                $student->email,
+                $studentName,
+                $variables
+            );
         } catch (\Throwable $e) {
             Log::warning(
                 "Impossibile inviare notifica cancellazione lezione #{$lesson->id} "

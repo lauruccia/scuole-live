@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ContractDocumentController;
 use App\Http\Controllers\GoogleOAuthController;
+use App\Http\Controllers\HomeworkGradeController;
+use App\Http\Controllers\MaterialVisibilityController;
 use App\Http\Controllers\PublicController;
 use App\Http\Controllers\StudentContractPrintController;
 use App\Http\Controllers\Reports\TeacherHoursPdfController;
@@ -13,6 +15,16 @@ Route::get('/iscriviti', [PublicController::class, 'iscriviti'])->name('iscrizio
 Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])->name('iscrizione.store');
 Route::get('/grazie', [PublicController::class, 'grazie'])->name('iscrizione.grazie');
 Route::get('/privacy', [PublicController::class, 'privacy'])->name('privacy');
+
+// ─── Valutazione compiti (staff e docenti) ────────────────────────────────────
+Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria|docente|Docente'])
+    ->post('/admin/homework/{submission}/grade', HomeworkGradeController::class)
+    ->name('admin.homework.grade');
+
+// ─── Toggle visibilità materiale per contratto ────────────────────────────────
+Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria|admin'])
+    ->patch('/admin/material/{material}/contract/{contract}/visibility', MaterialVisibilityController::class)
+    ->name('admin.material.toggle-visibility');
 
 // ✅ solo staff scuola
 Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria'])->group(function () {

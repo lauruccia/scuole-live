@@ -36,7 +36,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
@@ -1536,38 +1535,97 @@ Select::make('student_id')
                         ->action(function (Contract $record) {
                             $record->loadMissing(['course', 'beneficiaries']);
 
-                            $to = [];
+                            // Raccoglie tutti i destinatari
+                            $recipients = [];
 
                             if (($record->billing_type ?? 'private') === 'company') {
-                                $to[] = $record->company_email ?: $record->pec;
+                                $primaryEmail = $record->company_email ?: $record->pec;
+                                $primaryName  = $record->company_name ?? 'Azienda';
                             } else {
-                                $to[] = $record->billing_email;
+                                $primaryEmail = $record->billing_email;
+                                $primaryName  = trim(
+                                    ($record->billing_first_name ?? '') . ' '
+                                    . ($record->billing_last_name ?? '')
+                                ) ?: 'Cliente';
+                            }
+
+                            if ($primaryEmail) {
+                                $recipients[] = ['email' => $primaryEmail, 'name' => $primaryName];
                             }
 
                             foreach (($record->beneficiaries ?? []) as $b) {
-                                if (! empty($b->beneficiary_email)) {
-                                    $to[] = $b->beneficiary_email;
+                                if (! empty($b->beneficiary_email) && $b->beneficiary_email !== $primaryEmail) {
+                                    $recipients[] = [
+                                        'email' => $b->beneficiary_email,
+                                        'name'  => trim(($b->beneficiary_first_name ?? '') . ' ' . ($b->beneficiary_last_name ?? '')) ?: 'Studente',
+                                    ];
                                 }
                             }
 
-                            $to = array_values(array_unique(array_filter($to)));
+                            $recipients = collect($recipients)->unique('email')->values()->all();
 
+                            if (empty($recipients)) {
+                                Notification::make()
+                                    ->title('Nessun destinatario trovato')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            // Genera il PDF allegato
                             $pdfBinary = \Barryvdh\DomPDF\Facade\Pdf::loadView('contracts.print', [
                                 'contract' => $record,
-                                'mode' => 'pdf',
+                                'mode'     => 'pdf',
                             ])->setPaper('a4', 'portrait')->output();
 
-                            $cc = array_filter([config('mail.from.address')]);
+                            $svc        = app(\App\Services\EmailTemplateService::class);
+                            $lingua     = is_array($record->languages)
+                                ? implode(', ', $record->languages)
+                                : ($record->languages ?? ($record->course?->name ?? '—'));
+                            $nomCorso   = $record->course?->name ?? $lingua;
+                            $sent       = 0;
 
-                            Mail::to($to)
-                                ->cc($cc)
-                                ->send(new \App\Mail\ContractPdfMail($record, $pdfBinary));
+                            foreach ($recipients as $r) {
+                                $ok = $svc->sendByEvent(
+                                    'contract.sent',
+                                    $r['email'],
+                                    $r['name'],
+                                    [
+                                        'nome'             => explode(' ', $r['name'])[0] ?? $r['name'],
+                                        'cognome'          => '',
+                                        'numero_contratto' => (string) $record->id,
+                                        'lingua'           => $lingua,
+                                        'nome_corso'       => $nomCorso,
+                                    ],
+                                    [
+                                        [
+                                            'data' => $pdfBinary,
+                                            'name' => 'Contratto_' . $record->id . '.pdf',
+                                            'mime' => 'application/pdf',
+                                        ],
+                                    ]
+                                );
 
-                            Notification::make()
-                                ->title('Email inviata')
-                                ->body('Contratto inviato a: ' . implode(', ', $to))
-                                ->success()
-                                ->send();
+                                if ($ok) {
+                                    $sent++;
+                                }
+                            }
+
+                            $toList = implode(', ', array_column($recipients, 'email'));
+
+                            if ($sent > 0) {
+                                Notification::make()
+                                    ->title('Email inviata')
+                                    ->body("Contratto inviato a: {$toList}")
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title('Errore invio email')
+                                    ->body('Nessuna email inviata. Controlla i log e verifica che il template "contract_pdf" sia attivo.')
+                                    ->danger()
+                                    ->send();
+                            }
                         }),
                 ])
                     ->label('')

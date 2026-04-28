@@ -163,6 +163,14 @@ class Contract extends Model
             ->withTimestamps();
     }
 
+    public function materials(): BelongsToMany
+    {
+        return $this->belongsToMany(CourseMaterial::class, 'contract_course_material')
+                    ->withPivot('is_visible', 'assigned_at')
+                    ->withTimestamps()
+                    ->orderByPivot('assigned_at', 'desc');
+    }
+
     public function installments(): HasMany
     {
         return $this->hasMany(Installment::class, 'contract_id');

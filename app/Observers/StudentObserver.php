@@ -2,13 +2,12 @@
 
 namespace App\Observers;
 
-use App\Mail\WelcomeStudentMail;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\EmailTemplateService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class StudentObserver
@@ -69,15 +68,24 @@ class StudentObserver
         // (evita l'invio se la transazione va in rollback)
         $studentEmail  = $student->email;
         $studentFirst  = $student->first_name ?? $name;
+        $studentLast   = $student->last_name ?? '';
         $welcomePass   = $plainPassword;
 
-        DB::afterCommit(function () use ($studentEmail, $studentFirst, $welcomePass) {
+        DB::afterCommit(function () use ($studentEmail, $studentFirst, $studentLast, $welcomePass) {
             try {
-                Mail::to($studentEmail)->send(new WelcomeStudentMail(
-                    firstName:     $studentFirst,
-                    studentEmail:  $studentEmail,
-                    loginPassword: $welcomePass,
-                ));
+                app(EmailTemplateService::class)->sendByEvent(
+                    'student.created',
+                    $studentEmail,
+                    $studentFirst,
+                    [
+                        'nome'        => $studentFirst,
+                        'cognome'     => $studentLast,
+                        'email'       => $studentEmail,
+                        'password'    => $welcomePass,
+                        'portale_url' => url('/'),
+                        'app_name'    => config('app.name', 'A&A Language Center'),
+                    ]
+                );
             } catch (\Throwable $e) {
                 // Non bloccare la creazione dello studente se l'email fallisce
                 Log::warning('Impossibile inviare email di benvenuto a ' . $studentEmail . ': ' . $e->getMessage());

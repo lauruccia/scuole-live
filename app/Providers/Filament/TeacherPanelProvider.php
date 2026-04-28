@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\LessonCalendar;
 use App\Filament\Resources\LessonResource;
+use App\Filament\Teacher\Pages\MieiStudentiPage;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -51,12 +52,15 @@ class TeacherPanelProvider extends PanelProvider
 
             ->pages([
                 Dashboard::class,
+                MieiStudentiPage::class,
                 LessonCalendar::class,
-                    ChangePasswordPage::class,
+                ChangePasswordPage::class,
             ])
 
             ->resources([
                 LessonResource::class,
+                \App\Filament\Teacher\Resources\TeacherHomeworkResource::class,
+                \App\Filament\Teacher\Resources\TeacherMaterialResource::class,
             ])
 
             ->navigationGroups([

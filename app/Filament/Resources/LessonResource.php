@@ -488,6 +488,19 @@ Select::make('language_id')
 
             ])
             ->filters([
+                SelectFilter::make('student_id')
+                    ->label('Studente')
+                    ->options(fn () => \App\Models\Student::orderBy('last_name')->orderBy('first_name')
+                        ->get()
+                        ->mapWithKeys(fn ($s) => [$s->id => trim($s->last_name . ' ' . $s->first_name)])
+                        ->toArray()
+                    )
+                    ->searchable()
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $q, $id) => $q->where('lessons.student_id', $id)
+                    )),
+
                 SelectFilter::make('academic_year')
                     ->label('Anno didattico')
                     ->options(fn () => \App\Models\Contract::query()
