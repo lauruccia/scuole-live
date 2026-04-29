@@ -52,6 +52,12 @@ class RicevutaRataService
 
             'bankIban'         => SchoolSetting::bankIban(),
             'bankIntestatario' => SchoolSetting::bankIntestatario(),
+
+            // ── Testi personalizzabili ricevuta ───────────────────────────────
+            'ricevutaLabel'    => SchoolSetting::ricevutaLabel(),
+            'headerNote'       => SchoolSetting::ricevutaHeaderNote(),
+            'thankYouText'     => SchoolSetting::ricevutaThankYouText(),
+            'disclaimer'       => SchoolSetting::ricevutaDisclaimerText(),
         ];
 
         $pdf = Pdf::loadView('reports.ricevuta-rata-pdf', $data)

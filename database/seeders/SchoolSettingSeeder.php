@@ -35,6 +35,13 @@ class SchoolSettingSeeder extends Seeder
 
             // ── Funzionalità ──────────────────────────────────────────────────
             'digital_signature_enabled' => '0',
+
+            // ── Ricevute PDF ──────────────────────────────────────────────────
+            'ricevuta_enabled'       => '1',
+            'ricevuta_label'         => 'RICEVUTA',
+            'ricevuta_header_note'   => 'Scuola di lingue',
+            'ricevuta_thank_you_text'  => 'Grazie per il pagamento. Questa ricevuta conferma la ricezione dell\'importo indicato.',
+            'ricevuta_disclaimer'    => 'Documento generato automaticamente — Non ha valore fiscale ai sensi del D.P.R. 633/72.',
         ];
 
         foreach ($defaults as $key => $value) {

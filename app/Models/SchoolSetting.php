@@ -121,4 +121,42 @@ class SchoolSetting extends Model
     {
         return static::get('bank_intestatario', config('services.bank.intestatario', static::schoolLegalName()));
     }
+
+    // ─── Ricevute PDF ─────────────────────────────────────────────────────────
+
+    /** Il download ricevuta rata è abilitato? */
+    public static function isRicevutaEnabled(): bool
+    {
+        return static::bool('ricevuta_enabled', true);
+    }
+
+    /** Etichetta documento (es. "RICEVUTA" o "QUIETANZA DI PAGAMENTO") */
+    public static function ricevutaLabel(): string
+    {
+        return static::get('ricevuta_label', 'RICEVUTA');
+    }
+
+    /** Sottotitolo header email/PDF (es. "Scuola di lingue — Roma") */
+    public static function ricevutaHeaderNote(): string
+    {
+        return static::get('ricevuta_header_note', '');
+    }
+
+    /** Testo di ringraziamento sotto la tabella (visibile solo se rata pagata) */
+    public static function ricevutaThankYouText(): string
+    {
+        return static::get(
+            'ricevuta_thank_you_text',
+            'Grazie per il pagamento. Questa ricevuta conferma la ricezione dell\'importo.'
+        );
+    }
+
+    /** Nota legale/fiscale nel footer */
+    public static function ricevutaDisclaimerText(): string
+    {
+        return static::get(
+            'ricevuta_disclaimer',
+            'Documento generato automaticamente — Non ha valore fiscale ai sensi del D.P.R. 633/72.'
+        );
+    }
 }

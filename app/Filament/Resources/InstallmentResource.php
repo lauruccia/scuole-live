@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\InstallmentResource\Pages;
 use App\Models\Installment;
+use App\Models\SchoolSetting;
 use App\Services\RicevutaRataService;
 use Carbon\Carbon;
 use Filament\Forms;
@@ -292,7 +293,7 @@ class InstallmentResource extends Resource
                     ->label('Scarica ricevuta')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->visible(fn (Installment $record) => $record->status === 'paid' || ! is_null($record->paid_at))
+                    ->visible(fn (Installment $record) => SchoolSetting::isRicevutaEnabled() && ($record->status === 'paid' || ! is_null($record->paid_at)))
                     ->action(function (Installment $record): StreamedResponse {
                         /** @var RicevutaRataService $svc */
                         $svc      = app(RicevutaRataService::class);

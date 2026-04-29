@@ -20,14 +20,12 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-// ⚠️  spatie/laravel-activitylog non ancora installato.
-//     Dopo: composer require spatie/laravel-activitylog:^4.9  → decommentare i blocchi [ACTIVITYLOG].
-// [ACTIVITYLOG] use Spatie\Activitylog\LogOptions;
-// [ACTIVITYLOG] use Spatie\Activitylog\Traits\LogsActivity;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Contract extends Model
 {
-    // [ACTIVITYLOG] use LogsActivity;
+    use LogsActivity;
 
     protected $fillable = [
         'billing_type',
@@ -138,36 +136,36 @@ class Contract extends Model
     ];
 
     // ─── Activity Log ─────────────────────────────────────────────────────────
-    // [ACTIVITYLOG] Decommentare dopo: composer require spatie/laravel-activitylog:^4.9
-    //
-    // public function getActivitylogOptions(): LogOptions
-    // {
-    //     return LogOptions::defaults()
-    //         ->logName('contracts')
-    //         ->logOnly([
-    //             'status',
-    //             'billing_first_name', 'billing_last_name', 'billing_email',
-    //             'company_name',
-    //             'course_id', 'course_price', 'enrollment_fee', 'deposit',
-    //             'payment_mode', 'installments_count',
-    //             'hours_purchased', 'hours_consumed',
-    //             'starts_at', 'ends_at',
-    //             'academic_year',
-    //             'signed_at',
-    //         ])
-    //         ->logOnlyDirty()
-    //         ->dontSubmitEmptyLogs()
-    //         ->setDescriptionForEvent(function (string $eventName): string {
-    //             $name = trim(($this->billing_first_name ?? '') . ' ' . ($this->billing_last_name ?? ''))
-    //                  ?: ($this->company_name ?? "Contratto #{$this->id}");
-    //             return match ($eventName) {
-    //                 'created' => "Contratto #{$this->id} creato — {$name}",
-    //                 'updated' => "Contratto #{$this->id} aggiornato — {$name}",
-    //                 'deleted' => "Contratto #{$this->id} eliminato — {$name}",
-    //                 default   => "Contratto #{$this->id} — {$eventName}",
-    //             };
-    //         });
-    // }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('contracts')
+            ->logOnly([
+                'status',
+                'billing_first_name', 'billing_last_name', 'billing_email',
+                'company_name',
+                'course_id', 'course_price', 'enrollment_fee', 'deposit',
+                'payment_mode', 'installments_count',
+                'hours_purchased', 'hours_consumed',
+                'starts_at', 'ends_at',
+                'academic_year',
+                'signed_at',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName): string {
+                $name = trim(($this->billing_first_name ?? '') . ' ' . ($this->billing_last_name ?? ''))
+                     ?: ($this->company_name ?? "Contratto #{$this->id}");
+
+                return match ($eventName) {
+                    'created' => "Contratto #{$this->id} creato — {$name}",
+                    'updated' => "Contratto #{$this->id} aggiornato — {$name}",
+                    'deleted' => "Contratto #{$this->id} eliminato — {$name}",
+                    default   => "Contratto #{$this->id} — {$eventName}",
+                };
+            });
+    }
 
     /* -----------------------------------------------------------------
      |  RELATIONS

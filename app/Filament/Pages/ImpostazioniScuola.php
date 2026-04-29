@@ -5,8 +5,8 @@ namespace App\Filament\Pages;
 use App\Models\SchoolSetting;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
-use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -28,13 +28,12 @@ class ImpostazioniScuola extends Page implements HasForms
 
     public array $data = [];
 
-    /* ─── Accesso ─────────────────────────────────────────────────────────────── */
+    /* ─── Accesso ────────────────────────────────────────────────────────────── */
 
     public static function canAccess(): bool
     {
         $u = Filament::auth()->user();
         if (! $u) return false;
-
         return $u->hasAnyRole(['superadmin', 'super_admin', 'Amministrazione', 'Segreteria']);
     }
 
@@ -43,7 +42,7 @@ class ImpostazioniScuola extends Page implements HasForms
         return static::canAccess();
     }
 
-    /* ─── Form ────────────────────────────────────────────────────────────────── */
+    /* ─── Form ───────────────────────────────────────────────────────────────── */
 
     public function mount(): void
     {
@@ -61,6 +60,12 @@ class ImpostazioniScuola extends Page implements HasForms
             // Banca
             'bank_iban'         => SchoolSetting::get('bank_iban', ''),
             'bank_intestatario' => SchoolSetting::get('bank_intestatario', ''),
+            // Ricevute PDF
+            'ricevuta_enabled'          => SchoolSetting::bool('ricevuta_enabled', true),
+            'ricevuta_label'            => SchoolSetting::get('ricevuta_label', 'RICEVUTA'),
+            'ricevuta_header_note'      => SchoolSetting::get('ricevuta_header_note', ''),
+            'ricevuta_thank_you_text'   => SchoolSetting::get('ricevuta_thank_you_text', ''),
+            'ricevuta_disclaimer'       => SchoolSetting::get('ricevuta_disclaimer', ''),
             // Funzionalità
             'digital_signature_enabled' => SchoolSetting::bool('digital_signature_enabled', false),
         ]);
@@ -147,7 +152,49 @@ class ImpostazioniScuola extends Page implements HasForms
                             ->maxLength(200),
                     ]),
 
-                // ── Funzionalità ──────────────────────────────────────────────
+                // ── Ricevute PDF ──────────────────────────────────────────────
+                Section::make('Ricevute di pagamento PDF')
+                    ->description('Personalizza il documento scaricabile per le rate pagate.')
+                    ->icon('heroicon-o-document-text')
+                    ->columns(2)
+                    ->schema([
+                        Toggle::make('ricevuta_enabled')
+                            ->label('Abilita download ricevuta per le rate pagate')
+                            ->helperText('Se disattivato, il pulsante "Scarica ricevuta" non sarà visibile in nessun pannello.')
+                            ->onColor('success')
+                            ->offColor('gray')
+                            ->columnSpanFull(),
+
+                        TextInput::make('ricevuta_label')
+                            ->label('Etichetta documento')
+                            ->placeholder('RICEVUTA')
+                            ->helperText('Es. "RICEVUTA", "QUIETANZA DI PAGAMENTO", "CONFERMA PAGAMENTO"')
+                            ->maxLength(60),
+
+                        TextInput::make('ricevuta_header_note')
+                            ->label('Sottotitolo intestazione')
+                            ->placeholder('Scuola di lingue — Roma')
+                            ->helperText('Riga piccola sotto il nome scuola nell\'header del PDF.')
+                            ->maxLength(150),
+
+                        Textarea::make('ricevuta_thank_you_text')
+                            ->label('Testo di ringraziamento')
+                            ->placeholder('Grazie per il pagamento. Questa ricevuta conferma...')
+                            ->helperText('Appare nel riquadro colorato sotto la tabella rata, solo se la rata è pagata.')
+                            ->rows(3)
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+
+                        Textarea::make('ricevuta_disclaimer')
+                            ->label('Nota legale / disclaimer nel footer')
+                            ->placeholder('Documento generato automaticamente — Non ha valore fiscale...')
+                            ->helperText('Appare in fondo al PDF in piccolo.')
+                            ->rows(2)
+                            ->maxLength(400)
+                            ->columnSpanFull(),
+                    ]),
+
+                // ── Firma digitale ────────────────────────────────────────────
                 Section::make('Firma digitale contratti')
                     ->description('Se abilitata, gli studenti potranno firmare il proprio contratto dall\'area riservata tramite un codice OTP ricevuto via email.')
                     ->icon('heroicon-o-pencil-square')
@@ -165,7 +212,7 @@ class ImpostazioniScuola extends Page implements HasForms
             ]);
     }
 
-    /* ─── Azioni ──────────────────────────────────────────────────────────────── */
+    /* ─── Azioni ─────────────────────────────────────────────────────────────── */
 
     protected function getFormActions(): array
     {
@@ -196,6 +243,13 @@ class ImpostazioniScuola extends Page implements HasForms
         // Banca
         SchoolSetting::set('bank_iban',          $state['bank_iban'] ?? '');
         SchoolSetting::set('bank_intestatario',  $state['bank_intestatario'] ?? '');
+
+        // Ricevute PDF
+        SchoolSetting::set('ricevuta_enabled',        $state['ricevuta_enabled'] ? '1' : '0');
+        SchoolSetting::set('ricevuta_label',           $state['ricevuta_label'] ?? 'RICEVUTA');
+        SchoolSetting::set('ricevuta_header_note',     $state['ricevuta_header_note'] ?? '');
+        SchoolSetting::set('ricevuta_thank_you_text',  $state['ricevuta_thank_you_text'] ?? '');
+        SchoolSetting::set('ricevuta_disclaimer',      $state['ricevuta_disclaimer'] ?? '');
 
         // Funzionalità
         SchoolSetting::set('digital_signature_enabled', $state['digital_signature_enabled'] ? '1' : '0');

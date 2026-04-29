@@ -168,6 +168,9 @@
         <div class="header-left">
             <div class="school-name">{{ $schoolName }}</div>
             <div class="school-sub">
+                @if($headerNote)
+                    {{ $headerNote }}<br>
+                @endif
                 {{ $schoolAddress }}<br>
                 Tel {{ $schoolPhone }}
                 @if($schoolEmail)
@@ -179,7 +182,7 @@
             </div>
         </div>
         <div class="header-right">
-            <div class="doc-title">RICEVUTA</div>
+            <div class="doc-title">{{ strtoupper($ricevutaLabel) }}</div>
             <div class="doc-num">
                 N° RIC-{{ str_pad($installment->id, 5, '0', STR_PAD_LEFT) }}<br>
                 Emessa il: {{ now()->format('d/m/Y') }}
@@ -245,10 +248,10 @@
     </table>
 
     {{-- ── NOTE DI RINGRAZIAMENTO ──────────────────────────────────────────── --}}
-    @if($installment->status === 'paid')
+    @if($installment->status === 'paid' && $thankYouText)
     <div class="thank-you">
-        Grazie per il pagamento. Questa ricevuta conferma la ricezione dell'importo
-        <strong>€ {{ number_format((float) $installment->amount, 2, ',', '.') }}</strong>
+        {{ $thankYouText }}
+        — <strong>€ {{ number_format((float) $installment->amount, 2, ',', '.') }}</strong>
         in data <strong>{{ $installment->paid_at?->format('d/m/Y') }}</strong>.
     </div>
     @endif
@@ -263,8 +266,8 @@
             @endif
             <br>
         @endif
-        Documento generato automaticamente il {{ now()->format('d/m/Y \a\l\l\e H:i') }}
-        — Non ha valore fiscale ai sensi del D.P.R. 633/72.
+        Documento generato automaticamente il {{ now()->format('d/m/Y \a\l\l\e H:i') }}<br>
+        {{ $disclaimer }}
     </div>
 
 </body>
