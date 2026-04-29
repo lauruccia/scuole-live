@@ -3,29 +3,41 @@
 namespace App\Services;
 
 use App\Models\EmailTemplate;
+use App\Models\SchoolSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmailTemplateService
 {
     /**
-     * Firma standard aggiunta automaticamente in fondo a ogni email.
-     * Modificabile qui senza toccare i singoli template.
+     * Firma standard dinamica — legge i contatti da SchoolSetting.
      */
     private function signature(): string
     {
-        return <<<'HTML'
+        $legalName = e(SchoolSetting::schoolLegalName());
+        $address   = e(SchoolSetting::schoolFullAddress());
+        $phone     = e(SchoolSetting::schoolPhone());
+        $mobile    = e(SchoolSetting::schoolMobile());
+        $website   = e(SchoolSetting::schoolWebsite());
+
+        $phoneTel    = preg_replace('/[^0-9+]/', '', $phone);
+        $mobileClean = preg_replace('/[^0-9]/', '', $mobile);
+
+        $phoneRow  = $phone  ? "<a href=\"tel:{$phoneTel}\" style=\"color:#1e3a5f; text-decoration:none;\">{$phone}</a><br>" : '';
+        $mobileRow = $mobile ? "<a href=\"https://wa.me/{$mobileClean}\" style=\"color:#1e3a5f; text-decoration:none;\">{$mobile}</a><br>" : '';
+        $websiteRow = $website ? "<a href=\"{$website}\" style=\"color:#1e3a5f;\">{$website}</a>" : '';
+
+        return <<<HTML
 <hr style="border:none; border-top:1px solid #dde5ef; margin:32px 0 20px;">
 <table cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#555; line-height:1.7;">
   <tr>
     <td>
       <strong style="color:#1e3a5f;">Segreteria</strong><br>
-      <strong>A&amp;A LANGUAGE CENTER SRL</strong><br>
-      Viale Leonardo Da Vinci 193<br>
-      00145 Roma<br>
-      Tel <a href="tel:+390657437340" style="color:#1e3a5f; text-decoration:none;">+39 06.5743734</a><br>
-      Mobile <a href="https://wa.me/393463836175" style="color:#1e3a5f; text-decoration:none;">+39 346 3836175</a><br>
-      <a href="https://www.aealanguagecenter.it" style="color:#1e3a5f;">www.aealanguagecenter.it</a>
+      <strong>{$legalName}</strong><br>
+      {$address}<br>
+      {$phoneRow}
+      {$mobileRow}
+      {$websiteRow}
     </td>
   </tr>
 </table>
@@ -34,10 +46,19 @@ HTML;
 
     /**
      * Avvolge il contenuto del template in un layout email responsive.
+     * Header e footer leggono nome e indirizzo da SchoolSetting.
      */
     private function wrapInLayout(string $bodyContent): string
     {
-        $signature = $this->signature();
+        $signature  = $this->signature();
+        $name       = e(SchoolSetting::schoolName());
+        $legalName  = e(SchoolSetting::schoolLegalName());
+        $address    = e(SchoolSetting::schoolFullAddress());
+        $website    = SchoolSetting::schoolWebsite();
+        $privacyUrl = rtrim($website, '/') . '/privacy';
+
+        // Mostra solo il dominio nell'header (senza https://)
+        $websiteDisplay = preg_replace('#^https?://(www\.)?#', '', $website);
 
         return <<<HTML
 <!DOCTYPE html>
@@ -50,9 +71,9 @@ HTML;
       <!-- Header -->
       <tr>
         <td style="background:#1e3a5f; padding:24px 40px; text-align:center;">
-          <h1 style="margin:0; color:#fff; font-size:20px; letter-spacing:1px;">A&amp;A Language Center</h1>
+          <h1 style="margin:0; color:#fff; font-size:20px; letter-spacing:1px;">{$name}</h1>
           <p style="margin:4px 0 0; color:#b0c8e8; font-size:13px;">
-            <a href="https://aealanguagecenter.it" style="color:#b0c8e8; text-decoration:none;">aealanguagecenter.it</a>
+            <a href="{$website}" style="color:#b0c8e8; text-decoration:none;">{$websiteDisplay}</a>
           </p>
         </td>
       </tr>
@@ -67,8 +88,8 @@ HTML;
       <tr>
         <td style="background:#f0f4f8; border-top:1px solid #dde5ef; padding:16px 40px; text-align:center;">
           <p style="margin:0; font-size:12px; color:#888;">
-            A&amp;A Language Center Srl — Viale Leonardo Da Vinci 193, 00145 Roma<br>
-            <a href="https://aealanguagecenter.it/privacy" style="color:#888;">Privacy Policy</a>
+            {$legalName} — {$address}<br>
+            <a href="{$privacyUrl}" style="color:#888;">Privacy Policy</a>
           </p>
         </td>
       </tr>

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\InstallmentResource\Pages;
 use App\Models\Installment;
+use App\Services\RicevutaRataService;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -14,6 +15,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InstallmentResource extends Resource
 {
@@ -284,6 +286,24 @@ class InstallmentResource extends Resource
                             'status'  => 'unpaid',
                             'paid_at' => null,
                         ]);
+                    }),
+
+                Tables\Actions\Action::make('downloadRicevuta')
+                    ->label('Scarica ricevuta')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->visible(fn (Installment $record) => $record->status === 'paid' || ! is_null($record->paid_at))
+                    ->action(function (Installment $record): StreamedResponse {
+                        /** @var RicevutaRataService $svc */
+                        $svc      = app(RicevutaRataService::class);
+                        $pdf      = $svc->generate($record);
+                        $filename = $svc->filename($record);
+
+                        return response()->streamDownload(
+                            fn () => print($pdf),
+                            $filename,
+                            ['Content-Type' => 'application/pdf']
+                        );
                     }),
             ])
 

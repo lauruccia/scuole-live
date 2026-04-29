@@ -51,7 +51,6 @@ class CourseMaterial extends Model
     {
         return $this->belongsToMany(Contract::class, 'contract_course_material')
                     ->withPivot('is_visible', 'assigned_at')
-                    ->withTimestamps()
                     ->orderByPivot('assigned_at', 'desc');
     }
 

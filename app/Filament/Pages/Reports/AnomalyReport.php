@@ -186,7 +186,36 @@ class AnomalyReport extends Page implements Forms\Contracts\HasForms
             'anomaly' => ['value' => $anomaly],
         ]);
 
+        // Query separata: conta i docenti che hanno almeno una sovrapposizione oraria
+        // tra lezioni non cancellate. Non può essere CASE WHEN nella query principale
+        // perché richiede un self-join sulla stessa tabella.
+        $teacherConflictsCount = (int) DB::selectOne("
+            SELECT COUNT(DISTINCT l1.id) AS cnt
+            FROM lessons l1
+            INNER JOIN lessons l2
+                ON  l1.teacher_id = l2.teacher_id
+                AND l1.id < l2.id
+                AND l1.cancelled_at IS NULL
+                AND l2.cancelled_at IS NULL
+                AND l1.starts_at < l2.ends_at
+                AND l1.ends_at   > l2.starts_at
+            WHERE l1.teacher_id IS NOT NULL
+            " . ($from ? " AND l1.starts_at >= ?" : "") . "
+            " . ($to   ? " AND l1.starts_at <= ?" : "") . "
+            " . ($year ? " AND l1.contract_id IN (SELECT id FROM contracts WHERE academic_year = ?)" : ""),
+            array_filter([$from?->toDateTimeString(), $to?->toDateTimeString(), $year], fn ($v) => $v !== null)
+        )->cnt;
+
         return [
+            $this->item(
+                $teacherConflictsCount > 0 ? 'danger' : 'success',
+                'Lezioni con docente in sovrapposizione oraria',
+                $teacherConflictsCount,
+                'Uno o più docenti hanno lezioni con orari sovrapposti. Questo causa conflitti di calendario e incongruenze nella paga docenti.',
+                'Vai in Lezioni → filtra per docente → individua le sovrapposizioni e correggi orario o riassegna il docente.',
+                null
+            ),
+
             $this->item(
                 $row->no_duration > 0 ? 'warning' : 'success',
                 'Lezioni senza durata esplicita',

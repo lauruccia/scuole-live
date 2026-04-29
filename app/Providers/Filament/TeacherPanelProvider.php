@@ -28,8 +28,6 @@ class TeacherPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->default()
-
             ->id('docente')
             ->path('docente')
             ->authGuard('web')

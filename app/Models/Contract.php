@@ -20,9 +20,15 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+// ⚠️  spatie/laravel-activitylog non ancora installato.
+//     Dopo: composer require spatie/laravel-activitylog:^4.9  → decommentare i blocchi [ACTIVITYLOG].
+// [ACTIVITYLOG] use Spatie\Activitylog\LogOptions;
+// [ACTIVITYLOG] use Spatie\Activitylog\Traits\LogsActivity;
 
 class Contract extends Model
 {
+    // [ACTIVITYLOG] use LogsActivity;
+
     protected $fillable = [
         'billing_type',
         'billing_is_beneficiary',
@@ -89,6 +95,14 @@ class Contract extends Model
         'billing_profile_id',
 
         'languages',
+
+        // Firma digitale
+        'signature_otp',
+        'signature_otp_expires_at',
+        'signature_otp_attempts',
+        'signed_at',
+        'signed_ip',
+        'signed_user_agent',
     ];
 
     protected $casts = [
@@ -105,10 +119,15 @@ class Contract extends Model
         'enrollment_fee'         => 'decimal:2',
         'deposit'                => 'decimal:2',
 
-        'hours_purchased'        => 'decimal:2',
-        'hours_consumed'         => 'decimal:2',
+        'hours_purchased'              => 'decimal:2',
+        'hours_consumed'               => 'decimal:2',
 
-        'languages'              => 'array',
+        'languages'                    => 'array',
+
+        // Firma digitale
+        'signature_otp_expires_at'     => 'datetime',
+        'signature_otp_attempts'       => 'integer',
+        'signed_at'                    => 'datetime',
     ];
 
     protected $appends = [
@@ -117,6 +136,38 @@ class Contract extends Model
         'residual',
         'hours_remaining',
     ];
+
+    // ─── Activity Log ─────────────────────────────────────────────────────────
+    // [ACTIVITYLOG] Decommentare dopo: composer require spatie/laravel-activitylog:^4.9
+    //
+    // public function getActivitylogOptions(): LogOptions
+    // {
+    //     return LogOptions::defaults()
+    //         ->logName('contracts')
+    //         ->logOnly([
+    //             'status',
+    //             'billing_first_name', 'billing_last_name', 'billing_email',
+    //             'company_name',
+    //             'course_id', 'course_price', 'enrollment_fee', 'deposit',
+    //             'payment_mode', 'installments_count',
+    //             'hours_purchased', 'hours_consumed',
+    //             'starts_at', 'ends_at',
+    //             'academic_year',
+    //             'signed_at',
+    //         ])
+    //         ->logOnlyDirty()
+    //         ->dontSubmitEmptyLogs()
+    //         ->setDescriptionForEvent(function (string $eventName): string {
+    //             $name = trim(($this->billing_first_name ?? '') . ' ' . ($this->billing_last_name ?? ''))
+    //                  ?: ($this->company_name ?? "Contratto #{$this->id}");
+    //             return match ($eventName) {
+    //                 'created' => "Contratto #{$this->id} creato — {$name}",
+    //                 'updated' => "Contratto #{$this->id} aggiornato — {$name}",
+    //                 'deleted' => "Contratto #{$this->id} eliminato — {$name}",
+    //                 default   => "Contratto #{$this->id} — {$eventName}",
+    //             };
+    //         });
+    // }
 
     /* -----------------------------------------------------------------
      |  RELATIONS
@@ -167,7 +218,6 @@ class Contract extends Model
     {
         return $this->belongsToMany(CourseMaterial::class, 'contract_course_material')
                     ->withPivot('is_visible', 'assigned_at')
-                    ->withTimestamps()
                     ->orderByPivot('assigned_at', 'desc');
     }
 
@@ -392,6 +442,9 @@ class Contract extends Model
                         'language_id',
                         'lesson_type',
                         'languages',
+                        // Cambiare le ore acquistate modifica quante lezioni vanno generate:
+                        // la rigenerazione (non forzata) aggiunge le lezioni mancanti.
+                        'hours_purchased',
                     ];
 
                     $shouldRegen = empty($changes)
@@ -707,5 +760,93 @@ class Contract extends Model
     {
         $arr = is_array($value) ? $value : (json_decode($value ?? '[]', true) ?: []);
         return array_values(array_filter($arr, fn ($v) => filled($v)));
+    }
+
+    /* -----------------------------------------------------------------
+     |  FIRMA DIGITALE OTP
+     | ----------------------------------------------------------------- */
+
+    /** Il contratto e' gia' stato firmato digitalmente? */
+    public function isSigned(): bool
+    {
+        return $this->signed_at !== null;
+    }
+
+    /** E' possibile firmare (firma abilitata globalmente e contratto non ancora firmato)? */
+    public function isReadyToSign(): bool
+    {
+        return ! $this->isSigned()
+            && SchoolSetting::isDigitalSignatureEnabled();
+    }
+
+    /** Genera e salva un nuovo OTP a 6 cifre, valido 15 minuti. Azzera i tentativi. */
+    public function generateAndSaveOtp(): string
+    {
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        $this->withoutTimestamps(function () use ($otp) {
+            $this->update([
+                'signature_otp'            => $otp,
+                'signature_otp_expires_at' => now()->addMinutes(15),
+                'signature_otp_attempts'   => 0,
+            ]);
+        });
+
+        return $otp;
+    }
+
+    /** L'OTP e' ancora valido (non scaduto, tentativi < 5)? */
+    public function isOtpValid(): bool
+    {
+        return $this->signature_otp !== null
+            && $this->signature_otp_expires_at !== null
+            && $this->signature_otp_expires_at->isFuture()
+            && $this->signature_otp_attempts < 5;
+    }
+
+    /**
+     * Verifica il codice inserito dallo studente.
+     * Incrementa sempre i tentativi, restituisce true solo se corretto.
+     */
+    public function verifyOtp(string $code): bool
+    {
+        $this->withoutTimestamps(function () {
+            $this->increment('signature_otp_attempts');
+        });
+        $this->refresh();
+
+        if (! $this->isOtpValid()) {
+            return false;
+        }
+
+        return hash_equals((string) $this->signature_otp, trim($code));
+    }
+
+    /** Marca il contratto come firmato e cancella i dati OTP. */
+    public function markAsSigned(string $ip, string $userAgent): void
+    {
+        $this->withoutTimestamps(function () use ($ip, $userAgent) {
+            $this->update([
+                'signed_at'                => now(),
+                'signed_ip'                => $ip,
+                'signed_user_agent'        => $userAgent,
+                'signature_otp'            => null,
+                'signature_otp_expires_at' => null,
+                'signature_otp_attempts'   => 0,
+            ]);
+        });
+    }
+
+    /**
+     * Email a cui inviare l'OTP.
+     * Prima scelta: billing_email del contratto. Fallback: primo studente associato.
+     */
+    public function getSignatureEmailAttribute(): ?string
+    {
+        if (filled($this->billing_email)) {
+            return $this->billing_email;
+        }
+
+        return $this->students()->first()?->email;
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Lesson;
+use App\Models\SchoolSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
@@ -20,7 +21,7 @@ class LessonCancelledMail extends Mailable
     public function build(): self
     {
         return $this
-            ->subject('Comunicazione lezione — A&A Language Center')
+            ->subject('Comunicazione lezione — ' . SchoolSetting::schoolName())
             ->view('emails.lesson-cancelled');
     }
 }

@@ -187,17 +187,22 @@ class TeacherMaterialResource extends Resource
                                         ->where(fn ($q) => $q
                                             ->where('billing_last_name', 'like', "%{$search}%")
                                             ->orWhere('billing_first_name', 'like', "%{$search}%")
+                                            ->orWhere('company_name',      'like', "%{$search}%")
+                                            ->orWhereHas('students', fn ($sq) => $sq
+                                                ->where('last_name',  'like', "%{$search}%")
+                                                ->orWhere('first_name', 'like', "%{$search}%")
+                                            )
                                         )
                                         ->limit(20)
                                         ->get()
                                         ->mapWithKeys(fn ($c) => [
-                                            $c->id => '#' . $c->id . ' — ' . trim(($c->billing_last_name ?? '') . ' ' . ($c->billing_first_name ?? '')),
+                                            $c->id => self::contractLabel($c),
                                         ])->toArray();
                                 })
                                 ->getOptionLabelsUsing(fn (array $values): array =>
                                     Contract::whereIn('id', $values)->get()
                                         ->mapWithKeys(fn ($c) => [
-                                            $c->id => '#' . $c->id . ' — ' . trim(($c->billing_last_name ?? '') . ' ' . ($c->billing_first_name ?? '')),
+                                            $c->id => self::contractLabel($c),
                                         ])->toArray()
                                 )
                                 ->required(),
@@ -259,5 +264,17 @@ class TeacherMaterialResource extends Resource
             'create' => Pages\CreateTeacherMaterial::route('/create'),
             'edit'   => Pages\EditTeacherMaterial::route('/{record}/edit'),
         ];
+    }
+
+    private static function contractLabel(?Contract $c): string
+    {
+        if (! $c) return '—';
+        $name = ($c->billing_type ?? 'private') === 'company'
+            ? ($c->company_name ?? '—')
+            : trim(($c->billing_last_name ?? '') . ' ' . ($c->billing_first_name ?? ''));
+        $langs = is_array($c->languages) && count($c->languages)
+            ? ' · ' . implode(', ', $c->languages)
+            : '';
+        return '#' . $c->id . ' — ' . $name . $langs;
     }
 }

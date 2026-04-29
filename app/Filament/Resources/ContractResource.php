@@ -1016,6 +1016,46 @@ Select::make('student_id')
                             ->schema([
                                 Textarea::make('notes')->label('Note contratto')->rows(3),
                             ]),
+
+                        Section::make('Firma digitale')
+                            ->icon('heroicon-o-pencil-square')
+                            ->description('Informazioni sulla firma digitale del contratto tramite OTP email.')
+                            ->collapsed()
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    Placeholder::make('firma_status')
+                                        ->label('Stato firma')
+                                        ->content(fn ($record) => $record?->signed_at
+                                            ? new \Illuminate\Support\HtmlString(
+                                                '<span class="inline-flex items-center gap-1.5 text-green-700 font-semibold">'
+                                                . '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.603 3.799A4.49 4.49 0 0112 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 013.498 1.307 4.491 4.491 0 011.307 3.497A4.49 4.49 0 0121.75 12a4.49 4.49 0 01-1.549 3.397 4.491 4.491 0 01-1.307 3.497 4.491 4.491 0 01-3.497 1.307A4.49 4.49 0 0112 21.75a4.49 4.49 0 01-3.397-1.549 4.491 4.491 0 01-3.497-1.307 4.491 4.491 0 01-1.307-3.497A4.49 4.49 0 012.25 12a4.49 4.49 0 011.549-3.397 4.492 4.492 0 011.307-3.497 4.492 4.492 0 013.497-1.307zm7.007 6.387a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clip-rule="evenodd"/></svg>'
+                                                . 'Firmato digitalmente</span>'
+                                            )
+                                            : new \Illuminate\Support\HtmlString(
+                                                '<span class="text-gray-500">Non ancora firmato</span>'
+                                            )
+                                        ),
+
+                                    Placeholder::make('signed_at_display')
+                                        ->label('Data firma')
+                                        ->content(fn ($record) => $record?->signed_at
+                                            ? $record->signed_at->format('d/m/Y \a\l\l\e H:i')
+                                            : '—'
+                                        ),
+
+                                    Placeholder::make('signed_ip_display')
+                                        ->label('IP firma')
+                                        ->content(fn ($record) => $record?->signed_ip ?? '—'),
+
+                                    Placeholder::make('signed_user_agent_display')
+                                        ->label('Browser / dispositivo')
+                                        ->content(fn ($record) => $record?->signed_user_agent
+                                            ? \Illuminate\Support\Str::limit($record->signed_user_agent, 80)
+                                            : '—'
+                                        ),
+                                ]),
+                            ])
+                            ->visible(fn ($record) => \App\Models\SchoolSetting::isDigitalSignatureEnabled() || $record?->signed_at),
                     ]),
             ])->columnSpanFull(),
         ]);
@@ -1339,6 +1379,15 @@ Select::make('student_id')
                         return 'success';
                     }),
                 Tables\Columns\TextColumn::make('created_at')->label('Data')->dateTime('d/m/Y H:i')->sortable(),
+
+                Tables\Columns\IconColumn::make('signed_at')
+                    ->label('Firmato')
+                    ->tooltip(fn ($record) => $record->signed_at
+                        ? 'Firmato il ' . $record->signed_at->format('d/m/Y H:i')
+                        : 'Non ancora firmato')
+                    ->icon(fn ($record) => $record->signed_at ? 'heroicon-s-check-badge' : 'heroicon-o-clock')
+                    ->color(fn ($record) => $record->signed_at ? 'success' : 'gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('academic_year')

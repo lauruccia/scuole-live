@@ -16,7 +16,8 @@ class QuizPage extends Page
     protected static ?string $navigationLabel = 'Test di livello';
     protected static ?string $title           = 'Test di livello';
     protected static string  $view            = 'filament.studente.pages.quiz-page';
-    protected static ?int    $navigationSort  = 5;
+    protected static ?string $navigationGroup = 'Area Studente';
+    protected static ?int    $navigationSort  = 35;
 
     // Fasi: 'select' | 'quiz' | 'result'
     public string $phase = 'select';

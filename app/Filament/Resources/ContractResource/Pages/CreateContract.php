@@ -5,7 +5,6 @@ namespace App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource;
 use App\Models\BillingProfile;
 use App\Models\Contract;
-use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Installment;
 use App\Models\Student;
@@ -271,42 +270,17 @@ class CreateContract extends CreateRecord
                     ->with(['beneficiaries', 'course'])
                     ->findOrFail($contractId);
 
-                foreach ($contract->beneficiaries as $cs) {
-                    if (! $cs->student_id) {
-                        continue;
-                    }
-
-                    if (! $cs->weekly_day || ! $cs->weekly_time) {
-                        continue;
-                    }
-
-                    ContractLessonSlot::updateOrCreate(
-                        [
-                            'contract_id' => $contract->id,
-                            'student_id'  => (int) $cs->student_id,
-                            'weekly_day'  => (int) $cs->weekly_day,
-                            'weekly_time' => $cs->weekly_time,
-                        ],
-                        [
-                            'teacher_id'       => $cs->teacher_id,
-                            'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
-                            'is_active'        => true,
-                            'starts_at'        => $contract->starts_at
-                                ? Carbon::parse($contract->starts_at)->toDateString()
-                                : null,
-                            'ends_at'          => null,
-                            'meet_url'         => $cs->meet_url,
-                        ]
-                    );
-                }
-
+                // Gli slot vengono già creati da Contract::syncLessonSlotsFromBeneficiaries()
+                // invocato nel hook Contract::saved() → non duplichiamo qui la logica.
+                // Forziamo solo la prima generazione completa (force=true) delle lezioni
+                // partendo da starts_at, che include anche eventuali date nel passato.
                 app(LessonGeneratorService::class)->generateForContract($contract->fresh(), true);
             } catch (\Throwable $e) {
                 report($e);
 
                 Notification::make()
                     ->title('Contratto salvato, ma generazione lezioni non completata')
-                    ->body('Gli slot sono stati creati, ma le lezioni non sono state generate correttamente.')
+                    ->body('Le lezioni non sono state generate correttamente. Usa "Genera / completa lezioni" dal contratto.')
                     ->warning()
                     ->send();
             }

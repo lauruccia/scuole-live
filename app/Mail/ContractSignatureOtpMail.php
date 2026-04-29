@@ -2,25 +2,25 @@
 
 namespace App\Mail;
 
-use App\Models\SchoolSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class WelcomeStudentMail extends Mailable
+class ContractSignatureOtpMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
+        public string $otpCode,
         public string $firstName,
-        public string $studentEmail,
-        public string $loginPassword,
+        public int    $contractId,
+        public int    $validMinutes = 15,
     ) {}
 
     public function build(): self
     {
         return $this
-            ->subject('Benvenuto/a in ' . SchoolSetting::schoolName() . '!')
-            ->view('emails.welcome-student');
+            ->subject('Codice di firma contratto #' . $this->contractId)
+            ->view('emails.contract-signature-otp');
     }
 }

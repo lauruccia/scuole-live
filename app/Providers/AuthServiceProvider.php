@@ -8,19 +8,17 @@ use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvid
 
 class AuthServiceProvider extends ServiceProvider
 {
+    /**
+     * Policy registrate nell'applicazione.
+     * Il Gate::before per il superadmin è già in AppServiceProvider — non duplicare qui.
+     */
     protected $policies = [
         User::class => UserPolicy::class,
     ];
 
     public function boot(): void
     {
-        // ✅ Superadmin bypass: se l'utente ha uno di questi ruoli, può fare TUTTO
-        Gate::before(function ($user, $ability) {
-            if ($user?->hasAnyRole(['superadmin', 'super_admin'])) {
-                return true;
-            }
-
-            return null; // continua con policy/permessi normali
-        });
+        // Le policy vengono registrate automaticamente dal framework tramite $policies.
+        // Nessun'altra logica necessaria qui.
     }
 }

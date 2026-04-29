@@ -3,7 +3,6 @@
 namespace App\Filament\Studente\Pages;
 
 use App\Filament\Studente\Concerns\HasStudentScope;
-use App\Models\Contract;
 use Filament\Pages\Page;
 
 class MaterialiPage extends Page
@@ -14,7 +13,8 @@ class MaterialiPage extends Page
     protected static ?string $navigationLabel = 'Materiali didattici';
     protected static ?string $title           = 'Materiali didattici';
     protected static string  $view            = 'filament.studente.pages.materiali-page';
-    protected static ?int    $navigationSort  = 3;
+    protected static ?string $navigationGroup = 'Area Studente';
+    protected static ?int    $navigationSort  = 25;
 
     public array $materials = [];
 
@@ -32,27 +32,10 @@ class MaterialiPage extends Page
         $this->materials = $contract->materials()
             ->wherePivot('is_visible', true)
             ->orderBy('material_type')
-            ->orderBy('course_materials.created_at', 'desc')
+            ->orderBy('course_materials.id', 'desc')
             ->get()
             ->toArray();
     }
 
-    /**
-     * Recupera il contratto attivo dello studente loggato.
-     */
-    private function getActiveContract(): ?Contract
-    {
-        $student = $this->getStudent();
-        if (! $student) return null;
 
-        return Contract::query()
-            ->whereHas('students', fn ($q) => $q->where('students.id', $student->id))
-            ->where('status', 'active')
-            ->latest('id')
-            ->first()
-            ?? Contract::query()
-                ->whereHas('students', fn ($q) => $q->where('students.id', $student->id))
-                ->latest('id')
-                ->first();
-    }
 }

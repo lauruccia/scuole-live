@@ -33,7 +33,10 @@ class ContractLessonSlotObserver
 
             // Lock per evitare rigenerazioni multiple ravvicinate dall'Observer.
             // Usiamo get() invece di blockFor() per compatibilità con driver cache 'file'.
-            $lock = Cache::lock("contract:{$contractId}:auto_regen_lessons", 30);
+            // Durata 120s allineata al lock in LessonGeneratorService: contratti con molte
+            // ore possono richiedere più di 30s e un secondo lock scaduto avvierebbe
+            // una rigenerazione parallela producendo lezioni duplicate.
+            $lock = Cache::lock("contract:{$contractId}:auto_regen_lessons", 120);
             if (! $lock->get()) {
                 return;
             }

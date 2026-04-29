@@ -13,31 +13,24 @@ use Illuminate\Support\Str;
 class ContractService
 {
     /**
-     * Risolve il totale ore del contratto cercando il campo giusto
-     * tra i possibili nomi usati storicamente.
+     * Risolve il totale ore del contratto.
+     *
+     * Il campo autoritativo è hours_purchased sul contratto stesso.
+     * Fallback sul corso collegato per i contratti che non hanno ancora
+     * un valore esplicito (es. contratti precedenti alla migrazione che
+     * ha copiato lessons_count → hours_purchased sui corsi).
      */
     public function resolveContractHoursTotal(Contract $contract): float
     {
-        $candidates = [
-            data_get($contract, 'hours_total'),
-            data_get($contract, 'total_hours'),
-            data_get($contract, 'course_hours'),
-            data_get($contract, 'hours'),
-            data_get($contract, 'duration_hours'),
-            data_get($contract, 'package_hours'),
+        $value = data_get($contract, 'hours_purchased');
+        if ($value !== null && is_numeric($value) && (float) $value > 0) {
+            return (float) $value;
+        }
 
-            data_get($contract, 'course.hours_total'),
-            data_get($contract, 'course.total_hours'),
-            data_get($contract, 'course.course_hours'),
-            data_get($contract, 'course.hours'),
-            data_get($contract, 'course.duration_hours'),
-            data_get($contract, 'course.package_hours'),
-        ];
-
-        foreach ($candidates as $value) {
-            if ($value !== null && $value !== '' && is_numeric($value) && (float) $value > 0) {
-                return (float) $value;
-            }
+        // Fallback: prende le ore dal corso collegato se il contratto non ne ha
+        $value = data_get($contract, 'course.hours_purchased');
+        if ($value !== null && is_numeric($value) && (float) $value > 0) {
+            return (float) $value;
         }
 
         return 0.0;

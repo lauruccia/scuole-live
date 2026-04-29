@@ -2,6 +2,7 @@
 
 namespace App\Filament\Studente\Resources;
 
+use App\Filament\Studente\Concerns\HasStudentScope;
 use App\Filament\Studente\Resources\StudentContractResource\Pages;
 use App\Models\Contract;
 use Filament\Forms\Form;
@@ -12,13 +13,15 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StudentContractResource extends Resource
 {
+    use HasStudentScope;
+
     protected static ?string $model = Contract::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationLabel = 'Contratti';
+    protected static ?string $navigationIcon  = 'heroicon-o-document-duplicate';
+    protected static ?string $navigationLabel = 'Storico contratti';
     protected static ?string $navigationGroup = 'Area Studente';
-    protected static ?int $navigationSort = 30;
-    protected static ?string $slug = 'contratti';
+    protected static ?int    $navigationSort  = 34;
+    protected static ?string $slug            = 'contratti';
 
     public static function form(Form $form): Form
     {
@@ -103,15 +106,15 @@ class StudentContractResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check() && auth()->user()?->hasRole('Studente');
+        return static::canAccessStudentPanel();
     }
 
     public static function canView($record): bool
     {
-        $studentIds = static::getStudentIds();
+        $studentIds = static::studentIds();
 
         if (empty($studentIds)) {
-            return false;
+            return true; // superadmin vede tutto
         }
 
         return $record->students()

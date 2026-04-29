@@ -24,6 +24,7 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
+            ->default()
             ->id('admin')
             ->path('admin')
             ->authGuard('web')
@@ -45,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
+                \App\Filament\Widgets\SystemStatusWidget::class,  // sort=0, solo superadmin
                 Widgets\AccountWidget::class,
                 \App\Filament\Widgets\CrmStatsWidget::class,
                 \App\Filament\Widgets\LessonsTodayWidget::class,

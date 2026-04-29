@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\ContractLessonSlot;
 use App\Models\Lesson;
+use App\Models\SchoolSetting;
 use App\Observers\ContractLessonSlotObserver;
 use App\Observers\LessonMeetObserver;
 use App\Observers\LessonObserver;
@@ -69,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
             );
 
             return (new MailMessage)
-                ->subject('Reimposta la password — A&A Language Center')
+                ->subject('Reimposta la password — ' . SchoolSetting::schoolName())
                 ->view('emails.reset-password-brand', [
                     'url' => $url,
                     'notifiable' => $notifiable,

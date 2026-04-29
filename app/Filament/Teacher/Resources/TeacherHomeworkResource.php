@@ -5,6 +5,7 @@ namespace App\Filament\Teacher\Resources;
 use App\Filament\Teacher\Resources\TeacherHomeworkResource\Pages;
 use App\Models\Contract;
 use App\Models\Homework;
+use App\Models\HomeworkSubmission;
 use App\Models\Student;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -14,9 +15,12 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Resource;
+use Filament\Notifications\Notification;
 use Filament\Tables;
+use Illuminate\Support\Facades\Storage;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -96,13 +100,34 @@ class TeacherHomeworkResource extends Resource
                     ->label('Contratto')
                     ->required()
                     ->searchable()
-                    ->preload(false)
+                    ->live()
+                    ->options(function (Get $get) use ($teacherId): array {
+                        $studentId = $get('student_search') ? (int) $get('student_search') : null;
+                        $currentId = $get('contract_id')    ? (int) $get('contract_id')    : null;
+
+                        $query = Contract::query()
+                            ->whereHas('lessons', fn ($q) => $q->where('lessons.teacher_id', $teacherId))
+                            ->orderByDesc('id');
+
+                        if ($studentId) {
+                            $query->whereHas('students', fn ($q) => $q->where('students.id', $studentId));
+                        } elseif ($currentId) {
+                            $query->where('id', $currentId);
+                        } else {
+                            $query->limit(30);
+                        }
+
+                        return $query->get()
+                            ->mapWithKeys(fn ($c) => [$c->id => self::contractLabel($c)])
+                            ->toArray();
+                    })
                     ->getSearchResultsUsing(function (string $search) use ($teacherId): array {
                         return Contract::query()
                             ->whereHas('lessons', fn ($q) => $q->where('lessons.teacher_id', $teacherId))
                             ->where(fn ($q) => $q
                                 ->where('billing_last_name', 'like', "%{$search}%")
                                 ->orWhere('billing_first_name', 'like', "%{$search}%")
+                                ->orWhere('company_name',      'like', "%{$search}%")
                             )
                             ->limit(20)
                             ->get()
@@ -218,17 +243,64 @@ class TeacherHomeworkResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\Action::make('grade')
-                    ->label('Valuta')
-                    ->icon('heroicon-o-star')
-                    ->color('warning')
-                    ->modalHeading(fn (Homework $r): string => 'Valuta consegne — ' . $r->title)
+                Tables\Actions\Action::make('consegne')
+                    ->label('Consegne')
+                    ->icon('heroicon-o-inbox-arrow-down')
+                    ->color('info')
+                    ->modalHeading(fn (Homework $r): string => 'Consegne — ' . $r->title)
                     ->modalContent(fn (Homework $r) => view(
                         'filament.admin.homework-submissions-modal',
                         ['homework' => $r]
                     ))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Chiudi'),
+
+                Tables\Actions\Action::make('valuta')
+                    ->label('Valuta')
+                    ->icon('heroicon-o-star')
+                    ->color('warning')
+                    ->visible(fn (Homework $r): bool => $r->submissions()->where('status', 'submitted')->exists())
+                    ->modalHeading(fn (Homework $r): string => 'Valuta consegna — ' . $r->title)
+                    ->form(function (Homework $r): array {
+                        $sub = $r->submissions()->where('status', 'submitted')->with('student')->first();
+                        $fileLink = $sub?->file_path
+                            ? '<a href="' . Storage::disk('public')->url($sub->file_path) . '" target="_blank" class="text-primary-600 hover:underline">📎 ' . ($sub->file_name ?? 'scarica') . '</a>'
+                            : '—';
+                        return [
+                            \Filament\Forms\Components\Placeholder::make('studente')
+                                ->label('Studente')
+                                ->content($sub?->student?->full_name ?? '—'),
+                            \Filament\Forms\Components\Placeholder::make('consegnato_il')
+                                ->label('Consegnato il')
+                                ->content($sub?->submitted_at?->format('d/m/Y H:i') ?? '—'),
+                            \Filament\Forms\Components\Placeholder::make('nota_studente')
+                                ->label('Nota studente')
+                                ->content($sub?->student_note ?? '—'),
+                            \Filament\Forms\Components\Placeholder::make('file_allegato')
+                                ->label('File allegato')
+                                ->content(new \Illuminate\Support\HtmlString($fileLink)),
+                            \Filament\Forms\Components\TextInput::make('grade')
+                                ->label('Voto')
+                                ->required()
+                                ->maxLength(50)
+                                ->placeholder('es. 8/10, B+, Ottimo...'),
+                            \Filament\Forms\Components\Textarea::make('teacher_feedback')
+                                ->label('Commento (opzionale)')
+                                ->rows(3),
+                        ];
+                    })
+                    ->action(function (Homework $r, array $data): void {
+                        $sub = $r->submissions()->where('status', 'submitted')->first();
+                        if (! $sub) return;
+                        $sub->update([
+                            'grade'            => $data['grade'],
+                            'teacher_feedback' => $data['teacher_feedback'] ?? null,
+                            'status'           => 'graded',
+                            'graded_at'        => now(),
+                        ]);
+                        Notification::make()->title('Compito valutato!')->success()->send();
+                    })
+                    ->modalSubmitActionLabel('Salva valutazione'),
 
                 Tables\Actions\EditAction::make()->label('')->iconButton(),
                 Tables\Actions\DeleteAction::make()->label('')->iconButton(),

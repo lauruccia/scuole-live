@@ -263,6 +263,25 @@ class LessonGeneratorService
                             continue;
                         }
 
+                        // Controllo sovrapposizione docente: se il docente è già impegnato
+                        // in un'altra lezione nello stesso orario (su qualsiasi contratto),
+                        // saltiamo alla settimana successiva per questo slot.
+                        // Questo evita conflitti silenziosi quando lo stesso docente
+                        // è assegnato a più contratti con orari sovrapposti.
+                        if ($slot->teacher_id) {
+                            $teacherOverlap = Lesson::query()
+                                ->where('teacher_id', (int) $slot->teacher_id)
+                                ->whereNull('cancelled_at')
+                                ->where('starts_at', '<', $endAt)
+                                ->where('ends_at', '>', $startAt)
+                                ->exists();
+
+                            if ($teacherOverlap) {
+                                $nextBySlot[$slot->id] = $startAt->copy()->addWeek();
+                                continue;
+                            }
+                        }
+
                         Lesson::create([
                             'contract_id'         => $contract->id,
                             'contract_student_id' => $contractStudentId,
@@ -348,7 +367,18 @@ class LessonGeneratorService
                                     ->where('starts_at', $partialAt->toDateTimeString())
                                     ->exists();
 
-                                if (! $dupPartial) {
+                                // Controllo sovrapposizione docente anche per la lezione di completamento
+                                $teacherPartialOverlap = false;
+                                if ($partialSlot->teacher_id) {
+                                    $teacherPartialOverlap = Lesson::query()
+                                        ->where('teacher_id', (int) $partialSlot->teacher_id)
+                                        ->whereNull('cancelled_at')
+                                        ->where('starts_at', '<', $partialEnd)
+                                        ->where('ends_at', '>', $partialAt)
+                                        ->exists();
+                                }
+
+                                if (! $dupPartial && ! $teacherPartialOverlap) {
                                     $slotStandard = (int) ($partialSlot->duration_minutes ?? 60);
 
                                     Lesson::create([

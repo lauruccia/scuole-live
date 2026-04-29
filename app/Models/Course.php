@@ -15,7 +15,9 @@ class Course extends Model
         'description',
         'level',
         'image_path',
-        'lessons_count',
+        // lessons_count rimosso da fillable: campo legacy (ora si usa hours_purchased).
+        // La colonna esiste ancora in DB per compatibilità con dati storici,
+        // ma non deve essere modificabile dall'interfaccia.
         'hours_purchased',
         'language_id',
         'lesson_type',
@@ -27,7 +29,6 @@ class Course extends Model
         'course_price'    => 'decimal:2',
         'enrollment_fee'  => 'decimal:2',
         'hours_purchased' => 'decimal:2',
-        'lessons_count'   => 'integer',
         'is_active'       => 'boolean',
         'is_public'       => 'boolean',
     ];

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Studente\Resources;
 
+use App\Filament\Studente\Concerns\HasStudentScope;
 use App\Filament\Studente\Resources\StudentInstallmentResource\Pages;
 use App\Models\Installment;
 use Filament\Forms\Form;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StudentInstallmentResource extends Resource
 {
+    use HasStudentScope;
+
     protected static ?string $model = Installment::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
@@ -140,15 +143,15 @@ class StudentInstallmentResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check() && auth()->user()?->hasRole('Studente');
+        return static::canAccessStudentPanel();
     }
 
     public static function canView($record): bool
     {
-        $studentIds = static::getStudentIds();
+        $studentIds = static::studentIds();
 
         if (empty($studentIds)) {
-            return false;
+            return true; // superadmin vede tutto
         }
 
         return $record->contract()

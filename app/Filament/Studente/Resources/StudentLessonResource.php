@@ -2,6 +2,7 @@
 
 namespace App\Filament\Studente\Resources;
 
+use App\Filament\Studente\Concerns\HasStudentScope;
 use App\Filament\Studente\Resources\StudentLessonResource\Pages;
 use App\Models\Lesson;
 use Filament\Forms\Form;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class StudentLessonResource extends Resource
 {
+    use HasStudentScope;
+
     protected static ?string $model = Lesson::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-academic-cap';
@@ -153,7 +156,7 @@ class StudentLessonResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->check() && auth()->user()?->hasRole('Studente');
+        return static::canAccessStudentPanel();
     }
 
     public static function canView($record): bool
