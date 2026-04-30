@@ -1,0 +1,119 @@
+---
+# Deploy automatico per scuoleLive (Laravel 11) su cPanel
+#
+# Struttura sul server:
+#   /home/aeacenter/scuole_app/   -> Codice Laravel (app, vendor, storage, ecc.)
+#   /home/aeacenter/public_html/  -> Document root pubblico (contenuto di /public)
+#
+# Repository cPanel (sorgente del deploy):
+#   /home/aeacenter/repositories/scuole-live/
+
+deployment:
+  tasks:
+    # ----------------------------------------------------------------
+    # 0. Variabili
+    # ----------------------------------------------------------------
+    - export APP_PATH=/home/aeacenter/scuole_app
+    - export PUBLIC_PATH=/home/aeacenter/public_html
+    - export DEPLOY_LOG=$APP_PATH/storage/logs/deploy.log
+
+    # ----------------------------------------------------------------
+    # 1. Sicurezza: assicurati che le cartelle esistano
+    # ----------------------------------------------------------------
+    - /bin/mkdir -p $APP_PATH
+    - /bin/mkdir -p $PUBLIC_PATH
+    - /bin/mkdir -p $APP_PATH/storage/logs
+    - /bin/mkdir -p $APP_PATH/storage/framework/cache
+    - /bin/mkdir -p $APP_PATH/storage/framework/sessions
+    - /bin/mkdir -p $APP_PATH/storage/framework/views
+    - /bin/mkdir -p $APP_PATH/bootstrap/cache
+
+    # ----------------------------------------------------------------
+    # 2. Copia il codice dell'app (TUTTO TRANNE /public) -> scuole_app
+    #    --delete tiene scuole_app perfettamente allineato al repo
+    #    ATTENZIONE: i file in --exclude NON vengono toccati
+    # ----------------------------------------------------------------
+    - >
+      /usr/bin/rsync -av --delete
+      --exclude='.git/'
+      --exclude='.gitignore'
+      --exclude='.gitattributes'
+      --exclude='.cpanel.yml'
+      --exclude='.env'
+      --exclude='.env.*'
+      --exclude='.envOLD'
+      --exclude='node_modules/'
+      --exclude='public/'
+      --exclude='tests/'
+      --exclude='_server_backup/'
+      --exclude='*.docx'
+      --exclude='*.bat'
+      --exclude='*.bak'
+      --exclude='*.conf'
+      --exclude='vendor.zip'
+      --exclude='storage/logs/*.log'
+      --exclude='storage/framework/cache/data/'
+      --exclude='storage/framework/sessions/*'
+      --exclude='storage/framework/views/*'
+      --exclude='storage/app/public/'
+      ./ $APP_PATH/
+
+    # ----------------------------------------------------------------
+    # 3. Copia il contenuto di /public -> public_html
+    #    NB: niente --delete qui, public_html può contenere file di servizio
+    #    (es. cgi-bin, .well-known per Let's Encrypt). Se vuoi mirror puro,
+    #    metti --delete-after --exclude='cgi-bin' --exclude='.well-known'
+    # ----------------------------------------------------------------
+    - >
+      /usr/bin/rsync -av
+      --exclude='hot'
+      --exclude='storage'
+      ./public/ $PUBLIC_PATH/
+
+    # ----------------------------------------------------------------
+    # 4. Patch di public_html/index.php per puntare a scuole_app
+    #    Laravel 11 usa __DIR__.'/../' per raggiungere bootstrap, vendor,
+    #    storage. Riscriviamo questi 3 path in assoluto.
+    # ----------------------------------------------------------------
+    - /bin/sed -i "s|__DIR__\.'/\.\./storage|'/home/aeacenter/scuole_app/storage|g" $PUBLIC_PATH/index.php
+    - /bin/sed -i "s|__DIR__\.'/\.\./vendor|'/home/aeacenter/scuole_app/vendor|g" $PUBLIC_PATH/index.php
+    - /bin/sed -i "s|__DIR__\.'/\.\./bootstrap|'/home/aeacenter/scuole_app/bootstrap|g" $PUBLIC_PATH/index.php
+
+    # ----------------------------------------------------------------
+    # 5. Symlink storage pubblico (sostituisce php artisan storage:link)
+    #    public_html/storage -> /home/aeacenter/scuole_app/storage/app/public
+    # ----------------------------------------------------------------
+    - /bin/mkdir -p $APP_PATH/storage/app/public
+    - /bin/rm -rf $PUBLIC_PATH/storage
+    - /bin/ln -nfs $APP_PATH/storage/app/public $PUBLIC_PATH/storage
+
+    # ----------------------------------------------------------------
+    # 6. Permessi
+    # ----------------------------------------------------------------
+    - /bin/chmod -R 755 $APP_PATH
+    - /bin/chmod -R 775 $APP_PATH/storage
+    - /bin/chmod -R 775 $APP_PATH/bootstrap/cache
+
+    # ----------------------------------------------------------------
+    # 7. Composer install (best effort - se composer non è in PATH sul deploy
+    #    cPanel, lancialo manualmente da Terminal cPanel dopo il primo push)
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && composer install --no-dev --optimize-autoloader --no-interaction 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "composer non disponibile in deploy, esegui a mano" >> $DEPLOY_LOG
+
+    # ----------------------------------------------------------------
+    # 8. Pulisci e ricrea cache Laravel (config / route / view)
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan config:clear 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /usr/bin/php artisan route:clear  2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /usr/bin/php artisan view:clear   2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /usr/bin/php artisan optimize     2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 9. Restart queue worker (se è attivo via cron / supervisor)
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan queue:restart 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 10. Log finale
+    # ----------------------------------------------------------------
+    - /bin/echo "===== Deploy completato $(/bin/date) =====" >> $DEPLOY_LOG
