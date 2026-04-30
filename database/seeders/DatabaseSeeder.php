@@ -12,14 +12,20 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * Ordine importante:
+     *  1. RolesSeeder           — crea i ruoli Spatie (superadmin, Docente, ecc.)
+     *  2. SchoolPermissionsSeeder — crea/assegna i permessi di sistema
+     *  3. EmailTemplateSeeder   — popola i template email di default
+     *  4. SchoolSettingSeeder   — popola brand, contatti, IBAN e impostazioni scuola
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            RolesSeeder::class,
+            SchoolPermissionsSeeder::class,
+            EmailTemplateSeeder::class,
+            SchoolSettingSeeder::class,
         ]);
     }
 }
