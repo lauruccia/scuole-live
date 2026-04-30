@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ScuoleLive – Analisi Migliorie Validazioni & UX</title>
+  <style>
+    :root {
+      --blue:   #2563eb;
+      --green:  #16a34a;
+      --yellow: #ca8a04;
+      --red:    #dc2626;
+      --gray:   #6b7280;
+      --bg:     #f8fafc;
+      --card:   #ffffff;
+      --border: #e2e8f0;
+      --text:   #1e293b;
+      --muted:  #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 40px 48px 32px;
+    }
+    header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    header p  { opacity: .8; font-size: 14px; }
+    header .meta { margin-top: 16px; display: flex; gap: 24px; font-size: 13px; opacity: .75; }
+    /* ── LAYOUT ── */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 36px 32px 60px; }
+    /* ── SOMMARIO ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .summary-card .num  { font-size: 32px; font-weight: 700; }
+    .summary-card .lbl  { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+    .c-red    { color: var(--red); }
+    .c-yellow { color: var(--yellow); }
+    .c-blue   { color: var(--blue); }
+    .c-green  { color: var(--green); }
+    /* ── SEZIONE ── */
+    .section { margin-bottom: 44px; }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    .section-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .section-header h2 { font-size: 18px; font-weight: 700; }
+    .section-header .count {
+      margin-left: auto;
+      font-size: 12px;
+      background: var(--border);
+      padding: 2px 10px;
+      border-radius: 20px;
+      color: var(--muted);
+    }
+    /* ── CARD MIGLIORIA ── */
+    .item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .item-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .badge-critica  { background: #fee2e2; color: var(--red); }
+    .badge-alta     { background: #fef3c7; color: #92400e; }
+    .badge-media    { background: #dbeafe; color: #1e40af; }
+    .badge-bassa    { background: #dcfce7; color: #14532d; }
+    .item-head h3 { font-size: 14px; font-weight: 600; flex: 1; }
+    .item-head .area {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .item-body { padding: 0 20px 18px; border-top: 1px solid var(--border); }
+    .item-body p { margin-top: 12px; color: var(--muted); font-size: 13px; }
+    .item-body strong { color: var(--text); }
+    /* stato attuale / proposta */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .box {
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+    }
+    .box-before { background: #fff1f2; border: 1px solid #fecdd3; }
+    .box-after  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .box-title  { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing:.04em; margin-bottom: 6px; }
+    .box-before .box-title { color: var(--red); }
+    .box-after  .box-title { color: var(--green); }
+    /* codice */
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    pre .c  { color: #94a3b8; }       /* commento */
+    pre .k  { color: #7dd3fc; }       /* keyword */
+    pre .s  { color: #86efac; }       /* stringa */
+    pre .n  { color: #fbbf24; }       /* nome metodo */
+    pre .v  { color: #f9a8d4; }       /* variabile */
+    /* ── LEGENDA ── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ ScuoleLive — Analisi Migliorie: Validazioni & UX</h1>
+  <p>Analisi del codice sorgente · Proposte con esempi di implementazione Filament/PHP</p>
+  <div class="meta">
+    <span>📅 Aprile 2026</span>
+    <span>📂 Codebase: Laravel 12 + Filament 3</span>
+    <span>🎯 Obiettivo: ridurre errori di inserimento, migliorare feedback utente</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- SOMMARIO -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="num c-red">6</div>
+      <div class="lbl">🔴 Priorità Critica</div>
+    </div>
+    <div class="summary-card">
+      <div class="num c-yellow">7</div>
+      <div class="lbl">🟡 Priorità Alta</div>
+    </div>
+    <div class="summary-card">
+      <div class="num c-blue">6</div>
+      <div class="lbl">🔵 Priorità Media</div>
+    </div>
+    <div class="summary-card">
+      <div class="num c-green">4</div>
+      <div class="lbl">🟢 Miglioramento UX</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="badge badge-critica">Critica</span> Blocca o corrompe dati — implementare subito</span>
+    <span class="legend-item"><span class="badge badge-alta">Alta</span> Errori frequenti, dati incoerenti — implementare presto</span>
+    <span class="legend-item"><span class="badge badge-media">Media</span> Casi limite, comfort operatore — pianificare</span>
+    <span class="legend-item"><span class="badge badge-bassa">UX</span> Migliora l'esperienza senza impatto su dati</span>
+  </div>
+
+  <!-- ════════════════════════════════════════════════
+       SEZIONE 1 — LEZIONI
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#fee2e2;">📚</div>
+      <h2>1 · Gestione Lezioni</h2>
+      <span class="count">6 proposte</span>
+    </div>
+
+    <!-- 1.1 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Durata massima lezione — blocco e avviso graduato</h3>
+        <span class="area">LessonResource</span>
+      </div>
+      <div class="item-body">
+        <p>Attualmente il sistema mostra solo <code>⚠️ La fine deve essere dopo l'inizio</code> ma <strong>non impone nessun limite superiore alla durata</strong>. Una lezione da 100 ore viene salvata silenziosamente e distorce il conteggio ore del contratto.</p>
+        <div class="two-col">
+          <div class="box box-before">
+            <div class="box-title">⛔ Stato attuale</div>
+            Nessun controllo sul valore massimo di durata. Una lezione con starts_at=09:00 e ends_at=09:00 del giorno dopo viene accettata.
+          </div>
+          <div class="box box-after">
+            <div class="box-title">✅ Proposta</div>
+            <strong>Avviso</strong> (non bloccante) se durata &gt; 4 ore. <strong>Errore bloccante</strong> se durata &gt; 8 ore. Il messaggio cita la durata calcolata.
+          </div>
+        </div>
+        <pre><span class="c">// In LessonResource::formatDurationFromDates() — aggiungere dopo calcolo $mins</span>
+<span class="k">if</span> (<span class="v">$mins</span> > 480) { <span class="c">// > 8 ore</span>
+    <span class="k">return</span> <span class="s">'🚫 Durata anomala: '</span> . <span class="n">static</span>::<span class="n">formatDurationMinutes</span>(<span class="v">$mins</span>) . <span class="s">' — max consentito 8 ore.'</span>;
+}
+<span class="k">if</span> (<span class="v">$mins</span> > 240) { <span class="c">// > 4 ore</span>
+    <span class="k">return</span> <span class="s">'⚠️ Durata insolita: '</span> . <span class="n">static</span>::<span class="n">formatDurationMinutes</span>(<span class="v">$mins</span>) . <span class="s">' — verificare.'</span>;
+}
+
+<span class="c">// In LessonResource::form() sul campo ends_at — aggiungere regola:</span>
+DateTimePicker::make(<span class="s">'ends_at'</span>)
+    ->rules([
+        <span class="k">function</span> (Get <span class="v">$get</span>) {
+            <span class="k">return</span> <span class="k">function</span> (string <span class="v">$attr</span>, <span class="v">$val</span>, <span class="v">$fail</span>) <span class="k">use</span> (<span class="v">$get</span>) {
+                <span class="v">$mins</span> = Carbon::<span class="n">parse</span>(<span class="v">$get</span>(<span class="s">'starts_at'</span>))-><span class="n">diffInMinutes</span>(Carbon::<span class="n">parse</span>(<span class="v">$val</span>), <span class="k">false</span>);
+                <span class="k">if</span> (<span class="v">$mins</span> > 480) {
+                    <span class="v">$fail</span>(<span class="s">'La lezione non può durare più di 8 ore.'</span>);
+                }
+            };
+        }
+    ])</pre>
+      </div>
+    </div>
+
+    <!-- 1.2 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Alert ore residue negative — lezione che sfora il contratto</h3>
+        <span class="area">LessonResource</span>
+      </div>
+      <div class="item-body">
+        <p>Il placeholder "Ore rimanenti" mostra le ore residue ma <strong>non avvisa se la nuova lezione le porterebbe in negativo</strong>. L'operatore può creare una lezione che sfora il monte ore acquistato senza nessun feedback.</p>
+        <div class="two-col">
+          <div class="box box-before">
+            <div class="box-title">⛔ Stato attuale</div>
+            Ore residue mostrate in sola lettura. Nessun avviso se la lezione in creazione supera il saldo.
+          </div>
+          <div class="box box-after">
+            <div class="box-title">✅ Proposta</div>
+            Il placeholder diventa dinamico: calcola la durata della lezione corrente e segnala se il saldo scende sotto zero, con indicazione del deficit.
+          </div>
+        </div>
+        <pre><span class="c">// Sostituire il Placeholder 'hours_remaining' con versione live e reattiva</span>
+Placeholder::make(<span class="s">'hours_remaining'</span>)
+    ->label(<span class="s">'Ore rimanenti (contratto)'</span>)
+    ->live()
+    ->content(<span class="k">function</span> (Get <span class="v">$get</span>, ?Lesson <span class="v">$record</span>) {
+        <span class="v">$c</span> = <span class="v">$record</span>?->contract ?? Contract::<span class="n">find</span>(<span class="v">$get</span>(<span class="s">'contract_id'</span>));
+        <span class="k">if</span> (! <span class="v">$c</span>) <span class="k">return</span> <span class="s">'—'</span>;
+
+        <span class="v">$remaining</span> = (float) <span class="v">$c</span>->hours_remaining;
+
+        <span class="c">// Calcola durata della lezione in corso di modifica</span>
+        <span class="v">$mins</span> = Carbon::<span class="n">parse</span>(<span class="v">$get</span>(<span class="s">'starts_at'</span>))-><span class="n">diffInMinutes</span>(Carbon::<span class="n">parse</span>(<span class="v">$get</span>(<span class="s">'ends_at'</span>)), <span class="k">false</span>);
+        <span class="v">$thisHours</span> = <span class="n">max</span>(0, <span class="n">round</span>(<span class="v">$mins</span> / 60, 2));
+        <span class="v">$afterSave</span> = <span class="v">$remaining</span> - <span class="v">$thisHours</span>;
+
+        <span class="k">if</span> (<span class="v">$afterSave</span> < 0) {
+            <span class="k">return</span> <span class="s">"🚨 Saldo residuo: {$remaining} h — questa lezione ({$thisHours} h) supererebbe il contratto di "</span>
+                 . <span class="n">abs</span>(<span class="v">$afterSave</span>) . <span class="s">' h'</span>;
+        }
+        <span class="k">if</span> (<span class="v">$afterSave</span> < 1) {
+            <span class="k">return</span> <span class="s">"⚠️ Residuo dopo lezione: {$afterSave} h (quasi esaurito)"</span>;
+        }
+        <span class="k">return</span> <span class="s">"✅ Residuo dopo lezione: {$afterSave} h"</span>;
+    })</pre>
+      </div>
+    </div>
+
+    <!-- 1.3 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Sovrapposizione docente — controllo mancante in fase di creazione manuale</h3>
+        <span class="area">LessonResource · LessonGeneratorService</span>
+      </div>
+      <div class="item-body">
+        <p>Il <code>LessonGeneratorService</code> controlla le sovrapposizioni dello <strong>studente</strong> ma non quelle del <strong>docente</strong>. In più, il controllo è completamente assente nella creazione manuale da LessonResource. Un docente può quindi essere assegnato a due lezioni contemporanee.</p>
+        <div class="two-col">
+          <div class="box box-before">
+            <div class="box-title">⛔ Stato attuale</div>
+            Nessun controllo docente in LessonResource. Il generatore controlla solo sovrapposizioni studente.
+          </div>
+          <div class="box box-after">
+            <div class="box-title">✅ Proposta</div>
+            Validazione server-side su ends_at: se il docente ha già una lezione in quell'orario, mostrare errore con i dettagli del conflitto.
+          </div>
+        </div>
+        <pre><span class="c">// In LessonResource::form() — aggiungere rules() su ends_at o teacher_id</span>
+DateTimePicker::make(<span class="s">'ends_at'</span>)
+    ->rules([
+        <span class="k">function</span> (Get <span class="v">$get</span>) use (<span class="v">$record</span>) {
+            <span class="k">return</span> <span class="k">function</span> (string <span class="v">$attr</span>, <span class="v">$val</span>, <span class="v">$fail</span>) <span class="k">use</span> (<span class="v">$get</span>, <span class="v">$record</span>) {
+                <span class="v">$teacherId</span> = <span class="v">$get</span>(<span class="s">'teacher_id'</span>);
+                <span class="v">$startAt</span>   = <span class="v">$get</span>(<span class="s">'starts_at'</span>);
+                <span class="k">if</span> (! <span class="v">$teacherId</span> || ! <span class="v">$startAt</span> || ! <span class="v">$val</span>) <span class="k">return</span>;
+
+                <span class="v">$conflict</span> = Lesson::<span class="n">query</span>()
+                    -><span class="n">where</span>(<span class="s">'teacher_id'</span>, <span class="v">$teacherId</span>)
+                    -><span class="n">whereNull</span>(<span class="s">'cancelled_at'</span>)
+                    -><span class="n">when</span>(<span class="v">$record</span>?->id, <span class="k">fn</span>(<span class="v">$q</span>) => <span class="v">$q</span>-><span class="n">where</span>(<span class="s">'id'</span>, <span class="s">'!='</span>, <span class="v">$record</span>->id))
+                    -><span class="n">where</span>(<span class="s">'starts_at'</span>, <span class="s">'<'</span>, <span class="v">$val</span>)
+                    -><span class="n">where</span>(<span class="s">'ends_at'</span>,   <span class="s">'>'</span>, <span class="v">$startAt</span>)
+                    -><span class="n">first</span>();
+
+                <span class="k">if</span> (<span class="v">$conflict</span>) {
+                    <span class="v">$fail</span>(<span class="s">'Il docente ha già una lezione in questo orario ('</span>
+                        . <span class="v">$conflict</span>->starts_at-><span class="n">format</span>(<span class="s">'d/m H:i'</span>) . <span class="s">'–'</span>
+                        . <span class="v">$conflict</span>->ends_at-><span class="n">format</span>(<span class="s">'H:i'</span>) . <span class="s">').'</span>);
+                }
+            };
+        }
+    ])</pre>
+      </div>
+    </div>
+
+    <!-- 1.4 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Lezione nel passato — avviso esplicito</h3>
+        <span class="area">LessonResource</span>
+      </div>
+      <div class="item-body">
+        <p>Creare una lezione con data nel passato è un'operazione lecita (inserimento retroattivo), ma avviene spesso per errore di battitura o copia-incolla. Un avviso non bloccante riduce questo rischio.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun avviso per lezioni nel passato.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Placeholder dinamico che avvisa se starts_at è nel passato: "📅 Attenzione: stai inserendo una lezione passata (ieri o prima)."</div>
+        </div>
+        <pre><span class="c">// Aggiungere Placeholder dopo starts_at</span>
+Placeholder::make(<span class="s">'past_lesson_warning'</span>)
+    ->label(<span class="s">''</span>)
+    ->live()
+    ->content(<span class="k">fn</span>(Get <span class="v">$get</span>) =>
+        <span class="v">$get</span>(<span class="s">'starts_at'</span>) && Carbon::<span class="n">parse</span>(<span class="v">$get</span>(<span class="s">'starts_at'</span>))-><span class="n">isPast</span>()
+            ? <span class="s">'📅 Attenzione: stai inserendo una lezione con data nel passato.'</span>
+            : <span class="k">null</span>
+    )</pre>
+      </div>
+    </div>
+
+    <!-- 1.5 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Lezione fuori dal periodo del contratto — avviso</h3>
+        <span class="area">LessonResource</span>
+      </div>
+      <div class="item-body">
+        <p>Una lezione può essere pianificata per una data precedente all'inizio del contratto o successiva alla sua scadenza. Questo dato viene accettato senza feedback.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun controllo sull'intervallo di validità del contratto collegato.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Se starts_at è fuori dall'intervallo [contract.starts_at, contract.ends_at], mostrare avviso con le date del contratto.</div>
+        </div>
+        <pre><span class="c">// Nel Placeholder 'consumption_preview' o in uno nuovo, aggiungere:</span>
+<span class="v">$contractId</span> = <span class="v">$get</span>(<span class="s">'contract_id'</span>);
+<span class="v">$c</span>          = <span class="v">$contractId</span> ? Contract::<span class="n">find</span>(<span class="v">$contractId</span>) : <span class="k">null</span>;
+<span class="v">$startAt</span>    = <span class="v">$get</span>(<span class="s">'starts_at'</span>) ? Carbon::<span class="n">parse</span>(<span class="v">$get</span>(<span class="s">'starts_at'</span>)) : <span class="k">null</span>;
+
+<span class="k">if</span> (<span class="v">$c</span> && <span class="v">$startAt</span>) {
+    <span class="k">if</span> (<span class="v">$c</span>->ends_at && <span class="v">$startAt</span>-><span class="n">gt</span>(Carbon::<span class="n">parse</span>(<span class="v">$c</span>->ends_at))) {
+        <span class="k">return</span> <span class="s">'⚠️ Data lezione successiva alla scadenza del contratto ('</span>
+             . Carbon::<span class="n">parse</span>(<span class="v">$c</span>->ends_at)-><span class="n">format</span>(<span class="s">'d/m/Y'</span>) . <span class="s">').'</span>;
+    }
+    <span class="k">if</span> (<span class="v">$c</span>->starts_at && <span class="v">$startAt</span>-><span class="n">lt</span>(Carbon::<span class="n">parse</span>(<span class="v">$c</span>->starts_at))) {
+        <span class="k">return</span> <span class="s">'⚠️ Data lezione precedente all\'inizio del contratto ('</span>
+             . Carbon::<span class="n">parse</span>(<span class="v">$c</span>->starts_at)-><span class="n">format</span>(<span class="s">'d/m/Y'</span>) . <span class="s">').'</span>;
+    }
+}</pre>
+      </div>
+    </div>
+
+    <!-- 1.6 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-media">Media</span>
+        <h3>Lezione il giorno di chiusura — avviso</h3>
+        <span class="area">LessonResource</span>
+      </div>
+      <div class="item-body">
+        <p>Il generatore automatico rispetta i <code>ClosureDay</code>, ma chi inserisce una lezione <em>manualmente</em> non riceve nessun avviso se sceglie una data di chiusura scolastica.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun controllo ClosureDay in inserimento manuale lezione.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Placeholder che controlla se la data selezionata ricade in un ClosureDay e mostra il titolo della chiusura.</div>
+        </div>
+        <pre><span class="c">// Placeholder aggiuntivo dopo starts_at:</span>
+Placeholder::make(<span class="s">'closure_warning'</span>)
+    ->label(<span class="s">''</span>)->live()
+    ->content(<span class="k">function</span> (Get <span class="v">$get</span>) {
+        <span class="v">$date</span> = <span class="v">$get</span>(<span class="s">'starts_at'</span>);
+        <span class="k">if</span> (! <span class="v">$date</span>) <span class="k">return</span> <span class="k">null</span>;
+        <span class="v">$closure</span> = ClosureDay::<span class="n">whereDate</span>(<span class="s">'date'</span>, Carbon::<span class="n">parse</span>(<span class="v">$date</span>)-><span class="n">toDateString</span>())-><span class="n">first</span>();
+        <span class="k">return</span> <span class="v">$closure</span>
+            ? <span class="s">'🔴 Giorno di chiusura: '</span> . (<span class="v">$closure</span>->title ?? <span class="s">'Chiusura programmata'</span>)
+            : <span class="k">null</span>;
+    })</pre>
+      </div>
+    </div>
+
+  </div><!-- /section lezioni -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SEZIONE 2 — CONTRATTI
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#fef3c7;">📄</div>
+      <h2>2 · Gestione Contratti</h2>
+      <span class="count">6 proposte</span>
+    </div>
+
+    <!-- 2.1 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Ore acquistate anomale — blocco inserimento valori assurdi</h3>
+        <span class="area">ContractResource · Step 2</span>
+      </div>
+      <div class="item-body">
+        <p>Il campo <code>hours_purchased</code> accetta qualsiasi numero positivo. Non esiste un limite superiore: 500 ore, 9999 ore o un valore con virgola inserito per errore (es. <code>6,0</code> letto come <code>60</code>) vengono salvati.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Solo validazione <code>numeric()</code> e <code>required()</code>. Nessun limite massimo.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Avviso se &gt; 200 ore, blocco se &gt; 500 ore. Anche un avviso se il valore sembra troppo basso (es. &lt; 1 ora per un corso non test).</div>
+        </div>
+        <pre><span class="c">// In ContractResource — campo hours_purchased:</span>
+TextInput::make(<span class="s">'hours_purchased'</span>)
+    ->numeric()->required()->default(0)
+    ->minValue(0)
+    ->maxValue(500)  <span class="c">// blocco hard</span>
+    ->hint(<span class="k">fn</span>(Get <span class="v">$get</span>) =>
+        (float)<span class="v">$get</span>(<span class="s">'hours_purchased'</span>) > 200
+            ? <span class="s">'⚠️ Valore insolito: verificare le ore inserite.'</span>
+            : <span class="k">null</span>
+    )
+    ->hintColor(<span class="s">'warning'</span>)
+    ->rules([<span class="s">'max:500'</span>, <span class="s">'min:0'</span>])</pre>
+      </div>
+    </div>
+
+    <!-- 2.2 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Ore assegnate ai beneficiari ≠ ore totali — avviso visibile nel riepilogo</h3>
+        <span class="area">ContractResource · Step 4</span>
+      </div>
+      <div class="item-body">
+        <p>Il placeholder <code>assigned_hours_summary</code> mostra il delta in formato testuale neutro. Se le ore assegnate non corrispondono al totale del contratto, il testo appare uguale — <strong>non c'è differenza visiva tra situazione ok e situazione anomala</strong>.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>"Ore contratto: 20 — Ore assegnate: 15 — Residuo: 5" — testo piatto, sempre uguale.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>HTML con colore: verde se delta = 0, arancione se delta &gt; 0 (ore non assegnate), rosso se delta &lt; 0 (assegnate più del dovuto).</div>
+        </div>
+        <pre><span class="c">// Sostituire content() del Placeholder 'assigned_hours_summary':</span>
+->content(<span class="k">function</span> (Get <span class="v">$get</span>) {
+    <span class="v">$totalAssigned</span> = collect(<span class="v">$get</span>(<span class="s">'beneficiaries'</span>) ?? [])
+        -><span class="n">sum</span>(<span class="k">fn</span>(<span class="v">$r</span>) => (float)(<span class="v">$r</span>[<span class="s">'assigned_hours'</span>] ?? 0));
+    <span class="v">$purchased</span> = (float)(<span class="v">$get</span>(<span class="s">'hours_purchased'</span>) ?? 0);
+    <span class="v">$delta</span>     = <span class="n">round</span>(<span class="v">$purchased</span> - <span class="v">$totalAssigned</span>, 2);
+
+    [<span class="v">$icon</span>, <span class="v">$color</span>, <span class="v">$msg</span>] = <span class="k">match</span>(<span class="k">true</span>) {
+        <span class="v">$delta</span> == 0 => [<span class="s">'✅'</span>, <span class="s">'green'</span>,  <span class="s">'Ore distribuite correttamente.'</span>],
+        <span class="v">$delta</span> >  0 => [<span class="s">'⚠️'</span>, <span class="s">'orange'</span>, <span class="s">"{$delta} ore del contratto non ancora assegnate."</span>],
+        <span class="k">default</span>     => [<span class="s">'🚨'</span>, <span class="s">'red'</span>,    <span class="s">'Assegnate '</span> . <span class="n">abs</span>(<span class="v">$delta</span>) . <span class="s">' ore in più del contratto!'</span>],
+    };
+    <span class="k">return</span> <span class="n">new</span> HtmlString(<span class="s">"&lt;span style='color:{$color}'&gt;{$icon} Contratto: {$purchased} h | Assegnate: {$totalAssigned} h — {$msg}&lt;/span&gt;"</span>);
+})</pre>
+      </div>
+    </div>
+
+    <!-- 2.3 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Validazione Codice Fiscale italiano — formato</h3>
+        <span class="area">ContractResource · StudentResource</span>
+      </div>
+      <div class="item-body">
+        <p>I campi <code>billing_tax_code</code> e <code>fiscal_code</code> accettano qualsiasi stringa fino a 50/16 caratteri. Un CF malformato viene salvato senza avvisi.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Solo maxLength(). Nessuna regex sul formato CF (16 caratteri alfanumerici, schema preciso).</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Regex di validazione + normalizzazione UPPERCASE + avviso se la lunghezza non è 16 caratteri.</div>
+        </div>
+        <pre><span class="c">// Aggiungere a billing_tax_code e fiscal_code:</span>
+TextInput::make(<span class="s">'fiscal_code'</span>)
+    ->maxLength(16)
+    ->formatStateUsing(<span class="k">fn</span>(<span class="v">$v</span>) => <span class="n">strtoupper</span>(<span class="n">trim</span>(<span class="v">$v</span> ?? <span class="s">''</span>)) ?: <span class="k">null</span>)
+    ->dehydrateStateUsing(<span class="k">fn</span>(<span class="v">$v</span>) => <span class="v">$v</span> ? <span class="n">strtoupper</span>(<span class="n">trim</span>(<span class="v">$v</span>)) : <span class="k">null</span>)
+    ->rule(<span class="s">'nullable'</span>)
+    ->rule(<span class="s">'regex:/^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$/'</span>)
+    ->validationMessages([
+        <span class="s">'regex'</span> => <span class="s">'Il codice fiscale non sembra valido (formato atteso: RSSMRA80A01H501T).'</span>,
+    ])</pre>
+      </div>
+    </div>
+
+    <!-- 2.4 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Validazione P.IVA — formato 11 cifre</h3>
+        <span class="area">ContractResource · CompanyResource</span>
+      </div>
+      <div class="item-body">
+        <p>Il campo <code>vat_number</code> accetta qualsiasi stringa. Una P.IVA italiana ha esattamente 11 cifre numeriche. Errori di battitura (es. inserire il CF al posto della P.IVA) non vengono rilevati.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Solo maxLength(50). Nessun controllo formato.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Regex + hint che mostra il formato atteso. Non bloccante per P.IVA estere.</div>
+        </div>
+        <pre>TextInput::make(<span class="s">'vat_number'</span>)
+    ->maxLength(50)
+    ->hint(<span class="s">'Per P.IVA italiana: 11 cifre (es. 01234567890)'</span>)
+    ->rule(<span class="k">function</span> () {
+        <span class="k">return</span> <span class="k">function</span> (string <span class="v">$attr</span>, <span class="v">$val</span>, <span class="v">$fail</span>) {
+            <span class="k">if</span> (! <span class="v">$val</span>) <span class="k">return</span>;
+            <span class="c">// Se sembra italiana (solo cifre) deve essere 11 caratteri</span>
+            <span class="k">if</span> (<span class="n">ctype_digit</span>(<span class="v">$val</span>) && <span class="n">strlen</span>(<span class="v">$val</span>) !== 11) {
+                <span class="v">$fail</span>(<span class="s">'La P.IVA italiana deve avere esattamente 11 cifre.'</span>);
+            }
+        };
+    })</pre>
+      </div>
+    </div>
+
+    <!-- 2.5 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Contratto senza data fine — avviso in stato "active"</h3>
+        <span class="area">ContractResource</span>
+      </div>
+      <div class="item-body">
+        <p>Un contratto attivo senza <code>ends_at</code> non ha una scadenza definita. Questo può essere voluto (contratto aperto), ma spesso è una dimenticanza. Non c'è nessun avviso.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>ends_at è nullable senza avvisi in stato active.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Hint sul campo ends_at: "Nessuna data di fine impostata — il contratto è aperto." visibile solo se status = active.</div>
+        </div>
+        <pre>DatePicker::make(<span class="s">'ends_at'</span>)
+    ->nullable()
+    ->minDate(<span class="k">fn</span>(Get <span class="v">$get</span>) => <span class="v">$get</span>(<span class="s">'starts_at'</span>) ?: <span class="k">null</span>)
+    ->hint(<span class="k">fn</span>(Get <span class="v">$get</span>) =>
+        ! <span class="v">$get</span>(<span class="s">'ends_at'</span>) && <span class="v">$get</span>(<span class="s">'status'</span>) === <span class="s">'active'</span>
+            ? <span class="s">'📋 Nessuna scadenza — contratto aperto.'</span>
+            : <span class="k">null</span>
+    )</pre>
+      </div>
+    </div>
+
+    <!-- 2.6 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Studente minorenne senza dati genitore — avviso bloccante</h3>
+        <span class="area">StudentResource</span>
+      </div>
+      <div class="item-body">
+        <p>Se <code>is_minor = true</code>, la sezione genitore diventa visibile ma <strong>nessun campo è obbligatorio</strong>. Un minorenne può essere salvato senza nome né contatto del genitore/tutore.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Campi parent_* nullable anche quando is_minor = true.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>parent_first_name, parent_last_name e almeno parent_email o parent_phone diventano required se is_minor = true.</div>
+        </div>
+        <pre>TextInput::make(<span class="s">'parent_first_name'</span>)
+    ->required(<span class="k">fn</span>(Get <span class="v">$get</span>) => (bool)<span class="v">$get</span>(<span class="s">'is_minor'</span>))
+
+TextInput::make(<span class="s">'parent_last_name'</span>)
+    ->required(<span class="k">fn</span>(Get <span class="v">$get</span>) => (bool)<span class="v">$get</span>(<span class="s">'is_minor'</span>))
+
+<span class="c">// Almeno email O telefono — aggiungere regola custom in afterValidation</span>
+<span class="c">// oppure con un Placeholder di avviso live:</span>
+Placeholder::make(<span class="s">'parent_warning'</span>)
+    ->label(<span class="s">''</span>)->live()
+    ->visible(<span class="k">fn</span>(Get <span class="v">$get</span>) => (bool)<span class="v">$get</span>(<span class="s">'is_minor'</span>))
+    ->content(<span class="k">fn</span>(Get <span class="v">$get</span>) =>
+        ! <span class="v">$get</span>(<span class="s">'parent_email'</span>) && ! <span class="v">$get</span>(<span class="s">'parent_phone'</span>)
+            ? <span class="s">'⚠️ Inserire almeno email o telefono del genitore/tutore.'</span>
+            : <span class="k">null</span>
+    )</pre>
+      </div>
+    </div>
+
+  </div><!-- /section contratti -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SEZIONE 3 — PAGAMENTI / RATE
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#dcfce7;">💶</div>
+      <h2>3 · Pagamenti e Rate</h2>
+      <span class="count">3 proposte</span>
+    </div>
+
+    <!-- 3.1 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-critica">Critica</span>
+        <h3>Rata con importo zero — blocco o avviso</h3>
+        <span class="area">InstallmentResource</span>
+      </div>
+      <div class="item-body">
+        <p>Una rata con <code>amount = 0</code> viene salvata regolarmente. Può essere generata per arrotondamento o inserita per errore, e distorce i report di incasso.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Campo amount con minValue non impostato. Zero è accettato.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>minValue(0.01) sul campo amount. Avviso se amount è negativo.</div>
+        </div>
+        <pre>TextInput::make(<span class="s">'amount'</span>)
+    ->numeric()->required()
+    ->minValue(0.01)
+    ->rules([<span class="s">'min:0.01'</span>])
+    ->validationMessages([
+        <span class="s">'min'</span> => <span class="s">'L\'importo della rata deve essere maggiore di zero.'</span>,
+    ])</pre>
+      </div>
+    </div>
+
+    <!-- 3.2 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-media">Media</span>
+        <h3>Somma rate ≠ totale contratto — avviso nel contratto</h3>
+        <span class="area">ContractResource · InstallmentResource</span>
+      </div>
+      <div class="item-body">
+        <p>Dopo la generazione automatica, le rate possono essere modificate manualmente. Non esiste un controllo che la somma delle rate corrisponda ancora al residuo del contratto.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun controllo di riconciliazione somma rate vs totale contratto.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Badge di avviso nella tabella contratti e nella pagina di dettaglio se la somma delle rate diverge dal residuo.</div>
+        </div>
+        <pre><span class="c">// Nel ContractResource::table() — aggiungere colonna badge:</span>
+Tables\Columns\TextColumn::make(<span class="s">'installments_balance'</span>)
+    ->label(<span class="s">'Rate'</span>)
+    ->state(<span class="k">function</span> (Contract <span class="v">$r</span>): string {
+        <span class="v">$sumRate</span>  = <span class="v">$r</span>->installments-><span class="n">sum</span>(<span class="s">'amount'</span>);
+        <span class="v">$residual</span> = (float)<span class="v">$r</span>->course_price + (float)<span class="v">$r</span>->enrollment_fee - (float)<span class="v">$r</span>->deposit;
+        <span class="v">$delta</span>    = <span class="n">round</span>(<span class="v">$sumRate</span> - <span class="v">$residual</span>, 2);
+        <span class="k">return</span> <span class="v">$delta</span> == 0 ? <span class="s">'✅ OK'</span> : (<span class="v">$delta</span> > 0 ? <span class="s">"⚠️ +{$delta}€"</span> : <span class="s">"🚨 {$delta}€"</span>);
+    })</pre>
+      </div>
+    </div>
+
+    <!-- 3.3 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-media">Media</span>
+        <h3>Rata con scadenza nel passato — avviso</h3>
+        <span class="area">InstallmentResource</span>
+      </div>
+      <div class="item-body">
+        <p>Creare o modificare una rata con <code>due_date</code> nel passato e stato <code>unpaid</code> non genera nessun avviso, pur indicando un pagamento scaduto non registrato.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun avviso rata scaduta e non pagata.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Indicatore visivo nella tabella rate: badge rosso "Scaduta" se due_date &lt; oggi e status = unpaid.</div>
+        </div>
+        <pre><span class="c">// In InstallmentResource::table():</span>
+Tables\Columns\BadgeColumn::make(<span class="s">'overdue'</span>)
+    ->label(<span class="s">'Stato'</span>)
+    ->state(<span class="k">fn</span>(Installment <span class="v">$r</span>) =>
+        <span class="v">$r</span>->status === <span class="s">'unpaid'</span> && <span class="v">$r</span>->due_date?-><span class="n">isPast</span>()
+            ? <span class="s">'Scaduta'</span> : <span class="n">ucfirst</span>(<span class="v">$r</span>->status)
+    )
+    ->colors([
+        <span class="s">'danger'</span>  => <span class="s">'Scaduta'</span>,
+        <span class="s">'success'</span> => <span class="s">'Paid'</span>,
+        <span class="s">'warning'</span> => <span class="s">'Partial'</span>,
+    ])</pre>
+      </div>
+    </div>
+
+  </div><!-- /section pagamenti -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SEZIONE 4 — SLOT SETTIMANALI
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#ede9fe;">🗓️</div>
+      <h2>4 · Slot Settimanali</h2>
+      <span class="count">2 proposte</span>
+    </div>
+
+    <!-- 4.1 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-alta">Alta</span>
+        <h3>Conflitto slot stesso studente — stessa fascia oraria</h3>
+        <span class="area">ContractLessonSlot / Repeater beneficiari</span>
+      </div>
+      <div class="item-body">
+        <p>È possibile aggiungere due slot per lo stesso studente con lo stesso giorno/ora. Il generatore salta i duplicati ma non avvisa mai l'operatore della configurazione incongruente.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Due slot identici vengono salvati. Il generatore li gestisce silenziosamente.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Validazione univocità (student_id + weekly_day + weekly_time) a livello di Model booted o Filament rule.</div>
+        </div>
+        <pre><span class="c">// In ContractLessonSlot::booted() — aggiungere in saving():</span>
+static::<span class="n">saving</span>(<span class="k">function</span> (self <span class="v">$slot</span>) {
+    <span class="v">$exists</span> = static::<span class="n">query</span>()
+        -><span class="n">where</span>(<span class="s">'contract_id'</span>, <span class="v">$slot</span>->contract_id)
+        -><span class="n">where</span>(<span class="s">'student_id'</span>,  <span class="v">$slot</span>->student_id)
+        -><span class="n">where</span>(<span class="s">'weekly_day'</span>,  <span class="v">$slot</span>->weekly_day)
+        -><span class="n">where</span>(<span class="s">'weekly_time'</span>, <span class="v">$slot</span>->weekly_time)
+        -><span class="n">when</span>(<span class="v">$slot</span>->exists, <span class="k">fn</span>(<span class="v">$q</span>) => <span class="v">$q</span>-><span class="n">where</span>(<span class="s">'id'</span>, <span class="s">'!='</span>, <span class="v">$slot</span>->id))
+        -><span class="n">exists</span>();
+
+    <span class="k">if</span> (<span class="v">$exists</span>) {
+        <span class="k">throw</span> <span class="k">new</span> \RuntimeException(
+            <span class="s">'Esiste già uno slot per questo studente in questo giorno/orario.'</span>
+        );
+    }
+});</pre>
+      </div>
+    </div>
+
+    <!-- 4.2 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-media">Media</span>
+        <h3>Slot con ore superiori alle ore assegnate — avviso preventivo</h3>
+        <span class="area">ContractLessonSlot</span>
+      </div>
+      <div class="item-body">
+        <p>Quando si configurano gli slot, non c'è nessun controllo che la durata totale delle lezioni generabili sia compatibile con le ore assegnate al beneficiario. L'operatore scopre la discrepanza solo dopo aver generato le lezioni.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">⛔ Stato attuale</div>Nessun calcolo preventivo ore generabili vs ore assegnate in fase di configurazione slot.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Aggiungere un placeholder nel repeater beneficiari che stima quante lezioni verranno generate con la configurazione attuale di slot e ore.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /section slot -->
+
+
+  <!-- ════════════════════════════════════════════════
+       SEZIONE 5 — MIGLIORAMENTI UX GENERALI
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#e0f2fe;">✨</div>
+      <h2>5 · Miglioramenti UX Generali</h2>
+      <span class="count">4 proposte</span>
+    </div>
+
+    <!-- 5.1 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-bassa">UX</span>
+        <h3>Semaforo ore residue contratto — indicatore visivo nella lista</h3>
+        <span class="area">ContractResource · Tabella</span>
+      </div>
+      <div class="item-body">
+        <p>Nella tabella contratti, le ore residue sono mostrate come testo. Non è immediato capire quali contratti stanno per esaurirsi.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">Attuale</div>"Residue: 4.5" — testo piatto uguale per tutti.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Badge colorato: 🟢 &gt; 20% ore residue · 🟡 &lt; 20% · 🔴 &lt; 2 ore · ⬛ esaurito.</div>
+        </div>
+        <pre><span class="c">// In ContractResource::table():</span>
+Tables\Columns\BadgeColumn::make(<span class="s">'hours_remaining'</span>)
+    ->label(<span class="s">'Ore residue'</span>)
+    ->formatStateUsing(<span class="k">fn</span>(<span class="v">$v</span>) => <span class="n">number_format</span>(<span class="v">$v</span>, 1) . <span class="s">' h'</span>)
+    ->color(<span class="k">function</span> (Contract <span class="v">$r</span>): string {
+        <span class="v">$pct</span> = <span class="v">$r</span>->hours_purchased > 0 ? <span class="v">$r</span>->hours_remaining / <span class="v">$r</span>->hours_purchased : 0;
+        <span class="k">return</span> <span class="k">match</span>(<span class="k">true</span>) {
+            <span class="v">$r</span>->hours_remaining <= 0   => <span class="s">'gray'</span>,
+            <span class="v">$r</span>->hours_remaining <= 2   => <span class="s">'danger'</span>,
+            <span class="v">$pct</span> < 0.20                => <span class="s">'warning'</span>,
+            <span class="k">default</span>                    => <span class="s">'success'</span>,
+        };
+    })</pre>
+      </div>
+    </div>
+
+    <!-- 5.2 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-bassa">UX</span>
+        <h3>Conferma prima di rigenerare lezioni — dialogo esplicito</h3>
+        <span class="area">ContractResource · Azioni</span>
+      </div>
+      <div class="item-body">
+        <p>L'azione "Rigenera lezioni" cancella tutte le lezioni future non svolte. Non esiste un passaggio di conferma che mostri quante lezioni verranno eliminate.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">Attuale</div>Click → rigenera immediatamente. L'operatore non vede quante lezioni verranno cancellate.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Modal di conferma con conteggio: "Questa azione cancellerà N lezioni future non svolte e ne genererà di nuove. Continuare?"</div>
+        </div>
+        <pre><span class="c">// Nell'azione di rigenerazione aggiungere ->requiresConfirmation() + ->modalDescription():</span>
+Action::make(<span class="s">'rigenera_lezioni'</span>)
+    ->requiresConfirmation()
+    ->modalHeading(<span class="s">'Rigenera lezioni'</span>)
+    ->modalDescription(<span class="k">function</span> (Contract <span class="v">$record</span>) {
+        <span class="v">$count</span> = Lesson::<span class="n">where</span>(<span class="s">'contract_id'</span>, <span class="v">$record</span>->id)
+            -><span class="n">whereNull</span>(<span class="s">'cancelled_at'</span>)
+            -><span class="n">where</span>(<span class="s">'counts_as_consumed'</span>, 0)
+            -><span class="n">whereDate</span>(<span class="s">'starts_at'</span>, <span class="s">'>='</span>, <span class="n">today</span>())
+            -><span class="n">count</span>();
+        <span class="k">return</span> <span class="s">"Questa azione cancellerà {$count} lezioni future non ancora svolte "</span>
+             . <span class="s">"e genererà nuove lezioni dagli slot attivi. Continuare?"</span>;
+    })
+    ->modalSubmitActionLabel(<span class="s">'Sì, rigenera'</span>)
+    ->color(<span class="s">'warning'</span>)</pre>
+      </div>
+    </div>
+
+    <!-- 5.3 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-bassa">UX</span>
+        <h3>Ricerca studente per codice fiscale o telefono</h3>
+        <span class="area">StudentResource · Select beneficiario</span>
+      </div>
+      <div class="item-body">
+        <p>La ricerca studente nel repeater beneficiari avviene solo per nome. Operatori che conoscono il CF o il numero di telefono dello studente non possono cercarlo con quei dati.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">Attuale</div>Ricerca solo per first_name + last_name.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Estendere getSearchResults() per cercare anche su fiscal_code, email, phone.</div>
+        </div>
+        <pre><span class="c">// Nel Select 'student_id' del repeater beneficiari:</span>
+->getSearchResultsUsing(<span class="k">function</span> (string <span class="v">$search</span>) {
+    <span class="k">return</span> Student::<span class="n">query</span>()
+        -><span class="n">where</span>(<span class="k">function</span> (<span class="v">$q</span>) <span class="k">use</span> (<span class="v">$search</span>) {
+            <span class="v">$q</span>-><span class="n">whereRaw</span>(<span class="s">"CONCAT(first_name, ' ', last_name) LIKE ?"</span>, [<span class="s">"%{$search}%"</span>])
+              -><span class="n">orWhere</span>(<span class="s">'fiscal_code'</span>, <span class="s">'LIKE'</span>, <span class="s">"%{$search}%"</span>)
+              -><span class="n">orWhere</span>(<span class="s">'email'</span>,       <span class="s">'LIKE'</span>, <span class="s">"%{$search}%"</span>)
+              -><span class="n">orWhere</span>(<span class="s">'phone'</span>,       <span class="s">'LIKE'</span>, <span class="s">"%{$search}%"</span>);
+        })
+        -><span class="n">limit</span>(20)
+        -><span class="n">pluck</span>(<span class="n">DB</span>::<span class="n">raw</span>(<span class="s">"CONCAT(first_name, ' ', last_name)"</span>), <span class="s">'id'</span>);
+})</pre>
+      </div>
+    </div>
+
+    <!-- 5.4 -->
+    <div class="item">
+      <div class="item-head">
+        <span class="badge badge-bassa">UX</span>
+        <h3>Contratti in scadenza — notifica proattiva nella dashboard</h3>
+        <span class="area">Dashboard / Widget</span>
+      </div>
+      <div class="item-body">
+        <p>Non esiste un meccanismo che avvisi la segreteria dei contratti prossimi alla scadenza (es. entro 30 giorni) o con ore quasi esaurite (es. meno di 2 ore residue). L'utente deve cercarli manualmente.</p>
+        <div class="two-col">
+          <div class="box box-before"><div class="box-title">Attuale</div>Nessun widget o notifica per contratti in scadenza o ore esaurite.</div>
+          <div class="box box-after"><div class="box-title">✅ Proposta</div>Widget Filament "Attenzione richiesta" con due elenchi: contratti in scadenza nei prossimi 30 giorni + contratti con &lt; 2 ore residue.</div>
+        </div>
+        <pre><span class="c">// Creare app/Filament/Widgets/AlertsWidget.php:</span>
+<span class="k">class</span> AlertsWidget <span class="k">extends</span> BaseWidget
+{
+    <span class="k">protected</span> <span class="k">function</span> <span class="n">getViewData</span>(): array {
+        <span class="k">return</span> [
+            <span class="s">'expiring'</span> => Contract::<span class="n">where</span>(<span class="s">'status'</span>, <span class="s">'active'</span>)
+                -><span class="n">whereNotNull</span>(<span class="s">'ends_at'</span>)
+                -><span class="n">whereBetween</span>(<span class="s">'ends_at'</span>, [<span class="n">now</span>(), <span class="n">now</span>()-><span class="n">addDays</span>(30)])
+                -><span class="n">with</span>(<span class="s">'students'</span>)-><span class="n">get</span>(),
+
+            <span class="s">'lowHours'</span> => Contract::<span class="n">where</span>(<span class="s">'status'</span>, <span class="s">'active'</span>)
+                -><span class="n">whereRaw</span>(<span class="s">'(hours_purchased - hours_consumed) < 2'</span>)
+                -><span class="n">whereRaw</span>(<span class="s">'hours_purchased > 0'</span>)
+                -><span class="n">with</span>(<span class="s">'students'</span>)-><span class="n">get</span>(),
+        ];
+    }
+}</pre>
+      </div>
+    </div>
+
+  </div><!-- /section ux -->
+
+
+  <!-- ════════════════════════════════════════════════
+       RIEPILOGO PRIORITÀ
+  ══════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-icon" style="background:#f1f5f9;">📋</div>
+      <h2>Riepilogo per priorità di intervento</h2>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:2px solid var(--border);">
+            <th style="padding:10px 16px;text-align:left;">Priorità</th>
+            <th style="padding:10px 16px;text-align:left;">Miglioria</th>
+            <th style="padding:10px 16px;text-align:left;">File da modificare</th>
+            <th style="padding:10px 16px;text-align:center;">Effort</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Blocco durata lezione &gt; 8 ore</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Alert ore residue negative in creazione lezione</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Controllo sovrapposizione docente</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php + LessonGeneratorService.php</td>
+            <td style="padding:9px 16px;text-align:center;">🔧 Medio</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Ore acquistate anomale — limite massimo</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Riepilogo ore assegnate colorato (verde/arancio/rosso)</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-critica">Critica</span></td>
+            <td style="padding:9px 16px;">Rata con importo zero — blocco</td>
+            <td style="padding:9px 16px;color:var(--muted);">InstallmentResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Validazione Codice Fiscale italiano</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php + StudentResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Validazione P.IVA 11 cifre</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Minorenne senza dati genitore — required</td>
+            <td style="padding:9px 16px;color:var(--muted);">StudentResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Avviso lezione nel passato</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Avviso lezione fuori periodo contratto</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Avviso contratto attivo senza data fine</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-alta">Alta</span></td>
+            <td style="padding:9px 16px;">Conflitto slot stessa fascia oraria studente</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractLessonSlot.php (Model)</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-media">Media</span></td>
+            <td style="padding:9px 16px;">Avviso lezione in giorno di chiusura (manuale)</td>
+            <td style="padding:9px 16px;color:var(--muted);">LessonResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-media">Media</span></td>
+            <td style="padding:9px 16px;">Riconciliazione somma rate vs totale contratto</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">🔧 Medio</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-media">Media</span></td>
+            <td style="padding:9px 16px;">Badge "Scaduta" su rate non pagate</td>
+            <td style="padding:9px 16px;color:var(--muted);">InstallmentResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-bassa">UX</span></td>
+            <td style="padding:9px 16px;">Semaforo ore residue nella tabella contratti</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);background:#fafafa;">
+            <td style="padding:9px 16px;"><span class="badge badge-bassa">UX</span></td>
+            <td style="padding:9px 16px;">Conferma prima di rigenerare lezioni</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:9px 16px;"><span class="badge badge-bassa">UX</span></td>
+            <td style="padding:9px 16px;">Ricerca studente per CF / email / telefono</td>
+            <td style="padding:9px 16px;color:var(--muted);">ContractResource.php</td>
+            <td style="padding:9px 16px;text-align:center;">⚡ Basso</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 16px;"><span class="badge badge-bassa">UX</span></td>
+            <td style="padding:9px 16px;">Widget "Attenzione richiesta" in dashboard</td>
+            <td style="padding:9px 16px;color:var(--muted);">Nuovo AlertsWidget.php</td>
+            <td style="padding:9px 16px;text-align:center;">🔧 Medio</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  ScuoleLive · Analisi migliorie validazioni &amp; UX · Aprile 2026
+</footer>
+
+</body>
+</html>
