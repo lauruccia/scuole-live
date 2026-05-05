@@ -162,6 +162,14 @@ deployment:
     - cd $APP_PATH && /usr/bin/php artisan queue:restart 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
+    # 9b. Health check post-deploy (solo log, non blocca il deploy)
+    #     Senza --strict: exit 0 anche su WARN, exit 2 solo su FAIL.
+    #     L'esito completo è nel deploy.log — controllarlo via File Manager.
+    # ----------------------------------------------------------------
+    - /bin/echo "----- HEALTH CHECK $(/bin/date '+%Y-%m-%d %H:%M:%S') -----" >> $DEPLOY_LOG
+    - cd $APP_PATH && /usr/bin/php artisan school:health-check 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
     # 10. Marker fine deploy
     # ----------------------------------------------------------------
     - /bin/echo "===== DEPLOY OK $(/bin/date '+%Y-%m-%d %H:%M:%S') =====" >> $DEPLOY_LOG
