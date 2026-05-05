@@ -55,12 +55,15 @@ deployment:
 
     # ----------------------------------------------------------------
     # 1b. Diagnostica ambiente (utile per debug deploy futuri)
+    #     IMPORTANTE: ogni stringa che contiene ": " (colon+space) DEVE essere
+    #     quotata, altrimenti il parser YAML di cPanel rifiuta tutto il file
+    #     e nessuna task viene eseguita.
     # ----------------------------------------------------------------
-    - /bin/echo "--- ENV DIAG ---" >> $DEPLOY_LOG
-    - /bin/echo "User: $(/usr/bin/whoami) | Home: $HOME" >> $DEPLOY_LOG
-    - /usr/bin/which php composer 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
-    - /opt/cpanel/ea-php83/root/usr/bin/php -v 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "ea-php83 NON trovato a /opt/cpanel/ea-php83/root/usr/bin/php" >> $DEPLOY_LOG
-    - /bin/ls -la /usr/local/bin/composer /opt/cpanel/composer/bin/composer /home/aeacenter/composer.phar 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - '/bin/echo "--- ENV DIAG ---" >> $DEPLOY_LOG'
+    - '/bin/echo "User=$(/usr/bin/whoami) Home=$HOME" >> $DEPLOY_LOG'
+    - '/usr/bin/which php composer 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true'
+    - '/opt/cpanel/ea-php83/root/usr/bin/php -v 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "ea-php83 NOT found at expected path" >> $DEPLOY_LOG'
+    - '/bin/ls -la /usr/local/bin/composer /opt/cpanel/composer/bin/composer /home/aeacenter/composer.phar 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true'
 
     # ----------------------------------------------------------------
     # 2. Copia il codice dell'app (TUTTO TRANNE /public) -> scuole_app
