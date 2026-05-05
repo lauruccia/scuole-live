@@ -43,6 +43,14 @@ class SuperadminCommands extends Page
     {
         return [
             [
+                'key' => 'clear_cache',
+                'title' => 'Svuota cache',
+                'subtitle' => 'optimize:clear + filament:cache-components --clear + permission:cache-reset',
+                'description' => 'Pulisce TUTTA la cache (config, view, route, event, application, Filament components, Spatie permissions). Da usare quando il menu admin non rispecchia il codice deployato (voci mancanti dopo un deploy). Opzionalmente ricrea la cache di produzione.',
+                'tone' => 'warning',
+                'requires_confirmation' => true,
+            ],
+            [
                 'key' => 'bonifica_consumi',
                 'title' => 'Bonifica ore fruite',
                 'subtitle' => 'scuole:bonifica',
@@ -102,6 +110,64 @@ class SuperadminCommands extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('clear_cache')
+                ->label('Svuota cache')
+                ->icon('heroicon-o-trash')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Svuota tutta la cache')
+                ->modalDescription('Esegue optimize:clear, view:clear, cache:clear, filament:cache-components --clear, permission:cache-reset. Da usare quando il menu non riflette il codice deployato.')
+                ->form([
+                    Toggle::make('rebuild')
+                        ->label('Rigenera cache produzione dopo (raccomandato)')
+                        ->helperText('Esegue optimize + filament:optimize + view:cache subito dopo la pulizia.')
+                        ->default(true),
+                ])
+                ->action(function (array $data) {
+                    $output = [];
+                    $tryCall = function (string $cmd, array $params = []) use (&$output) {
+                        try {
+                            Artisan::call($cmd, $params);
+                            $output[] = "✓ {$cmd}";
+                        } catch (\Throwable $e) {
+                            $output[] = "✗ {$cmd}: " . $e->getMessage();
+                        }
+                    };
+
+                    // Clear di tutte le cache standard
+                    $tryCall('optimize:clear');
+                    $tryCall('view:clear');
+                    $tryCall('config:clear');
+                    $tryCall('cache:clear');
+                    $tryCall('route:clear');
+                    $tryCall('event:clear');
+                    $tryCall('filament:cache-components', ['--clear' => true]);
+
+                    // Cache permessi Spatie (separata, non gestita da optimize:clear)
+                    if (class_exists(\Spatie\Permission\PermissionRegistrar::class)) {
+                        try {
+                            app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+                            $output[] = '✓ permission cache reset';
+                        } catch (\Throwable $e) {
+                            $output[] = '✗ permission cache: ' . $e->getMessage();
+                        }
+                    }
+
+                    if (! empty($data['rebuild'])) {
+                        $tryCall('optimize');
+                        $tryCall('view:cache');
+                        $tryCall('event:cache');
+                        $tryCall('filament:optimize');
+                    }
+
+                    Notification::make()
+                        ->title('Cache svuotata' . (! empty($data['rebuild']) ? ' e rigenerata' : ''))
+                        ->body(implode("\n", $output))
+                        ->success()
+                        ->persistent()
+                        ->send();
+                }),
+
             Action::make('bonifica_consumi')
                 ->label('Bonifica ore fruite')
                 ->icon('heroicon-o-wrench-screwdriver')
