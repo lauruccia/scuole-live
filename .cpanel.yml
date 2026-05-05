@@ -54,9 +54,22 @@ deployment:
     - /bin/echo "===== DEPLOY $(/bin/date '+%Y-%m-%d %H:%M:%S') =====" >> $DEPLOY_LOG
 
     # ----------------------------------------------------------------
+    # 1b. Diagnostica ambiente (utile per debug deploy futuri)
+    # ----------------------------------------------------------------
+    - /bin/echo "--- ENV DIAG ---" >> $DEPLOY_LOG
+    - /bin/echo "User: $(/usr/bin/whoami) | Home: $HOME" >> $DEPLOY_LOG
+    - /usr/bin/which php composer 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - /opt/cpanel/ea-php83/root/usr/bin/php -v 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "ea-php83 NON trovato a /opt/cpanel/ea-php83/root/usr/bin/php" >> $DEPLOY_LOG
+    - /bin/ls -la /usr/local/bin/composer /opt/cpanel/composer/bin/composer /home/aeacenter/composer.phar 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
     # 2. Copia il codice dell'app (TUTTO TRANNE /public) -> scuole_app
     #    --delete tiene scuole_app perfettamente allineato al repo
     #    ATTENZIONE: i file in --exclude NON vengono toccati
+    #
+    #    --exclude='vendor/' è CRITICO: il repo non contiene il vendor completo
+    #    (solo i file autoload). Senza esclusione, rsync --delete cancella il
+    #    vendor reale dal server, mandando giù il sito.
     # ----------------------------------------------------------------
     - >
       /usr/bin/rsync -av --delete
@@ -71,6 +84,7 @@ deployment:
       --exclude='public/'
       --exclude='tests/'
       --exclude='_server_backup/'
+      --exclude='vendor/'
       --exclude='*.docx'
       --exclude='*.bat'
       --exclude='*.bak'
@@ -120,46 +134,65 @@ deployment:
     - /bin/chmod -R 775 $APP_PATH/bootstrap/cache
 
     # ----------------------------------------------------------------
-    # 7. Composer install (best effort - se composer non è in PATH sul deploy
-    #    cPanel, lancialo manualmente da Terminal cPanel dopo il primo push)
+    # 7. Composer install — auto-detect del binary
+    #    Su cPanel/Aruba shared, "composer" non è in PATH per il deploy.
+    #    Cerchiamo in posizioni note; se non trova nulla, skip.
+    #    Workaround consigliato: caricare composer.phar in ~/composer.phar
+    #    via FTP, così questo step lo userà via php cli.
     # ----------------------------------------------------------------
-    - cd $APP_PATH && composer install --no-dev --optimize-autoloader --no-interaction 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "composer non disponibile in deploy, esegui a mano" >> $DEPLOY_LOG
+    - |
+      COMPOSER_BIN=""
+      PHP_CLI=/opt/cpanel/ea-php83/root/usr/bin/php
+      if [ -x /usr/local/bin/composer ]; then
+          COMPOSER_BIN=/usr/local/bin/composer
+      elif [ -x /opt/cpanel/composer/bin/composer ]; then
+          COMPOSER_BIN=/opt/cpanel/composer/bin/composer
+      elif [ -f /home/aeacenter/composer.phar ] && [ -x "$PHP_CLI" ]; then
+          COMPOSER_BIN="$PHP_CLI /home/aeacenter/composer.phar"
+      fi
+      if [ -n "$COMPOSER_BIN" ]; then
+          /bin/echo "Composer: $COMPOSER_BIN" >> $DEPLOY_LOG
+          cd $APP_PATH && $COMPOSER_BIN install --no-dev --optimize-autoloader --no-interaction 2>&1 | /usr/bin/tee -a $DEPLOY_LOG
+      else
+          /bin/echo "composer non disponibile in deploy. Carica composer.phar in /home/aeacenter/ via FTP per abilitare composer install automatico." >> $DEPLOY_LOG
+      fi
 
     # ----------------------------------------------------------------
     # 7b. Esegui migration — CRITICO: non saltare mai questo step.
     #     --force obbligatorio in produzione (bypassa la conferma interattiva).
+    #     Path PHP CLI: ea-php83 (NON /usr/bin/php che è la versione CGI).
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan migrate --force 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "migrate fallito, vedere log" >> $DEPLOY_LOG
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan migrate --force 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "migrate fallito, vedere log" >> $DEPLOY_LOG
 
     # ----------------------------------------------------------------
     # 8. Pulizia cache stale + ricostruzione cache produzione
     #    optimize:clear → rimuove config/route/view cache vecchie
     #    optimize      → ricrea config + route + events cache
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan optimize:clear 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
-    - cd $APP_PATH && /usr/bin/php artisan optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan optimize:clear 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 8b. Cache view (Blade compilate)
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan view:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan view:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 8c. Cache event listeners
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan event:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan event:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 8d. Filament cache (componenti, risorse, navigation)
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan filament:optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan filament:optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 9. Restart graceful dei worker queue
     #    Senza questo, i worker continuano a usare il vecchio codice in memoria.
     #    Il flag --tries è per il queue:work avviato dal supervisor/cron.
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan queue:restart 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan queue:restart 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 9b. Health check post-deploy (solo log, non blocca il deploy)
@@ -167,7 +200,7 @@ deployment:
     #     L'esito completo è nel deploy.log — controllarlo via File Manager.
     # ----------------------------------------------------------------
     - /bin/echo "----- HEALTH CHECK $(/bin/date '+%Y-%m-%d %H:%M:%S') -----" >> $DEPLOY_LOG
-    - cd $APP_PATH && /usr/bin/php artisan school:health-check 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /opt/cpanel/ea-php83/root/usr/bin/php artisan school:health-check 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
     # 10. Marker fine deploy
