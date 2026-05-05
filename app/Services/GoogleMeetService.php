@@ -9,6 +9,7 @@ use Google\Service\Calendar\Event;
 use Google\Service\Calendar\EventDateTime;
 use Google\Service\Calendar\CreateConferenceRequest;
 use Google\Service\Calendar\ConferenceData;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class GoogleMeetService
@@ -23,10 +24,16 @@ class GoogleMeetService
         $jsonPath   = config('services.google.service_account_json');
 
         if (! $calendarId || ! $jsonPath || ! file_exists($jsonPath)) {
+            Log::info('GoogleMeetService: configurazione mancante, skip', [
+                'lesson_id'           => $lesson->id,
+                'calendar_id_present' => (bool) $calendarId,
+                'json_path_present'   => $jsonPath ? file_exists($jsonPath) : false,
+            ]);
             return; // non configurato: non blocco nulla
         }
 
-        $client = new GoogleClient();
+        try {
+            $client = new GoogleClient();
         $client->setAuthConfig($jsonPath);
         $client->addScope(Calendar::CALENDAR);
 
@@ -66,5 +73,24 @@ class GoogleMeetService
         $lesson->google_event_id = $created->getId();
         $lesson->meet_url = $meetUrl ?: null;
         $lesson->saveQuietly();
+
+            Log::info('GoogleMeetService: evento Meet creato', [
+                'lesson_id' => $lesson->id,
+                'event_id'  => $created->getId(),
+                'has_meet'  => (bool) $meetUrl,
+            ]);
+        } catch (\Throwable $e) {
+            // Notifica Sentry + log con context completo per debug
+            report($e);
+            Log::error('GoogleMeetService: errore creazione evento Meet', [
+                'lesson_id'   => $lesson->id,
+                'starts_at'   => $lesson->starts_at?->toIso8601String(),
+                'calendar_id' => $calendarId,
+                'error'       => $e->getMessage(),
+                'trace'       => substr($e->getTraceAsString(), 0, 1000),
+            ]);
+            // Non rilanciamo: la lezione resta valida, il link Meet puo' essere
+            // generato manualmente in seguito.
+        }
     }
 }

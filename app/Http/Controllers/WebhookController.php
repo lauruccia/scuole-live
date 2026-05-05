@@ -86,10 +86,19 @@ class WebhookController extends Controller
     {
         $webhookId = config('services.paypal.webhook_id');
 
-        // Se il webhook_id non è configurato (es. in locale senza credenziali PayPal)
-        // restituiamo true per non bloccare lo sviluppo locale.
+        // SICUREZZA: in PRODUZIONE, se il webhook_id NON e' configurato BLOCCHIAMO
+        //   la richiesta. Senza verifica firma, chiunque potrebbe simulare un webhook
+        //   PayPal e completare ordini fittizi (fraud risk).
+        //   Solo locale/staging puo' saltare la verifica per sviluppo.
         if (empty($webhookId)) {
-            Log::warning('PayPal webhook: PAYPAL_WEBHOOK_ID non configurato — verifica firma saltata');
+            if (app()->environment('production')) {
+                Log::error('PayPal webhook: PAYPAL_WEBHOOK_ID non configurato in produzione — richiesta BLOCCATA per sicurezza', [
+                    'transmission_id' => $request->header('PAYPAL-TRANSMISSION-ID'),
+                    'remote_ip'       => $request->ip(),
+                ]);
+                return false;
+            }
+            Log::warning('PayPal webhook: PAYPAL_WEBHOOK_ID non configurato — verifica firma saltata (ambiente non-production)');
             return true;
         }
 

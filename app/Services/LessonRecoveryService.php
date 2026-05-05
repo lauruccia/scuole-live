@@ -4,11 +4,16 @@ namespace App\Services;
 
 use App\Models\ClosureDay;
 use App\Models\Lesson;
+use App\Models\SchoolSetting;
+use App\Services\EmailTemplateService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LessonRecoveryService
 {
+    public function __construct(private readonly EmailTemplateService $emailService) {}
+
     public function cancelAndCreateAutoRecovery(Lesson $lesson, Carbon $cancelledAt, string $reason = ''): Lesson
     {
         $lesson->refresh();
@@ -19,6 +24,14 @@ class LessonRecoveryService
 
         if ($lesson->recoveryLesson()->exists()) {
             throw new \RuntimeException('Recupero già creato per questa lezione.');
+        }
+
+        // Non creare recuperi su contratti non attivi (completati, cancellati, ecc.)
+        $contractStatus = $lesson->contract?->status;
+        if ($contractStatus && ! in_array($contractStatus, ['active', 'pending'], true)) {
+            throw new \RuntimeException(
+                "Impossibile creare il recupero: il contratto #{$lesson->contract_id} è in stato '{$contractStatus}'."
+            );
         }
 
         if (! $lesson->starts_at || ! $lesson->ends_at) {
@@ -47,7 +60,7 @@ class LessonRecoveryService
             originalStarts: $originalStarts,
         );
 
-        return DB::transaction(function () use ($lesson, $candidate, $durationMinutes, $movedReason) {
+        $recovery = DB::transaction(function () use ($lesson, $candidate, $durationMinutes, $movedReason) {
             $recovery = Lesson::create([
                 'contract_id' => $lesson->contract_id,
                 'contract_student_id' => $lesson->contract_student_id,
@@ -82,6 +95,88 @@ class LessonRecoveryService
 
             return $recovery;
         });
+
+        // Invia email di notifica allo studente (fuori dalla transaction: un errore email
+        // non deve annullare la creazione del recupero già salvato nel DB).
+        $this->notifyStudentOfRecovery($lesson, $recovery);
+
+        return $recovery;
+    }
+
+    /**
+     * Invia un'email informativa quando un recupero automatico viene creato.
+     * Usa il template 'lesson_recovery_created'. Fallimento silenzioso (solo log).
+     *
+     * Routing:
+     *  - To:  studente (se ha email valida), altrimenti intestatario del contratto.
+     *  - CC:  intestatario, se ha email valida e diversa da quella dello studente.
+     */
+    private function notifyStudentOfRecovery(Lesson $originalLesson, Lesson $recoveryLesson): void
+    {
+        try {
+            $student  = $originalLesson->student;
+            $contract = $originalLesson->contract;
+
+            // Risolvi i recipients tramite il contratto
+            if ($contract && $student) {
+                ['to' => $to, 'cc' => $cc] = $contract->lessonNotificationRecipients($student);
+            } elseif ($student && filter_var(trim((string) $student->email), FILTER_VALIDATE_EMAIL)) {
+                $to = ['email' => $student->email, 'name' => $student->full_name ?: $student->email];
+                $cc = [];
+            } else {
+                Log::info('LessonRecoveryService: nessun destinatario valido per notifica recupero.', [
+                    'lesson_id'   => $originalLesson->id,
+                    'recovery_id' => $recoveryLesson->id,
+                ]);
+                return;
+            }
+
+            if (! $to) {
+                Log::info('LessonRecoveryService: nessun indirizzo email valido per notifica recupero.', [
+                    'lesson_id'   => $originalLesson->id,
+                    'recovery_id' => $recoveryLesson->id,
+                ]);
+                return;
+            }
+
+            $teacher = $originalLesson->teacher;
+            $locale  = 'it';
+
+            $originalStarts = Carbon::parse($originalLesson->starts_at)->locale($locale);
+            $recoveryStarts = Carbon::parse($recoveryLesson->starts_at)->locale($locale);
+
+            $dataOriginale = $originalStarts->isoFormat('dddd D MMMM YYYY') . ' alle ' . $originalStarts->format('H:i');
+            $dataRecupero  = $recoveryStarts->isoFormat('dddd D MMMM YYYY') . ' alle ' . $recoveryStarts->format('H:i');
+
+            $nomeStudente = $student
+                ? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))
+                : $to['name'];
+
+            $variables = [
+                'nome_studente'  => $nomeStudente,
+                'data_originale' => $dataOriginale,
+                'data_recupero'  => $dataRecupero,
+                'docente'        => $teacher ? trim($teacher->name ?? ($teacher->first_name . ' ' . $teacher->last_name)) : '—',
+                'lingua'         => $originalLesson->language?->name ?? '—',
+                'nome_scuola'    => SchoolSetting::schoolName(),
+            ];
+
+            $this->emailService->sendBySlug(
+                'lesson_recovery_created',
+                $to['email'],
+                $to['name'],
+                $variables,
+                [],
+                $cc
+            );
+
+        } catch (\Throwable $e) {
+            Log::warning('LessonRecoveryService: errore invio email notifica recupero.', [
+                'lesson_id'   => $originalLesson->id,
+                'recovery_id' => $recoveryLesson->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 
     private function findFirstAvailableRecoverySlot(Lesson $lesson, Carbon $candidate, Carbon $originalStarts): array
@@ -107,69 +202,58 @@ class LessonRecoveryService
                     . 'La prima data proposta era '
                     . $originalCandidate->format('d/m/Y H:i')
                     . ', ma non era disponibile. '
-                    . 'Nuova data: '
-                    . $candidate->format('d/m/Y H:i')
-                    . '. Spostamento totale: +'
-                    . $moves
-                    . ' settimana/e.';
-
-                if (! empty($reasons)) {
-                    $msg .= ' Motivi degli spostamenti: ' . implode(' | ', $reasons);
-                }
+                    . 'Motivi: ' . implode('; ', $reasons);
 
                 return [$candidate, $msg];
             }
 
-            $reasonParts = [];
-
             if ($closure) {
-                $reasonParts[] = 'giorno di chiusura'
-                    . (($closure->reason ?? null) ? ' - ' . $closure->reason : '');
+                $reasons[] = 'Giornata di chiusura il ' . $candidate->format('d/m/Y');
+            } elseif ($busyLesson) {
+                $reasons[] = 'Docente occupato il ' . $candidate->format('d/m/Y H:i');
             }
 
-            if ($busyLesson) {
-                $reasonParts[] = 'slot già occupato dalla lezione ID '
-                    . $busyLesson->id
-                    . ' del '
-                    . Carbon::parse($busyLesson->starts_at)->format('d/m/Y H:i');
-            }
-
-            $reasons[] = $candidate->format('d/m/Y H:i') . ': ' . implode(', ', $reasonParts);
-
-            $candidate->addWeek();
+            $candidate = $candidate->copy()->addWeek();
             $moves++;
         }
 
-        throw new \RuntimeException('Impossibile creare il recupero: nessuno slot libero trovato nelle prossime 104 settimane.');
+        // Fallback: usa la prima data proposta anche se non ideale
+        return [$originalCandidate, 'Nessuno slot libero trovato nelle prossime 104 settimane.'];
+    }
+
+    private function applyTime(Carbon $date, string $time): Carbon
+    {
+        [$h, $m, $s] = explode(':', $time);
+        return $date->copy()->setTime((int)$h, (int)$m, (int)$s);
+    }
+
+    private function getClosureForDay(Carbon $dt): ?object
+    {
+        return \App\Models\ClosureDay::query()
+            ->whereDate('start_date', '<=', $dt->toDateString())
+            ->where(function ($q) use ($dt) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $dt->toDateString());
+            })->first();
     }
 
     private function getBusyLessonForSlot(Lesson $lesson, Carbon $candidate): ?Lesson
     {
         return Lesson::query()
+            ->where('teacher_id', $lesson->teacher_id)
             ->where('id', '!=', $lesson->id)
-            ->where('contract_student_id', $lesson->contract_student_id)
-            ->where('starts_at', $candidate->format('Y-m-d H:i:s'))
-            ->first();
-    }
-
-    private function applyTime(Carbon $dt, string $time): Carbon
-    {
-        try {
-            $dt->setTimeFromTimeString($time);
-        } catch (\Throwable) {
-            //
-        }
-
-        return $dt;
-    }
-
-    private function getClosureForDay(Carbon $dateTime): ?ClosureDay
-    {
-        $day = $dateTime->toDateString();
-
-        return ClosureDay::query()
-            ->whereDate('start_date', '<=', $day)
-            ->whereRaw('COALESCE(end_date, start_date) >= ?', [$day])
+            ->whereNull('cancelled_at')
+            ->whereNull('deleted_at')
+            ->where(function ($q) use ($candidate, $lesson) {
+                $endCandidate = $candidate->copy()->addMinutes(
+                    $lesson->duration_minutes ?: 60
+                );
+                $q->whereBetween('starts_at', [$candidate, $endCandidate])
+                  ->orWhereBetween('ends_at', [$candidate, $endCandidate])
+                  ->orWhere(function ($inner) use ($candidate, $endCandidate) {
+                      $inner->where('starts_at', '<=', $candidate)
+                            ->where('ends_at', '>=', $endCandidate);
+                  });
+            })
             ->first();
     }
 }

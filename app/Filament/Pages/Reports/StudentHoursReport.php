@@ -38,7 +38,7 @@ class StudentHoursReport extends Page implements Tables\Contracts\HasTable, Form
             return false;
         }
 
-        if ($u->hasAnyRole(['super_admin', 'superadmin'])) {
+        if ($u->hasAnyRole(['super_admin', 'superadmin', 'admin', 'Amministrazione'])) {
             return true;
         }
 

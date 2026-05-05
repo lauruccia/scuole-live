@@ -16,6 +16,7 @@
         "saade/filament-fullcalendar": "^3.2",
         "sentry/sentry-laravel": "^4.0",
         "spatie/laravel-activitylog": "^4.9",
+        "spatie/laravel-backup": "^10.2",
         "spatie/laravel-permission": "^6.24",
         "stripe/stripe-php": "^15.0"
     },
@@ -84,7 +85,7 @@
         }
     },
     "config": {
-    "optimize-autoloader": false,
+    "optimize-autoloader": true,
     "preferred-install": "dist",
     "sort-packages": true,
     "allow-plugins": {

@@ -60,6 +60,16 @@ return [
             'report' => false,
         ],
 
+        /*
+         * Disco dedicato ai backup locali (spatie/laravel-backup).
+         * I file vengono salvati in storage/app/backups.
+         * Assicurarsi che la cartella esista e non sia web-accessibile.
+         */
+        'local-backups' => [
+            'driver' => 'local',
+            'root'   => storage_path('app/backups'),
+        ],
+
     ],
 
     /*

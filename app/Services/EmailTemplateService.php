@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\TemplateMail;
 use App\Models\EmailTemplate;
 use App\Models\SchoolSetting;
 use Illuminate\Support\Facades\Log;
@@ -107,10 +108,11 @@ HTML;
      * Invia un'email usando il template identificato da slug.
      *
      * @param  string  $slug        Slug del template (es. 'welcome_student')
-     * @param  string  $toEmail     Destinatario
-     * @param  string  $toName      Nome destinatario
+     * @param  string  $toEmail     Destinatario principale
+     * @param  string  $toName      Nome destinatario principale
      * @param  array   $variables   Variabili da sostituire (es. ['nome' => 'Mario'])
      * @param  array   $attachments Array di ['data' => binary, 'name' => 'file.pdf', 'mime' => 'application/pdf']
+     * @param  array   $cc          Destinatari in copia — array di ['email' => '...', 'name' => '...']
      * @return bool    true se inviata, false altrimenti
      */
     public function sendBySlug(
@@ -118,7 +120,8 @@ HTML;
         string $toEmail,
         string $toName,
         array  $variables   = [],
-        array  $attachments = []
+        array  $attachments = [],
+        array  $cc          = []
     ): bool {
         $template = EmailTemplate::findBySlug($slug);
 
@@ -127,18 +130,21 @@ HTML;
             return false;
         }
 
-        return $this->sendTemplate($template, $toEmail, $toName, $variables, $attachments);
+        return $this->sendTemplate($template, $toEmail, $toName, $variables, $attachments, $cc);
     }
 
     /**
      * Invia un'email usando il template associato a un evento trigger.
+     *
+     * @param  array  $cc  Destinatari in copia — array di ['email' => '...', 'name' => '...']
      */
     public function sendByEvent(
         string $event,
         string $toEmail,
         string $toName,
         array  $variables   = [],
-        array  $attachments = []
+        array  $attachments = [],
+        array  $cc          = []
     ): bool {
         $template = EmailTemplate::findByEvent($event);
 
@@ -147,19 +153,22 @@ HTML;
             return false;
         }
 
-        return $this->sendTemplate($template, $toEmail, $toName, $variables, $attachments);
+        return $this->sendTemplate($template, $toEmail, $toName, $variables, $attachments, $cc);
     }
 
     /**
      * Invia usando un'istanza EmailTemplate già caricata.
      * Il corpo viene automaticamente avvolto nel layout con header, firma e footer.
+     *
+     * @param  array  $cc  Destinatari in copia — array di ['email' => '...', 'name' => '...']
      */
     public function sendTemplate(
         EmailTemplate $template,
         string        $toEmail,
         string        $toName,
         array         $variables   = [],
-        array         $attachments = []
+        array         $attachments = [],
+        array         $cc          = []
     ): bool {
         [$subject, $rawBody] = array_values($template->render($variables));
 
@@ -167,19 +176,25 @@ HTML;
         $fullHtml = $this->wrapInLayout($rawBody);
 
         try {
-            Mail::html($fullHtml, function ($mail) use ($toEmail, $toName, $subject, $attachments) {
-                $mail->to($toEmail, $toName)
-                     ->subject($subject)
-                     ->from(config('mail.from.address'), config('mail.from.name'));
+            $mailable = new TemplateMail($fullHtml, $subject, $attachments);
 
-                foreach ($attachments as $att) {
-                    $mail->attachData(
-                        $att['data'],
-                        $att['name'],
-                        ['mime' => $att['mime'] ?? 'application/octet-stream']
-                    );
-                }
-            });
+            // Costruisce la mailer chain: destinatario principale + eventuali CC
+            $mailer = Mail::to($toEmail, $toName);
+
+            if (! empty($cc)) {
+                // Normalizza in array di [email, name] compatibile con Laravel
+                $ccList = array_map(
+                    fn ($entry) => [$entry['email'], $entry['name'] ?? ''],
+                    $cc
+                );
+                $mailer = $mailer->cc($ccList);
+            }
+
+            if (config('queue.default', 'sync') !== 'sync') {
+                $mailer->queue($mailable);
+            } else {
+                $mailer->send($mailable);
+            }
 
             return true;
         } catch (\Throwable $e) {

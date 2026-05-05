@@ -144,7 +144,9 @@ class ImpostazioniScuola extends Page implements HasForms
                         TextInput::make('bank_iban')
                             ->label('IBAN')
                             ->placeholder('IT60 X054 2811 1010 0000 0123 456')
-                            ->maxLength(34),
+                            ->maxLength(34)
+                            ->rules([new \App\Rules\Iban])
+                            ->helperText('Validato con checksum ISO 13616 (mod-97).'),
 
                         TextInput::make('bank_intestatario')
                             ->label('Intestatario conto')

@@ -10,8 +10,10 @@ use App\Observers\LessonMeetObserver;
 use App\Observers\LessonObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use App\Models\Student;
@@ -28,8 +30,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Student::observe(StudentObserver::class);
         
-        // Forza lingua app
+        // Forza lingua app + Carbon in italiano
+        // Carbon::setLocale() è indipendente da App::setLocale() e necessario
+        // per translatedFormat(), isoFormat() e diffForHumans() in italiano.
         App::setLocale('it');
+        Carbon::setLocale('it');
 
         // Forza HTTPS in produzione
         if (app()->environment('production')) {
@@ -52,13 +57,39 @@ class AppServiceProvider extends ServiceProvider
 
         /**
          * Override globale email reset password.
-         * Temporaneamente forzato sul pannello docente
-         * per generare link corretti tipo /docente/password-reset/reset
+         *
+         * Determina il panel corretto in base al ruolo dell'utente:
+         *   - superadmin / super_admin → panel 'superadmin'
+         *   - Amministrazione / Segreteria → panel 'admin'
+         *   - Docente → panel 'docente'
+         *   - Studente / qualsiasi altro → panel 'studente'
+         *
+         * In questo modo il link nell'email punta sempre al panel giusto
+         * e la pagina di reset funziona per tutti i ruoli.
          */
         ResetPassword::toMailUsing(function ($notifiable, string $token) {
-            $panelId = 'docente';
+            // Ricava il panel dal ruolo dell'utente
+            $panelId = 'studente'; // fallback sicuro
+
+            if (method_exists($notifiable, 'getRoleNames')) {
+                $roles = $notifiable->getRoleNames();
+
+                if ($roles->intersect(['superadmin', 'super_admin', 'Superadmin'])->isNotEmpty()) {
+                    $panelId = 'superadmin';
+                } elseif ($roles->intersect(['Amministrazione', 'Segreteria', 'admin'])->isNotEmpty()) {
+                    $panelId = 'admin';
+                } elseif ($roles->contains('Docente')) {
+                    $panelId = 'docente';
+                }
+            }
 
             $routeName = "filament.{$panelId}.auth.password-reset.reset";
+
+            // Se la route non esiste (panel non ancora registrato o typo),
+            // torniamo al fallback sicuro evitando un'eccezione in produzione.
+            if (! \Illuminate\Support\Facades\Route::has($routeName)) {
+                $routeName = 'filament.admin.auth.password-reset.reset';
+            }
 
             $url = URL::temporarySignedRoute(
                 $routeName,
@@ -72,9 +103,9 @@ class AppServiceProvider extends ServiceProvider
             return (new MailMessage)
                 ->subject('Reimposta la password — ' . SchoolSetting::schoolName())
                 ->view('emails.reset-password-brand', [
-                    'url' => $url,
+                    'url'        => $url,
                     'notifiable' => $notifiable,
-                    'expire' => (int) config('auth.passwords.users.expire', 60),
+                    'expire'     => (int) config('auth.passwords.users.expire', 60),
                 ]);
         });
     }

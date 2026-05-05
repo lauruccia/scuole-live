@@ -39,7 +39,7 @@ class PaymentsReport extends Page implements Tables\Contracts\HasTable, Forms\Co
             return false;
         }
 
-        if ($u->hasAnyRole(['super_admin', 'superadmin'])) {
+        if ($u->hasAnyRole(['super_admin', 'superadmin', 'admin', 'Amministrazione'])) {
             return true;
         }
 

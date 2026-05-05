@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -78,9 +79,8 @@ class PaymentService
 
     public function redirectPaypal(CoursePurchase $purchase, Course $course)
     {
-        $token       = $this->getPaypalToken();
-        $baseUrl     = config('services.paypal.base_url'); // https://api-m.paypal.com o sandbox
-        $courseName  = mb_substr($course->name, 0, 127);
+        $baseUrl    = config('services.paypal.base_url');
+        $courseName = mb_substr($course->name, 0, 127);
 
         $body = [
             'intent'         => 'CAPTURE',
@@ -92,30 +92,58 @@ class PaymentService
                 'description' => $courseName,
             ]],
             'application_context' => [
-                'return_url' => route('checkout.paypal.return'),
-                'cancel_url' => route('checkout.paypal.cancel'),
-                'brand_name' => config('app.name'),
-                'locale'     => 'it-IT',
+                'return_url'  => route('checkout.paypal.return'),
+                'cancel_url'  => route('checkout.paypal.cancel'),
+                'brand_name'  => config('app.name'),
+                'locale'      => 'it-IT',
                 'user_action' => 'PAY_NOW',
             ],
         ];
 
-        $response = $this->paypalPost($baseUrl . '/v2/checkout/orders', $token, $body);
+        // Retry automatico: fino a 3 tentativi con backoff esponenziale (1s, 2s)
+        $maxAttempts = 3;
+        $response    = null;
+        $lastError   = null;
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $token    = $this->getPaypalToken();
+                $response = $this->paypalPost($baseUrl . '/v2/checkout/orders', $token, $body);
+                break; // successo → esci dal loop
+            } catch (\RuntimeException $e) {
+                $lastError = $e;
+                Log::warning("PayPal createOrder tentativo {$attempt}/{$maxAttempts} fallito: " . $e->getMessage());
+                if ($attempt < $maxAttempts) {
+                    sleep(2 ** ($attempt - 1)); // 1s, 2s
+                }
+            }
+        }
+
+        if ($response === null) {
+            Log::error('PayPal createOrder fallito dopo ' . $maxAttempts . ' tentativi', [
+                'purchase_id' => $purchase->id,
+                'error'       => $lastError?->getMessage(),
+            ]);
+            return redirect(route('checkout.catalogo'))
+                ->with('danger', 'Il servizio PayPal non è al momento disponibile. Riprova tra qualche minuto oppure scegli un altro metodo di pagamento.');
+        }
 
         $orderId = $response['id'] ?? null;
         if (! $orderId) {
-            Log::error('PayPal create order failed', $response);
-            abort(500, 'Errore PayPal. Riprova.');
+            Log::error('PayPal create order: risposta senza order ID', $response);
+            return redirect(route('checkout.catalogo'))
+                ->with('danger', 'Errore nella creazione dell\'ordine PayPal. Riprova o contatta la segreteria.');
         }
 
         $purchase->update(['paypal_order_id' => $orderId]);
 
-        // Trova il link approve
         $approveUrl = collect($response['links'] ?? [])
             ->firstWhere('rel', 'approve')['href'] ?? null;
 
         if (! $approveUrl) {
-            abort(500, 'Link PayPal non trovato. Riprova.');
+            Log::error('PayPal create order: link approve non trovato', $response);
+            return redirect(route('checkout.catalogo'))
+                ->with('danger', 'Errore nel collegamento a PayPal. Riprova o contatta la segreteria.');
         }
 
         return redirect($approveUrl);
@@ -129,38 +157,63 @@ class PaymentService
         return $result['status'] ?? 'UNKNOWN'; // COMPLETED | VOIDED | …
     }
 
+    /**
+     * Ottiene un access token PayPal OAuth2.
+     * Usa Http facade (Guzzle) con timeout esplicito e gestione errori.
+     *
+     * @throws \RuntimeException se l'autenticazione fallisce
+     */
     private function getPaypalToken(): string
     {
         $clientId = config('services.paypal.client_id');
         $secret   = config('services.paypal.secret');
-        $baseUrl  = config('services.paypal.base_url');
+        $baseUrl  = rtrim((string) config('services.paypal.base_url'), '/');
 
-        $ch = curl_init($baseUrl . '/v1/oauth2/token');
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_USERPWD        => $clientId . ':' . $secret,
-            CURLOPT_POSTFIELDS     => 'grant_type=client_credentials',
-        ]);
-        $res   = json_decode(curl_exec($ch), true);
-        curl_close($ch);
-        return $res['access_token'] ?? '';
+        $response = Http::timeout(15)
+            ->withBasicAuth($clientId, $secret)
+            ->asForm()
+            ->post("{$baseUrl}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
+
+        if (! $response->successful()) {
+            Log::error('PayPal: impossibile ottenere access token', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            throw new \RuntimeException('PayPal authentication failed (HTTP ' . $response->status() . ')');
+        }
+
+        $token = $response->json('access_token');
+
+        if (empty($token)) {
+            Log::error('PayPal: access_token mancante nella risposta', ['body' => $response->body()]);
+            throw new \RuntimeException('PayPal returned empty access token');
+        }
+
+        return $token;
     }
 
+    /**
+     * Esegue una POST autenticata verso l'API PayPal.
+     * Ritorna l'array decodificato o lancia eccezione su errore di rete.
+     *
+     * @throws \RuntimeException su errore HTTP o di rete
+     */
     private function paypalPost(string $url, string $token, array $body): array
     {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . $token,
-                'Content-Type: application/json',
-            ],
-            CURLOPT_POSTFIELDS => json_encode($body),
-        ]);
-        $res = curl_exec($ch);
-        curl_close($ch);
-        return json_decode($res, true) ?? [];
+        $response = Http::timeout(20)
+            ->withToken($token)
+            ->post($url, $body);
+
+        if (! $response->successful()) {
+            Log::error('PayPal API error', [
+                'url'    => $url,
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            throw new \RuntimeException('PayPal API error (HTTP ' . $response->status() . ')');
+        }
+
+        return $response->json() ?? [];
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -207,6 +260,8 @@ class PaymentService
         if ($student) return $student;
 
         // Crea nuovo studente
+
+        // Crea nuovo studente
         return Student::create([
             'first_name' => $purchase->billing_first_name ?? '',
             'last_name'  => $purchase->billing_last_name ?? '',
@@ -216,46 +271,44 @@ class PaymentService
         ]);
     }
 
+    /**
+     * Crea un nuovo Contract dal CoursePurchase confermato.
+     *
+     * Il contratto nasce in stato "pending": l'amministrazione lo completerà
+     * con slot orari, docente e date prima di passarlo a "active".
+     */
     private function createContractFromPurchase(CoursePurchase $purchase, Student $student): Contract
     {
-        $course = $purchase->course;
-
         $contract = Contract::create([
-            'status'        => 'pending', // la segreteria completerà orari/docente
-            'billing_type'  => $purchase->billing_type,
-            'billing_first_name' => $purchase->billing_first_name,
-            'billing_last_name'  => $purchase->billing_last_name,
-            'billing_email'      => $purchase->billing_email,
-            'billing_phone'      => $purchase->billing_phone,
-            'billing_address'    => $purchase->billing_address,
-            'billing_city'       => $purchase->billing_city,
-            'billing_zip'        => $purchase->billing_zip,
-            'billing_country'    => $purchase->billing_country ?? 'IT',
-            'billing_tax_code'   => $purchase->billing_tax_code,
-            'company_name'       => $purchase->company_name,
-            'vat_number'         => $purchase->vat_number,
-            'course_id'          => $course->id,
-            'hours_purchased'    => $course->hours_purchased,
-            'languages'          => $course->language_id ? [$course->language_id] : [],
-            'lesson_type'        => $course->lesson_type,
-            'course_price'       => $course->course_price,
-            'enrollment_fee'     => $course->enrollment_fee,
-            'notes'              => 'Acquisto online — #' . $purchase->id . ' — ' . $purchase->payment_method_label,
+            'course_id'           => $purchase->course_id,
+            'status'              => 'pending',
+            'course_price'        => $purchase->amount,
+            'billing_type'        => $purchase->billing_type,
+            'billing_first_name'  => $purchase->billing_first_name,
+            'billing_last_name'   => $purchase->billing_last_name,
+            'billing_email'       => $purchase->billing_email,
+            'billing_phone'       => $purchase->billing_phone,
+            'billing_address'     => $purchase->billing_address,
+            'billing_city'        => $purchase->billing_city,
+            'billing_zip'         => $purchase->billing_zip,
+            'billing_country'     => $purchase->billing_country,
+            'billing_tax_code'    => $purchase->billing_tax_code,
+            'company_name'        => $purchase->company_name,
+            'vat_number'          => $purchase->vat_number,
         ]);
 
-        // Aggancia lo studente al contratto
-        $contract->students()->syncWithoutDetaching([$student->id]);
+        // Aggancia lo studente come pivot
+        $contract->students()->attach($student->id);
 
         return $contract;
     }
 
+    /**
+     * Dispatcha l'invio email di conferma in queue (resiliente: tries=3, backoff).
+     * Il Job notifica Sentry in caso di fallimento finale.
+     */
     private function sendConfirmationEmail(CoursePurchase $purchase, Contract $contract): void
     {
-        try {
-            Mail::to($purchase->billing_email)
-                ->send(new \App\Mail\PurchaseConfirmationMail($purchase, $contract));
-        } catch (\Throwable $e) {
-            Log::error('Purchase confirmation email failed: ' . $e->getMessage());
-        }
+        \App\Jobs\SendPurchaseConfirmationJob::dispatch($purchase->id, $contract->id);
     }
 }

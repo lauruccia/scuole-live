@@ -47,6 +47,46 @@ class CreateContract extends CreateRecord
         $this->beneficiariesData = $data['beneficiaries'] ?? [];
         unset($data['beneficiaries']);
 
+        // ── Validazione beneficiari ──────────────────────────────────────────
+        // 1) Email duplicate tra beneficiari
+        $benefEmails = array_filter(
+            array_map(fn ($b) => strtolower(trim((string) ($b['beneficiary_email'] ?? ''))), $this->beneficiariesData)
+        );
+        $emailCounts  = array_count_values($benefEmails);
+        $dupEmails    = array_keys(array_filter($emailCounts, fn ($c) => $c > 1));
+
+        if (! empty($dupEmails)) {
+            Notification::make()
+                ->title('Email duplicate nei beneficiari')
+                ->body('I seguenti indirizzi email appaiono più volte tra i beneficiari: ' . implode(', ', $dupEmails) . '. Ogni beneficiario deve avere un\'email univoca.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+
+        // 2) Ore assegnate > ore personalizzate (totale - full)
+        $hoursTotal    = round((float) ($data['hours_purchased'] ?? 0), 2);
+        $hoursFull     = round((float) ($data['hours_full']      ?? 0), 2);
+        $hoursPersonal = max(0.0, $hoursTotal - $hoursFull);
+        $totalAssigned = round(
+            array_sum(array_map(fn ($b) => (float) ($b['assigned_hours'] ?? 0), $this->beneficiariesData)),
+            2
+        );
+
+        if ($hoursPersonal > 0 && $totalAssigned > $hoursPersonal + 0.01) {
+            Notification::make()
+                ->title('Ore assegnate eccedenti')
+                ->body("Le ore assegnate ai beneficiari ({$totalAssigned} h) superano le ore personalizzate del contratto ({$hoursPersonal} h). Correggi la distribuzione prima di salvare.")
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
 
@@ -88,9 +128,26 @@ class CreateContract extends CreateRecord
         $contract->loadMissing('course');
 
         DB::transaction(function () use ($contract) {
-            $beneficiaries = $this->beneficiariesData ?? [];
+            $beneficiaries      = $this->beneficiariesData ?? [];
             $beneficiariesCount = max(1, count($beneficiaries));
             $contractHoursTotal = app(ContractService::class)->resolveContractHoursTotal($contract);
+
+            // Pre-calcola le ore di fallback per i beneficiari senza assigned_hours.
+            // Usa floor a 0,5 h e aggiunge il resto all'ultimo, come fa recalcBeneficiariesAssignedHours nel form,
+            // per garantire che la somma non superi mai hours_purchased (evita over-generation di lezioni).
+            $nullBenefCount    = count(array_filter($beneficiaries, fn ($b) => ! isset($b['assigned_hours']) || $b['assigned_hours'] === '' || (float) $b['assigned_hours'] <= 0));
+            $sumExplicit       = round(array_sum(array_map(fn ($b) => (float) ($b['assigned_hours'] ?? 0), array_filter($beneficiaries, fn ($b) => isset($b['assigned_hours']) && $b['assigned_hours'] !== '' && (float) $b['assigned_hours'] > 0))), 2);
+            $hoursForNull      = max(0.0, $contractHoursTotal - $sumExplicit);
+
+            // ore base per ogni beneficiario null (floor a 0,5 h)
+            $baseHoursPerNull  = $nullBenefCount > 0
+                ? floor(($hoursForNull / $nullBenefCount) * 2) / 2
+                : 0.0;
+            $remainderHours    = $nullBenefCount > 0
+                ? round($hoursForNull - ($baseHoursPerNull * $nullBenefCount), 2)
+                : 0.0;
+
+            $nullIndex = 0; // contatore per sapere quando siamo all'ultimo beneficiario null
 
             foreach ($beneficiaries as $b) {
                 $email = Str::lower(trim((string) ($b['beneficiary_email'] ?? '')));
@@ -111,14 +168,16 @@ class CreateContract extends CreateRecord
 
                 $studentId = $this->upsertStudentFromBeneficiary($payload, $studentId);
 
-                $assignedHours = isset($b['assigned_hours']) && $b['assigned_hours'] !== ''
-                    ? (float) $b['assigned_hours']
-                    : 0.0;
+                $hasExplicit   = isset($b['assigned_hours']) && $b['assigned_hours'] !== '' && (float) $b['assigned_hours'] > 0;
+                $assignedHours = $hasExplicit ? (float) $b['assigned_hours'] : 0.0;
 
-                if ($assignedHours <= 0 && $contractHoursTotal > 0) {
-                    $assignedHours = $beneficiariesCount === 1
-                        ? $contractHoursTotal
-                        : round($contractHoursTotal / $beneficiariesCount, 2);
+                if (! $hasExplicit && $contractHoursTotal > 0) {
+                    $nullIndex++;
+                    $assignedHours = $baseHoursPerNull;
+                    // L'ultimo beneficiario senza ore esplicite riceve il resto
+                    if ($nullIndex === $nullBenefCount) {
+                        $assignedHours = round($assignedHours + $remainderHours, 2);
+                    }
                 }
 
                 ContractStudent::create([
@@ -159,20 +218,20 @@ class CreateContract extends CreateRecord
                 $enrollmentFee = (float) $contract->enrollment_fee;
                 $deposit       = (float) $contract->deposit;
 
-                $total = $coursePrice + $enrollmentFee;
-
                 $baseDate = $contract->admission_date
                     ? Carbon::parse($contract->admission_date)
                     : now();
 
-                // Numerazione coerente con EditContract:
-                // -1 = tassa iscrizione, 0 = acconto, 1..n = rate ordinarie
+                // Numerazione: -1 = tassa iscrizione, 0 = acconto, 1..n = rate ordinarie.
+                // La tassa iscrizione viene sempre fatturata a parte (installment -1).
+                // Il residuo da rateizzare riguarda solo il prezzo corso: course_price - deposit.
+                // (NON course_price + enrollment_fee - deposit, che causerebbe doppio conteggio.)
                 $nextNumber = 1;
 
                 if ($enrollmentFee > 0) {
                     Installment::create([
                         'contract_id' => $contract->id,
-                        'number'      => -1,   // -1 = tassa iscrizione
+                        'number'      => -1,
                         'is_deposit'  => false,
                         'due_date'    => $baseDate->toDateString(),
                         'amount'      => round($enrollmentFee, 2),
@@ -183,16 +242,16 @@ class CreateContract extends CreateRecord
                 if ($deposit > 0) {
                     Installment::create([
                         'contract_id' => $contract->id,
-                        'number'      => 0,    // 0 = acconto (coerente con EditContract)
+                        'number'      => 0,
                         'is_deposit'  => true,
                         'due_date'    => $baseDate->toDateString(),
                         'amount'      => round($deposit, 2),
                         'status'      => 'unpaid',
                     ]);
-                    // $nextNumber rimane 1: le rate ordinarie iniziano sempre da 1
                 }
 
-                $residual = max(0, $total - $deposit);
+                // Residuo = prezzo corso − acconto (la tassa iscrizione è già separata).
+                $residual = max(0, $coursePrice - $deposit);
 
                 if ($residual <= 0) {
                     return;

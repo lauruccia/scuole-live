@@ -35,3 +35,7 @@ _server_backup/
 .env
 .envOLD 
 .env 
+
+# Backup (spatie/laravel-backup) — i file .zip non vanno nel repo
+/storage/app/backups/*.zip
+/storage/app/backup-temp/
