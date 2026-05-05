@@ -888,8 +888,13 @@ Filter::make('missing_homework')
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make()
-                        ->label('Elimina')
+                        ->label('Sposta nel cestino')
                         ->visible(fn () => ! $isTeacher)
+                        ->requiresConfirmation()
+                        ->modalHeading('Elimina lezioni selezionate')
+                        ->modalDescription('Le lezioni selezionate verranno spostate nel cestino. Le lezioni già svolte non possono essere eliminate. Sei sicuro di voler continuare?')
+                        ->modalSubmitActionLabel('Sì, elimina')
+                        ->modalCancelActionLabel('Annulla')
                         ->before(function ($records) {
                             $hasDone = $records->contains(fn (Lesson $l) => (bool) $l->counts_as_consumed);
 

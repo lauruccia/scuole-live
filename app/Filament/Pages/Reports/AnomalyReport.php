@@ -34,7 +34,7 @@ class AnomalyReport extends Page implements Forms\Contracts\HasForms
     {
         $u = Filament::auth()->user();
         if (! $u) return false;
-        if ($u->hasAnyRole(['super_admin', 'superadmin'])) return true;
+        if ($u->hasAnyRole(['super_admin', 'superadmin', 'admin', 'Amministrazione'])) return true;
         return $u->can('page_' . class_basename(static::class));
     }
 

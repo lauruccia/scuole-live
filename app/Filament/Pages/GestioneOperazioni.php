@@ -33,7 +33,9 @@ class GestioneOperazioni extends Page
 
     protected static function allowedRoles(): array
     {
-        return ['superadmin', 'Amministrazione', 'Segreteria', 'admin'];
+        // Segreteria esclusa. Amministrazione e admin possono accedere.
+        // Comandi (SuperadminCommands) è separato e rimane solo superadmin.
+        return ['superadmin', 'super_admin', 'admin', 'Amministrazione'];
     }
 
     public static function shouldRegisterNavigation(): bool

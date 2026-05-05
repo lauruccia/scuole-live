@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class ContractStudent extends Model
@@ -106,8 +105,54 @@ class ContractStudent extends Model
                 $cs->assigned_hours = null;
             }
 
-            // se già c'è student_id non fare matching automatico
+            // Se già c'è student_id, aggiorna i campi mancanti nell'anagrafica studente
+            // (es. data/luogo di nascita inseriti dall'operatore nel form contratto)
+            // senza sovrascrivere dati già presenti.
             if (! empty($cs->student_id)) {
+                $student = Student::find((int) $cs->student_id);
+
+                if ($student) {
+                    $dirty = false;
+
+                    $birthDate = $cs->beneficiary_birth_date
+                        ? $cs->beneficiary_birth_date->toDateString()
+                        : null;
+
+                    if (! empty($birthDate) && empty($student->birth_date)) {
+                        $student->birth_date = $birthDate;
+                        $dirty = true;
+                    }
+
+                    if (! empty($cs->beneficiary_birth_place) && empty($student->birth_place)) {
+                        $student->birth_place = $cs->beneficiary_birth_place;
+                        $dirty = true;
+                    }
+
+                    if (! empty($cs->beneficiary_birth_province) && empty($student->birth_province)) {
+                        $student->birth_province = $cs->beneficiary_birth_province;
+                        $dirty = true;
+                    }
+
+                    if (! empty($cs->beneficiary_birth_country) && empty($student->birth_country)) {
+                        $student->birth_country = $cs->beneficiary_birth_country;
+                        $dirty = true;
+                    }
+
+                    if (! empty($cs->beneficiary_phone) && empty($student->phone)) {
+                        $student->phone = $cs->beneficiary_phone;
+                        $dirty = true;
+                    }
+
+                    if (! empty($cs->beneficiary_email) && empty($student->email)) {
+                        $student->email = Str::lower(trim((string) $cs->beneficiary_email));
+                        $dirty = true;
+                    }
+
+                    if ($dirty) {
+                        $student->save();
+                    }
+                }
+
                 return;
             }
 
@@ -135,13 +180,13 @@ class ContractStudent extends Model
                     ->first();
             }
 
-            if (! $student && $phone !== '' && Schema::hasColumn('students', 'phone')) {
+            if (! $student && $phone !== '') {
                 $student = Student::query()
                     ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
                     ->first();
             }
 
-            if (! $student && $firstNorm !== '' && $lastNorm !== '' && $birthDate && Schema::hasColumn('students', 'birth_date')) {
+            if (! $student && $firstNorm !== '' && $lastNorm !== '' && $birthDate) {
                 $student = Student::query()
                     ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [$firstNorm])
                     ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [$lastNorm])
@@ -165,9 +210,9 @@ class ContractStudent extends Model
                     'phone'          => $phone !== '' ? $phone : null,
                     'birth_date'     => $birthDate ?: null,
 
-                    'birth_place'    => Schema::hasColumn('students', 'birth_place') ? ($cs->beneficiary_birth_place ?: null) : null,
-                    'birth_province' => Schema::hasColumn('students', 'birth_province') ? ($cs->beneficiary_birth_province ?: null) : null,
-                    'birth_country'  => Schema::hasColumn('students', 'birth_country') ? ($cs->beneficiary_birth_country ?: null) : null,
+                    'birth_place'    => $cs->beneficiary_birth_place ?: null,
+                    'birth_province' => $cs->beneficiary_birth_province ?: null,
+                    'birth_country'  => $cs->beneficiary_birth_country ?: null,
 
                     'is_minor'       => false,
                 ]);
@@ -189,27 +234,27 @@ class ContractStudent extends Model
                     $dirty = true;
                 }
 
-                if (Schema::hasColumn('students', 'phone') && empty($student->phone) && $phone !== '') {
+                if (empty($student->phone) && $phone !== '') {
                     $student->phone = $phone;
                     $dirty = true;
                 }
 
-                if (Schema::hasColumn('students', 'birth_date') && empty($student->birth_date) && $birthDate) {
+                if (empty($student->birth_date) && $birthDate) {
                     $student->birth_date = $birthDate;
                     $dirty = true;
                 }
 
-                if (Schema::hasColumn('students', 'birth_place') && empty($student->birth_place) && ! empty($cs->beneficiary_birth_place)) {
+                if (empty($student->birth_place) && ! empty($cs->beneficiary_birth_place)) {
                     $student->birth_place = $cs->beneficiary_birth_place;
                     $dirty = true;
                 }
 
-                if (Schema::hasColumn('students', 'birth_province') && empty($student->birth_province) && ! empty($cs->beneficiary_birth_province)) {
+                if (empty($student->birth_province) && ! empty($cs->beneficiary_birth_province)) {
                     $student->birth_province = $cs->beneficiary_birth_province;
                     $dirty = true;
                 }
 
-                if (Schema::hasColumn('students', 'birth_country') && empty($student->birth_country) && ! empty($cs->beneficiary_birth_country)) {
+                if (empty($student->birth_country) && ! empty($cs->beneficiary_birth_country)) {
                     $student->birth_country = $cs->beneficiary_birth_country;
                     $dirty = true;
                 }

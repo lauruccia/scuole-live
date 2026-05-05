@@ -1,5 +1,7 @@
 ---
-# Deploy automatico per scuoleLive (Laravel 11) su cPanel
+# ════════════════════════════════════════════════════════════════════════════
+# Deploy automatico per scuoleLive (Laravel 12) su cPanel/Aruba (aeacenter)
+# ════════════════════════════════════════════════════════════════════════════
 #
 # Struttura sul server:
 #   /home/aeacenter/scuole_app/   -> Codice Laravel (app, vendor, storage, ecc.)
@@ -7,6 +9,24 @@
 #
 # Repository cPanel (sorgente del deploy):
 #   /home/aeacenter/repositories/scuole-live/
+#
+# ────────────────────────────────────────────────────────────────────────────
+#  CRON OBBLIGATORIO — configurare in cPanel → Cron Jobs:
+#
+#    * * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
+#
+#  Senza questo cron NON funzionano:
+#    • backup notturno (02:00) e settimanale (domenica 03:00)
+#    • promemoria rate (09:00)
+#    • notifiche CRM follow-up (08:00)
+#    • monitor backup (08:30)
+#    • notifiche programmate studenti (ogni 5 minuti)
+#    • riconciliazione conteggi lezioni (03:30)
+# ────────────────────────────────────────────────────────────────────────────
+#
+#  Worker code (RACCOMANDATO):
+#    * * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan queue:work --stop-when-empty --tries=3 >> /dev/null 2>&1
+# ════════════════════════════════════════════════════════════════════════════
 
 deployment:
   tasks:
@@ -27,6 +47,11 @@ deployment:
     - /bin/mkdir -p $APP_PATH/storage/framework/sessions
     - /bin/mkdir -p $APP_PATH/storage/framework/views
     - /bin/mkdir -p $APP_PATH/bootstrap/cache
+
+    # ----------------------------------------------------------------
+    # Marker inizio deploy nel log (utile per separare le run)
+    # ----------------------------------------------------------------
+    - /bin/echo "===== DEPLOY $(/bin/date '+%Y-%m-%d %H:%M:%S') =====" >> $DEPLOY_LOG
 
     # ----------------------------------------------------------------
     # 2. Copia il codice dell'app (TUTTO TRANNE /public) -> scuole_app
@@ -72,7 +97,7 @@ deployment:
 
     # ----------------------------------------------------------------
     # 4. Patch di public_html/index.php per puntare a scuole_app
-    #    Laravel 11 usa __DIR__.'/../' per raggiungere bootstrap, vendor,
+    #    Laravel 11/12 usa __DIR__.'/../' per raggiungere bootstrap, vendor,
     #    storage. Riscriviamo questi 3 path in assoluto.
     # ----------------------------------------------------------------
     - /bin/sed -i "s|__DIR__\.'/\.\./storage|'/home/aeacenter/scuole_app/storage|g" $PUBLIC_PATH/index.php
@@ -101,19 +126,50 @@ deployment:
     - cd $APP_PATH && composer install --no-dev --optimize-autoloader --no-interaction 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "composer non disponibile in deploy, esegui a mano" >> $DEPLOY_LOG
 
     # ----------------------------------------------------------------
-    # 8. Pulisci e ricrea cache Laravel (config / route / view)
+    # 7b. Esegui migration — CRITICO: non saltare mai questo step.
+    #     --force obbligatorio in produzione (bypassa la conferma interattiva).
     # ----------------------------------------------------------------
-    - cd $APP_PATH && /usr/bin/php artisan config:clear 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
-    - cd $APP_PATH && /usr/bin/php artisan route:clear  2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
-    - cd $APP_PATH && /usr/bin/php artisan view:clear   2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
-    - cd $APP_PATH && /usr/bin/php artisan optimize     2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /usr/bin/php artisan migrate --force 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || /bin/echo "migrate fallito, vedere log" >> $DEPLOY_LOG
 
     # ----------------------------------------------------------------
-    # 9. Restart queue worker (se è attivo via cron / supervisor)
+    # 8. Pulizia cache stale + ricostruzione cache produzione
+    #    optimize:clear → rimuove config/route/view cache vecchie
+    #    optimize      → ricrea config + route + events cache
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan optimize:clear 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+    - cd $APP_PATH && /usr/bin/php artisan optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 8b. Cache view (Blade compilate)
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan view:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 8c. Cache event listeners
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan event:cache 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 8d. Filament cache (componenti, risorse, navigation)
+    # ----------------------------------------------------------------
+    - cd $APP_PATH && /usr/bin/php artisan filament:optimize 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 9. Restart graceful dei worker queue
+    #    Senza questo, i worker continuano a usare il vecchio codice in memoria.
+    #    Il flag --tries è per il queue:work avviato dal supervisor/cron.
     # ----------------------------------------------------------------
     - cd $APP_PATH && /usr/bin/php artisan queue:restart 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
 
     # ----------------------------------------------------------------
-    # 10. Log finale
+    # 9b. Health check post-deploy (solo log, non blocca il deploy)
+    #     Senza --strict: exit 0 anche su WARN, exit 2 solo su FAIL.
+    #     L'esito completo è nel deploy.log — controllarlo via File Manager.
     # ----------------------------------------------------------------
-    - /bin/echo "===== Deploy completato $(/bin/date) =====" >> $DEPLOY_LOG
+    - /bin/echo "----- HEALTH CHECK $(/bin/date '+%Y-%m-%d %H:%M:%S') -----" >> $DEPLOY_LOG
+    - cd $APP_PATH && /usr/bin/php artisan school:health-check 2>&1 | /usr/bin/tee -a $DEPLOY_LOG || true
+
+    # ----------------------------------------------------------------
+    # 10. Marker fine deploy
+    # ----------------------------------------------------------------
+    - /bin/echo "===== DEPLOY OK $(/bin/date '+%Y-%m-%d %H:%M:%S') =====" >> $DEPLOY_LOG

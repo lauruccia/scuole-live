@@ -15,17 +15,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 class Contract extends Model
 {
-    use LogsActivity;
+    use LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'billing_type',
@@ -82,6 +82,7 @@ class Contract extends Model
 
         // Ore
         'hours_purchased',
+        'hours_full',
         'hours_consumed',
 
         'notes',
@@ -118,6 +119,7 @@ class Contract extends Model
         'deposit'                => 'decimal:2',
 
         'hours_purchased'              => 'decimal:2',
+        'hours_full'                   => 'decimal:2',
         'hours_consumed'               => 'decimal:2',
 
         'languages'                    => 'array',
@@ -253,6 +255,12 @@ class Contract extends Model
         return max(0, $this->total - (float) $this->deposit);
     }
 
+    /** Ore personalizzate (slot fisso, auto-generate) = totale - full */
+    public function getHoursPersonalAttribute(): float
+    {
+        return max(0.0, (float) $this->hours_purchased - (float) ($this->hours_full ?? 0));
+    }
+
     public function getHoursRemainingAttribute(): float
     {
         return max(0, (float) $this->hours_purchased - (float) $this->hours_consumed);
@@ -284,6 +292,121 @@ class Contract extends Model
     public function isCompany(): bool
     {
         return ($this->billing_type ?? 'private') === 'company';
+    }
+
+    // ─── Notifiche email: routing recipient ───────────────────────────────────
+
+    /**
+     * Restituisce l'intestatario del contratto come recipient.
+     * Se l'email di fatturazione non è valida, restituisce null.
+     *
+     * @return array{email:string,name:string}|null
+     */
+    public function holderRecipient(): ?array
+    {
+        $email = trim((string) ($this->billing_email ?? ''));
+
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+
+        $name = trim(($this->billing_first_name ?? '') . ' ' . ($this->billing_last_name ?? ''));
+
+        if ($name === '') {
+            $name = trim((string) ($this->company_name ?? '')) ?: $email;
+        }
+
+        return ['email' => $email, 'name' => $name];
+    }
+
+    /**
+     * Recipients per notifiche a livello di contratto (rate, scadenza, generali).
+     *
+     * Logica:
+     *  - To:  intestatario (billing_email), se valido.
+     *         Se non valido, usa il primo studente con email valida.
+     *  - CC:  tutti gli studenti con email valida ≠ To.
+     *
+     * Ritorna ['to' => [...], 'cc' => [...]] dove:
+     *   - 'to' è null se non esiste nessun indirizzo valido
+     *   - 'cc' è un array (eventualmente vuoto) di ['email', 'name']
+     *
+     * @return array{to: array{email:string,name:string}|null, cc: list<array{email:string,name:string}>}
+     */
+    public function contractNotificationRecipients(): array
+    {
+        // Assicura che gli studenti siano caricati (evita N+1 in loop)
+        if (! $this->relationLoaded('students')) {
+            $this->load('students');
+        }
+
+        $holder      = $this->holderRecipient();
+        $holderEmail = $holder ? strtolower($holder['email']) : null;
+
+        // Raccoglie tutti i recipient degli studenti con email valida
+        $studentRecipients = $this->students
+            ->filter(fn ($s) => filter_var(trim((string) ($s->email ?? '')), FILTER_VALIDATE_EMAIL))
+            ->map(fn ($s) => [
+                'email' => trim((string) $s->email),
+                'name'  => $s->full_name ?: trim((string) $s->email),
+            ])
+            ->unique('email')
+            ->values();
+
+        if ($holder) {
+            // Caso normale: To = intestatario, CC = studenti con email diversa
+            $cc = $studentRecipients
+                ->filter(fn ($r) => strtolower($r['email']) !== $holderEmail)
+                ->values()
+                ->all();
+
+            return ['to' => $holder, 'cc' => $cc];
+        }
+
+        // Intestatario senza email valida: usiamo il primo studente come To, resto in CC
+        if ($studentRecipients->isNotEmpty()) {
+            $to  = $studentRecipients->first();
+            $cc  = $studentRecipients->skip(1)->values()->all();
+
+            return ['to' => $to, 'cc' => $cc];
+        }
+
+        return ['to' => null, 'cc' => []];
+    }
+
+    /**
+     * Recipients per notifiche a livello di singola lezione (cancellazione, recupero).
+     *
+     * Logica:
+     *  - To:  lo studente, se ha email valida.
+     *         Altrimenti fallback all'intestatario.
+     *  - CC:  l'intestatario, se ha email valida e diversa da quella dello studente.
+     *
+     * @param  Student  $student  Lo studente coinvolto nella lezione
+     * @return array{to: array{email:string,name:string}|null, cc: list<array{email:string,name:string}>}
+     */
+    public function lessonNotificationRecipients(Student $student): array
+    {
+        $holder      = $this->holderRecipient();
+        $holderEmail = $holder ? strtolower($holder['email']) : null;
+
+        $studentEmail = trim((string) ($student->email ?? ''));
+
+        if (filter_var($studentEmail, FILTER_VALIDATE_EMAIL)) {
+            $to = [
+                'email' => $studentEmail,
+                'name'  => $student->full_name ?: $studentEmail,
+            ];
+
+            $cc = ($holder && strtolower($studentEmail) !== $holderEmail)
+                ? [$holder]
+                : [];
+
+            return ['to' => $to, 'cc' => $cc];
+        }
+
+        // Studente senza email valida → intestatario come To, nessun CC
+        return ['to' => $holder, 'cc' => []];
     }
 
     /**
@@ -326,6 +449,28 @@ class Contract extends Model
 
     protected static function booted(): void
     {
+        // ── Cascade SoftDelete ────────────────────────────────────────────────
+        // Quando un contratto viene soft-deleted, soft-deleta anche tutte le sue
+        // lezioni, così non compaiono come "orfane" in nessun listing o report.
+        // Le installment NON vengono cascate: restano visibili per i report finanziari.
+        static::deleting(function (self $contract) {
+            // Soft delete solo se il modello usa SoftDeletes (non forceDelete)
+            if (! $contract->isForceDeleting()) {
+                $contract->lessons()->whereNull('deleted_at')->update([
+                    'deleted_at' => now(),
+                ]);
+            }
+        });
+
+        // ── Cascade Restore ───────────────────────────────────────────────────
+        // Se un contratto viene ripristinato, ripristina anche le lezioni
+        // che erano state soft-deleted assieme a lui nello stesso istante.
+        static::restored(function (self $contract) {
+            $contract->lessons()->onlyTrashed()->update([
+                'deleted_at' => null,
+            ]);
+        });
+
         static::saving(function (self $contract) {
             // Validazione server-side date: fine deve essere dopo inizio
             // Usiamo un'eccezione generica (non ValidationException) perché
@@ -595,7 +740,7 @@ class Contract extends Model
                 ->first();
         }
 
-        if (! $student && $phone !== '' && Schema::hasColumn('students', 'phone')) {
+        if (! $student && $phone !== '') {
             $student = Student::query()
                 ->whereRaw("REPLACE(COALESCE(phone,''),' ','') = ?", [$phone])
                 ->first();
@@ -606,7 +751,7 @@ class Contract extends Model
                 ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::of($first)->lower()->toString()])
                 ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::of($last)->lower()->toString()]);
 
-            if ($contract->billing_birth_date && Schema::hasColumn('students', 'birth_date')) {
+            if ($contract->billing_birth_date) {
                 $q->whereDate('birth_date', $contract->billing_birth_date->toDateString());
             }
 
@@ -643,27 +788,27 @@ class Contract extends Model
                 $dirty = true;
             }
 
-            if (Schema::hasColumn('students', 'phone') && empty($student->phone) && $phone !== '') {
+            if (empty($student->phone) && $phone !== '') {
                 $student->phone = $phone;
                 $dirty = true;
             }
 
-            if (Schema::hasColumn('students', 'birth_date') && empty($student->birth_date) && $contract->billing_birth_date) {
+            if (empty($student->birth_date) && $contract->billing_birth_date) {
                 $student->birth_date = $contract->billing_birth_date->toDateString();
                 $dirty = true;
             }
 
-            if (Schema::hasColumn('students', 'birth_place') && empty($student->birth_place) && ! empty($contract->billing_birth_place)) {
+            if (empty($student->birth_place) && ! empty($contract->billing_birth_place)) {
                 $student->birth_place = $contract->billing_birth_place;
                 $dirty = true;
             }
 
-            if (Schema::hasColumn('students', 'birth_province') && empty($student->birth_province) && ! empty($contract->billing_province)) {
+            if (empty($student->birth_province) && ! empty($contract->billing_province)) {
                 $student->birth_province = $contract->billing_province;
                 $dirty = true;
             }
 
-            if (Schema::hasColumn('students', 'birth_country') && empty($student->birth_country) && ! empty($contract->billing_country)) {
+            if (empty($student->birth_country) && ! empty($contract->billing_country)) {
                 $student->birth_country = $contract->billing_country;
                 $dirty = true;
             }

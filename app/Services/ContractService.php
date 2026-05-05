@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\BillingProfile;
 use App\Models\Contract;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -13,27 +12,39 @@ use Illuminate\Support\Str;
 class ContractService
 {
     /**
-     * Risolve il totale ore del contratto.
+     * Risolve le ore PERSONALIZZATE del contratto usate per la generazione automatica lezioni.
      *
-     * Il campo autoritativo è hours_purchased sul contratto stesso.
-     * Fallback sul corso collegato per i contratti che non hanno ancora
-     * un valore esplicito (es. contratti precedenti alla migrazione che
-     * ha copiato lessons_count → hours_purchased sui corsi).
+     * Ore personalizzate = hours_purchased - hours_full
+     *
+     * Le ore "full immersion" (hours_full) sono escluse dal generatore perché vengono
+     * pianificate on-demand dall'amministrazione (più studenti, nessuno slot fisso).
+     * Contratti precedenti alla migrazione hanno hours_full = 0/null → comportamento invariato.
+     *
+     * Fallback: usa il corso collegato se il contratto non ha hours_purchased esplicito.
      */
     public function resolveContractHoursTotal(Contract $contract): float
     {
-        $value = data_get($contract, 'hours_purchased');
-        if ($value !== null && is_numeric($value) && (float) $value > 0) {
-            return (float) $value;
+        $total = data_get($contract, 'hours_purchased');
+        if ($total === null || ! is_numeric($total) || (float) $total <= 0) {
+            $total = data_get($contract, 'course.hours_purchased');
         }
 
-        // Fallback: prende le ore dal corso collegato se il contratto non ne ha
-        $value = data_get($contract, 'course.hours_purchased');
-        if ($value !== null && is_numeric($value) && (float) $value > 0) {
-            return (float) $value;
+        $total = (float) ($total ?? 0);
+        if ($total <= 0) {
+            return 0.0;
         }
 
-        return 0.0;
+        $full = (float) (data_get($contract, 'hours_full') ?? 0);
+
+        return max(0.0, $total - $full);
+    }
+
+    /**
+     * Ore full immersion del contratto (pianificate on-demand, non auto-generate).
+     */
+    public function resolveContractFullHours(Contract $contract): float
+    {
+        return max(0.0, (float) (data_get($contract, 'hours_full') ?? 0));
     }
 
     /**
@@ -47,31 +58,8 @@ class ContractService
      */
     public function attachOrCreateBillingProfileForPrivate(array $data): array
     {
-        // Legge i campi anagrafici opzionali passati dal form
-        $birthDate  = ! empty($data['billing_birth_date'])  ? $data['billing_birth_date']  : null;
-        $birthPlace = ! empty($data['billing_birth_place']) ? trim((string) $data['billing_birth_place']) : null;
-
-        // Se il profilo e gia agganciato, aggiorna solo birth_date / birth_place mancanti
+        // Se il profilo e gia agganciato, non occorre fare altro
         if (! empty($data['billing_profile_id'])) {
-            $profile = BillingProfile::find((int) $data['billing_profile_id']);
-
-            if ($profile) {
-                $dirty = false;
-
-                if ($birthDate && empty($profile->birth_date) && Schema::hasColumn('billing_profiles', 'birth_date')) {
-                    $profile->birth_date = $birthDate;
-                    $dirty = true;
-                }
-                if ($birthPlace && empty($profile->birth_place) && Schema::hasColumn('billing_profiles', 'birth_place')) {
-                    $profile->birth_place = $birthPlace;
-                    $dirty = true;
-                }
-
-                if ($dirty) {
-                    $profile->save();
-                }
-            }
-
             return $data;
         }
 
@@ -115,14 +103,6 @@ class ContractService
                 'country'     => $data['billing_country'] ?? null,
             ];
 
-            // Aggiunge birth_date e birth_place solo se le colonne esistono
-            if ($birthDate && Schema::hasColumn('billing_profiles', 'birth_date')) {
-                $payload['birth_date'] = $birthDate;
-            }
-            if ($birthPlace && Schema::hasColumn('billing_profiles', 'birth_place')) {
-                $payload['birth_place'] = $birthPlace;
-            }
-
             $profile = BillingProfile::create($payload);
         } else {
             $dirty = false;
@@ -140,16 +120,6 @@ class ContractService
                     $profile->{$k} = $v;
                     $dirty = true;
                 }
-            }
-
-            // Aggiorna birth_date / birth_place se mancanti nel profilo esistente
-            if ($birthDate && empty($profile->birth_date) && Schema::hasColumn('billing_profiles', 'birth_date')) {
-                $profile->birth_date = $birthDate;
-                $dirty = true;
-            }
-            if ($birthPlace && empty($profile->birth_place) && Schema::hasColumn('billing_profiles', 'birth_place')) {
-                $profile->birth_place = $birthPlace;
-                $dirty = true;
             }
 
             if ($dirty) {

@@ -14,14 +14,22 @@ use App\Http\Controllers\Reports\TeacherHoursPdfController;
 // ─── Pagine pubbliche ─────────────────────────────────────────────────────────
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/iscriviti', [PublicController::class, 'iscriviti'])->name('iscrizione');
-Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])->name('iscrizione.store');
 Route::get('/grazie', [PublicController::class, 'grazie'])->name('iscrizione.grazie');
 Route::get('/privacy', [PublicController::class, 'privacy'])->name('privacy');
+
+// Throttle anti-spam: max 5 invii per IP al minuto
+Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])
+    ->middleware('throttle:5,1')
+    ->name('iscrizione.store');
 
 // ─── Catalogo corsi + checkout ────────────────────────────────────────────────
 Route::get('/corsi', [CheckoutController::class, 'catalogo'])->name('checkout.catalogo');
 Route::get('/corsi/{course}', [CheckoutController::class, 'show'])->name('checkout.show');
-Route::post('/corsi/{course}/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+
+// Throttle anti-abuse: max 3 checkout per IP al minuto (evita session Stripe duplicate)
+Route::post('/corsi/{course}/checkout', [CheckoutController::class, 'store'])
+    ->middleware('throttle:3,1')
+    ->name('checkout.store');
 Route::get('/checkout/bonifico/{purchase}', [CheckoutController::class, 'bonifico'])->name('checkout.bonifico');
 Route::get('/checkout/stripe/return', [CheckoutController::class, 'stripeReturn'])->name('checkout.stripe.return');
 Route::get('/checkout/paypal/return', [CheckoutController::class, 'paypalReturn'])->name('checkout.paypal.return');
@@ -66,11 +74,22 @@ Route::middleware(['auth', 'role:superadmin|Amministrazione|Segreteria'])->group
         ->name('google.oauth.redirect');
 });
 
+
 // ✅ Callback OAuth: basta auth, il controllo ruolo lo facciamo nel controller
-Route::middleware(['auth'])->get('/google/oauth/callback', [GoogleOAuthController::class, 'callback'])
+//    (verifica state anti-CSRF è gestita nel controller stesso)
+Route::middleware(['auth'])
+    ->get('/google/oauth/callback', [GoogleOAuthController::class, 'callback'])
     ->name('google.oauth.callback');
 
-Route::middleware(['auth'])->get(
-    '/studente/contracts/{contract}/print',
-    StudentContractPrintController::class
-)->name('student.contracts.print');
+// ─── Stampa contratto firmato dal pannello studente ──────────────────────────
+//    (controller invokable: __invoke gestisce sia visualizzazione che PDF)
+Route::middleware(['auth'])
+    ->get('/studente/contratto/{contract}/print', StudentContractPrintController::class)
+    ->name('studente.contratto.print');
+
+// ─── Disiscrizione GDPR (token HMAC autocontenuto, no auth necessaria) ────────
+Route::get('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'show'])
+    ->name('unsubscribe.show');
+Route::post('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'confirm'])
+    ->middleware('throttle:10,1')
+    ->name('unsubscribe.confirm');

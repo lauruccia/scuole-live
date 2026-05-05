@@ -16,7 +16,6 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class EditContract extends EditRecord
@@ -54,6 +53,48 @@ class EditContract extends EditRecord
         if (! empty($data['billing_pec'])) {
             $data['billing_pec'] = Str::lower(trim((string) $data['billing_pec']));
         }
+
+        // ── Validazione beneficiari ──────────────────────────────────────────
+        $beneficiaries = $data['beneficiaries'] ?? [];
+
+        // 1) Email duplicate tra beneficiari
+        $benefEmails = array_filter(
+            array_map(fn ($b) => strtolower(trim((string) ($b['beneficiary_email'] ?? ''))), $beneficiaries)
+        );
+        $emailCounts = array_count_values($benefEmails);
+        $dupEmails   = array_keys(array_filter($emailCounts, fn ($c) => $c > 1));
+
+        if (! empty($dupEmails)) {
+            Notification::make()
+                ->title('Email duplicate nei beneficiari')
+                ->body('I seguenti indirizzi email appaiono più volte tra i beneficiari: ' . implode(', ', $dupEmails) . '. Ogni beneficiario deve avere un\'email univoca.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+
+        // 2) Ore assegnate > ore personalizzate (totale - full)
+        $hoursTotal    = round((float) ($data['hours_purchased'] ?? 0), 2);
+        $hoursFull     = round((float) ($data['hours_full']      ?? 0), 2);
+        $hoursPersonal = max(0.0, $hoursTotal - $hoursFull);
+        $totalAssigned = round(
+            array_sum(array_map(fn ($b) => (float) ($b['assigned_hours'] ?? 0), $beneficiaries)),
+            2
+        );
+
+        if ($hoursPersonal > 0 && $totalAssigned > $hoursPersonal + 0.01) {
+            Notification::make()
+                ->title('Ore assegnate eccedenti')
+                ->body("Le ore assegnate ai beneficiari ({$totalAssigned} h) superano le ore personalizzate del contratto ({$hoursPersonal} h). Correggi la distribuzione prima di salvare.")
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+        // ────────────────────────────────────────────────────────────────────
 
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
@@ -155,9 +196,20 @@ class EditContract extends EditRecord
                 }),
 
             Actions\DeleteAction::make()
-                ->label('Elimina')
+                ->label('Elimina contratto')
                 ->color('danger')
-                ->visible(fn (): bool => $this->canManageLessons()),
+                ->icon('heroicon-o-trash')
+                ->visible(fn (): bool => $this->canManageLessons())
+                ->requiresConfirmation()
+                ->modalHeading('Elimina contratto')
+                ->modalDescription(
+                    'Questa operazione sposta il contratto nel cestino insieme a tutte le sue lezioni. ' .
+                    'Le rate rimangono visibili nei report. ' .
+                    'Il contratto può essere ripristinato dal superadmin. ' .
+                    'Sei sicuro di voler continuare?'
+                )
+                ->modalSubmitActionLabel('Sì, elimina')
+                ->modalCancelActionLabel('Annulla'),
         ];
     }
 
@@ -205,8 +257,6 @@ class EditContract extends EditRecord
         $enrollmentFee = (float) $contract->enrollment_fee;
         $deposit       = (float) $contract->deposit;
 
-        $total = $coursePrice + $enrollmentFee;
-
         $baseDate = $contract->admission_date
             ? Carbon::parse($contract->admission_date)
             : now();
@@ -237,7 +287,8 @@ class EditContract extends EditRecord
             $created++;
         }
 
-        $residual = max(0, $total - $deposit);
+        // Residuo = prezzo corso − acconto (la tassa iscrizione è già separata come installment -1).
+        $residual = max(0, $coursePrice - $deposit);
         if ($residual <= 0) {
             return $created;
         }
@@ -370,27 +421,27 @@ class EditContract extends EditRecord
 
             $fill = [];
 
-            if (Schema::hasColumn('students', 'first_name') && $first !== '') {
+            if ($first !== '') {
                 $fill['first_name'] = $first;
             }
 
-            if (Schema::hasColumn('students', 'last_name') && $last !== '') {
+            if ($last !== '') {
                 $fill['last_name'] = $last;
             }
 
-            if (Schema::hasColumn('students', 'email') && $email !== '') {
+            if ($email !== '') {
                 $fill['email'] = $email;
             }
 
-            if (Schema::hasColumn('students', 'phone') && $phone !== '') {
+            if ($phone !== '') {
                 $fill['phone'] = $phone;
             }
 
-            if (Schema::hasColumn('students', 'birth_date') && ! empty($beneficiary->beneficiary_birth_date)) {
+            if (! empty($beneficiary->beneficiary_birth_date)) {
                 $fill['birth_date'] = $beneficiary->beneficiary_birth_date;
             }
 
-            if (Schema::hasColumn('students', 'birth_place') && ! empty($beneficiary->beneficiary_birth_place)) {
+            if (! empty($beneficiary->beneficiary_birth_place)) {
                 $fill['birth_place'] = $beneficiary->beneficiary_birth_place;
             }
 

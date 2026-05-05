@@ -8,7 +8,6 @@ use App\Services\EmailTemplateService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class StudentObserver
 {
@@ -21,12 +20,6 @@ class StudentObserver
         $existingUser = User::where('email', $student->email)->first();
 
         if ($existingUser) {
-            if (Schema::hasColumn('students', 'user_id') && empty($student->user_id)) {
-                $student->forceFill([
-                    'user_id' => $existingUser->id,
-                ])->saveQuietly();
-            }
-
             return;
         }
 
@@ -43,26 +36,7 @@ class StudentObserver
             'password' => Hash::make($plainPassword),
         ];
 
-        // Se nella tabella users esiste first_name / last_name, li valorizza
-        if (Schema::hasColumn('users', 'first_name')) {
-            $userData['first_name'] = $student->first_name;
-        }
-
-        if (Schema::hasColumn('users', 'last_name')) {
-            $userData['last_name'] = $student->last_name;
-        }
-
-        if (Schema::hasColumn('users', 'phone')) {
-            $userData['phone'] = $student->phone;
-        }
-
         $user = User::create($userData);
-
-        if (Schema::hasColumn('students', 'user_id')) {
-            $student->forceFill([
-                'user_id' => $user->id,
-            ])->saveQuietly();
-        }
 
         // Invia email di benvenuto DOPO il commit della transazione
         // (evita l'invio se la transazione va in rollback)
@@ -115,33 +89,11 @@ class StudentObserver
 
         $data = [];
 
-        if (Schema::hasColumn('users', 'name')) {
-            $name = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
-            $data['name'] = $name !== '' ? $name : $student->email;
-        }
+        $name = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
+        $data['name'] = $name !== '' ? $name : $student->email;
 
-        if (Schema::hasColumn('users', 'first_name')) {
-            $data['first_name'] = $student->first_name;
-        }
-
-        if (Schema::hasColumn('users', 'last_name')) {
-            $data['last_name'] = $student->last_name;
-        }
-
-        if (Schema::hasColumn('users', 'email')) {
-            $data['email'] = $student->email;
-        }
-
-        if (Schema::hasColumn('users', 'phone')) {
-            $data['phone'] = $student->phone;
-        }
+        $data['email'] = $student->email;
 
         $user->update($data);
-
-        if (empty($student->user_id) && Schema::hasColumn('students', 'user_id')) {
-            $student->forceFill([
-                'user_id' => $user->id,
-            ])->saveQuietly();
-        }
     }
 }

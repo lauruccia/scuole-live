@@ -57,7 +57,18 @@ class LessonMeetObserver
 
     public function deleted(Lesson $lesson): void
     {
-        // se elimini la lezione dal DB, idealmente elimini anche l’evento
+        // Soft-delete o force-delete: cancella l’evento Google Calendar e nulla google_event_id.
+        // cancelEventForLesson() chiama saveQuietly() sul record, che funziona anche con deleted_at set.
         app(GoogleCalendarService::class)->cancelEventForLesson($lesson);
+    }
+
+    public function restored(Lesson $lesson): void
+    {
+        // La lezione è stata ripristinata da soft-delete.
+        // google_event_id è già null (nullato al momento del delete).
+        // Se la lezione non è annullata, ricrea l’evento Google Calendar.
+        if (empty($lesson->cancelled_at)) {
+            app(GoogleCalendarService::class)->upsertEventForLesson($lesson);
+        }
     }
 }

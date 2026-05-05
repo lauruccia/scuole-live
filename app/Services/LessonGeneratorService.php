@@ -10,7 +10,6 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class LessonGeneratorService
 {
@@ -470,15 +469,7 @@ class LessonGeneratorService
 
     private function isClosureDay(Carbon $dt): bool
     {
-        static $hasDateColumn = null;
-        if ($hasDateColumn === null) {
-            $hasDateColumn = Schema::hasColumn('closure_days', 'date');
-        }
-
-        if ($hasDateColumn) {
-            return ClosureDay::query()->whereDate('date', $dt->toDateString())->exists();
-        }
-
+        // closure_days usa start_date / end_date (colonna 'date' non esiste)
         return ClosureDay::query()
             ->whereDate('start_date', '<=', $dt->toDateString())
             ->where(function ($q) use ($dt) {

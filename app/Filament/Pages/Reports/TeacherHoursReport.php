@@ -30,7 +30,8 @@ class TeacherHoursReport extends Page implements Tables\Contracts\HasTable, Form
         $u = Filament::auth()->user();
         if (! $u) return false;
 
-        if ($u->hasAnyRole(['super_admin', 'superadmin'])) return true;
+        // Report lezioni docenti visibile anche a Segreteria (ore, non paghe).
+        if ($u->hasAnyRole(['super_admin', 'superadmin', 'admin', 'Amministrazione', 'Segreteria'])) return true;
 
         return $u->can('page_' . class_basename(static::class));
     }

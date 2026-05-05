@@ -7,6 +7,7 @@ use App\Models\NotificationEmailLog;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SystemStatusWidget extends Widget
 {
@@ -26,9 +27,10 @@ class SystemStatusWidget extends Widget
     public function getStatusData(): array
     {
         return [
-            'google'     => $this->googleStatus(),
-            'email'      => $this->emailStatus(),
-            'queue'      => $this->queueStatus(),
+            'google'  => $this->googleStatus(),
+            'email'   => $this->emailStatus(),
+            'queue'   => $this->queueStatus(),
+            'backup'  => $this->backupStatus(),
         ];
     }
 
@@ -116,42 +118,125 @@ class SystemStatusWidget extends Widget
         ];
     }
 
-    // ─── Code in attesa ───────────────────────────────────────────────────────
+    // ─── Stato backup ────────────────────────────────────────────────────────
+
+    private function backupStatus(): array
+    {
+        try {
+            $disk       = \Illuminate\Support\Facades\Storage::disk('local-backups');
+            $backupName = config('backup.backup.name', config('app.name', 'ScuoleLive'));
+
+            // I backup di spatie sono in una cartella col nome dell'app
+            $files = collect($disk->allFiles($backupName))
+                ->filter(fn ($f) => str_ends_with($f, '.zip'))
+                ->sort()
+                ->values();
+
+            if ($files->isEmpty()) {
+                return [
+                    'status' => 'error',
+                    'label'  => 'Nessun backup trovato',
+                    'detail' => 'Nessun file .zip trovato in storage/app/backups. Eseguire: php artisan backup:run',
+                ];
+            }
+
+            $lastFile    = $files->last();
+            $lastModified = Carbon::createFromTimestamp($disk->lastModified($lastFile));
+            $age          = $lastModified->diffInHours(now());
+            $sizeBytes    = $disk->size($lastFile);
+            $sizeMb       = round($sizeBytes / 1024 / 1024, 1);
+            $label        = 'Ultimo: ' . $lastModified->format('d/m/Y H:i')
+                          . ' (' . round($age, 1) . 'h fa, ' . $sizeMb . ' MB)';
+
+            // ── Valutazione età backup ────────────────────────────────────────
+            // Backup giornaliero schedulato alle 02:00 → in giornata l'età è < 26h.
+            // Oltre 48h è considerato error (saltato un giorno o più).
+            // Tra 26h e 48h è warning (deploy ritardato, cron mancato, ecc.).
+            if ($age > 48) {
+                return [
+                    'status' => 'error',
+                    'label'  => $label,
+                    'detail' => 'Ultimo backup oltre 48 ore fa. Verificare il cron schedule:run e il comando backup:run.',
+                ];
+            }
+
+            if ($age > 26) {
+                return [
+                    'status' => 'warning',
+                    'label'  => $label,
+                    'detail' => 'Ultimo backup oltre 26 ore fa. Lo schedule giornaliero potrebbe non essere stato eseguito.',
+                ];
+            }
+
+            return [
+                'status' => 'ok',
+                'label'  => $label,
+                'detail' => 'Backup recente disponibile in storage/app/' . $backupName . '.',
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+            return [
+                'status' => 'error',
+                'label'  => 'Errore lettura backup',
+                'detail' => 'Eccezione durante l\'accesso al disco backup: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    // ─── Stato code (queue) ──────────────────────────────────────────────────
 
     private function queueStatus(): array
     {
-        // Conta job in coda e job falliti
         try {
-            $pending = DB::table('jobs')->count();
-            $failed  = DB::table('failed_jobs')->count();
-        } catch (\Throwable) {
-            return [
-                'status' => 'warning',
-                'label'  => 'Tabella jobs non trovata',
-                'detail' => 'Assicurarsi di aver eseguito php artisan migrate.',
-            ];
-        }
+            // Conta job in coda (solo per driver "database")
+            $pending = 0;
+            $failed  = 0;
 
-        if ($failed > 0) {
+            if (DB::getSchemaBuilder()->hasTable('jobs')) {
+                $pending = (int) DB::table('jobs')->count();
+            }
+            if (DB::getSchemaBuilder()->hasTable('failed_jobs')) {
+                $failed = (int) DB::table('failed_jobs')->count();
+            }
+
+            // Se ci sono failed jobs è sempre warning/error
+            if ($failed >= 10) {
+                return [
+                    'status' => 'error',
+                    'label'  => "{$failed} job falliti, {$pending} in coda",
+                    'detail' => 'Più di 10 job falliti. Esegui: php artisan queue:retry all (oppure queue:flush per scartarli).',
+                ];
+            }
+
+            if ($failed > 0) {
+                return [
+                    'status' => 'warning',
+                    'label'  => "{$failed} job falliti, {$pending} in coda",
+                    'detail' => 'Sono presenti job falliti. Verifica in Failed Jobs e considera retry o flush.',
+                ];
+            }
+
+            // Coda piena ma senza fallimenti = il worker è giù o lento
+            if ($pending >= 50) {
+                return [
+                    'status' => 'warning',
+                    'label'  => "{$pending} job in coda",
+                    'detail' => 'Coda lunga: verifica che il worker (queue:work) sia attivo.',
+                ];
+            }
+
+            return [
+                'status' => 'ok',
+                'label'  => $pending === 0 ? 'Coda vuota' : "{$pending} job in coda",
+                'detail' => 'Worker operativo, nessun job fallito.',
+            ];
+        } catch (\Throwable $e) {
+            report($e);
             return [
                 'status' => 'error',
-                'label'  => $pending . ' in coda — ' . $failed . ' falliti',
-                'detail' => 'Ci sono ' . $failed . ' job falliti. Eseguire: php artisan queue:retry all',
+                'label'  => 'Errore lettura coda',
+                'detail' => 'Eccezione durante la lettura tabella jobs: ' . $e->getMessage(),
             ];
         }
-
-        if ($pending > 10) {
-            return [
-                'status' => 'warning',
-                'label'  => $pending . ' job in attesa',
-                'detail' => 'La coda ha un backlog elevato. Verificare che il worker sia in esecuzione.',
-            ];
-        }
-
-        return [
-            'status' => 'ok',
-            'label'  => $pending === 0 ? 'Coda vuota' : $pending . ' job in coda',
-            'detail' => $failed === 0 ? 'Nessun job fallito.' : '',
-        ];
     }
 }

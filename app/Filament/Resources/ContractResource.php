@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\GoogleCalendarService;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
@@ -36,7 +37,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -136,196 +136,234 @@ class ContractResource extends Resource
                                 }
                             }),
 
-                        Select::make('billing_profile_id')
-                            ->label('Intestatario (anagrafica)')
-                            ->searchable()
-                            ->preload()
-                            ->options(fn () => BillingProfile::query()
-                                ->where('type', 'private')
-                                ->orderBy('last_name')
-                                ->orderBy('first_name')
-                                ->get()
-                                ->mapWithKeys(fn ($p) => [
-                                    $p->id => trim(($p->last_name ?? '') . ' ' . ($p->first_name ?? '')) . ($p->email ? " — {$p->email}" : ''),
-                                ])->toArray()
-                            )
-                            ->live()
-->afterStateUpdated(function ($state, Get $get, Set $set) {
-    if (! $state) {
-        return;
-    }
+                        // billing_profile_id rimane in schema come campo hidden per
+                        // essere correttamente idratato/deidratato da Filament.
+                        Hidden::make('billing_profile_id'),
 
-    $p = BillingProfile::find((int) $state);
-    if (! $p) {
-        return;
-    }
-
-    $set('billing_first_name', $p->first_name);
-    $set('billing_last_name',  $p->last_name);
-    $set('billing_tax_code',   $p->fiscal_code);
-    $set('billing_vat_number', $p->vat_number);
-    $set('billing_sdi',        $p->sdi_code);
-    $set('billing_pec',        $p->pec);
-    $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
-    $set('billing_phone',      $p->phone);
-    $set('billing_address',    $p->address);
-    $set('billing_zip',        $p->zip);
-    $set('billing_city',       $p->city);
-    $set('billing_province',   $p->province);
-    $set('billing_country',    $p->country);
-
-    $birthDate = null;
-    $birthPlace = null;
-
-    if (Schema::hasColumn('billing_profiles', 'birth_date')) {
-        $birthDate = $p->birth_date ?? null;
-    }
-
-    if (Schema::hasColumn('billing_profiles', 'birth_place')) {
-        $birthPlace = $p->birth_place ?? null;
-    }
-
-    // Se il BillingProfile non ha nascita, provo a recuperarla dallo Studente
-    if (! $birthDate || ! $birthPlace) {
-        $student = null;
-
-        if (! empty($p->email)) {
-            $student = Student::query()
-                ->whereRaw('LOWER(email) = ?', [Str::lower(trim($p->email))])
-                ->first();
-        }
-
-        if (! $student && ! empty($p->first_name) && ! empty($p->last_name)) {
-            $student = Student::query()
-                ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower(trim($p->first_name))])
-                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower(trim($p->last_name))])
-                ->first();
-        }
-
-        if ($student) {
-            $birthDate = $birthDate ?: $student->birth_date;
-            $birthPlace = $birthPlace ?: $student->birth_place;
-        }
-    }
-
-$set(
-    'billing_birth_date',
-    $birthDate ? \Illuminate\Support\Carbon::parse($birthDate)->format('Y-m-d') : null
-);
-    $set('billing_birth_place', $birthPlace);
-
-    static::syncSingleBeneficiaryFromBilling($get, $set);
-})
-                            ->visible(fn (Get $get) => $get('billing_type') === 'private'),
-
-                        Select::make('billing_profile_from_student')
-                            ->label('Crea/aggancia intestatario da studente')
-                            ->helperText('Seleziona lo studente: verrà creato (o riutilizzato) un intestatario e collegato al contratto.')
+                        // Unica select unificata: cerca sia profili fatturazione sia studenti.
+                        // Chiavi: "bp_{id}" per BillingProfile, "st_{id}" per Student.
+                        Select::make('billing_intestatario_search')
+                            ->label('Cerca intestatario')
+                            ->helperText('Cerca per cognome, nome, email o codice fiscale tra i profili di fatturazione (📄) e gli studenti già registrati (🎓).')
                             ->searchable()
                             ->preload(false)
                             ->dehydrated(false)
+                            ->live()
                             ->getSearchResultsUsing(function (string $search): array {
-                                return Student::query()
-                                    ->where(function ($q) use ($search) {
-                                        $q->where('last_name', 'like', "%{$search}%")
-                                            ->orWhere('first_name', 'like', "%{$search}%")
-                                            ->orWhere('email', 'like', "%{$search}%");
+                                $results = [];
+
+                                // Supporto ricerca multi-parola: "Laura Gulli" → ['laura', 'gulli']
+                                // Ogni token deve comparire in almeno un campo (AND tra token, OR tra campi).
+                                $tokens = array_filter(array_map('trim', explode(' ', $search)));
+
+                                // Profili di fatturazione privati
+                                BillingProfile::query()
+                                    ->where('type', 'private')
+                                    ->where(function ($q) use ($tokens, $search) {
+                                        // Ricerca esatta sulla stringa intera (per email, CF)
+                                        $q->where('email',       'like', "%{$search}%")
+                                          ->orWhere('fiscal_code', 'like', "%{$search}%");
+                                        // Ricerca per singoli token su nome/cognome
+                                        foreach ($tokens as $token) {
+                                            $q->orWhere(function ($sub) use ($token) {
+                                                $sub->where('last_name',  'like', "%{$token}%")
+                                                    ->orWhere('first_name', 'like', "%{$token}%");
+                                            });
+                                        }
+                                    })
+                                    ->where(function ($q) use ($tokens) {
+                                        // AND: tutti i token devono comparire in qualche campo
+                                        foreach ($tokens as $token) {
+                                            $q->where(function ($sub) use ($token) {
+                                                $sub->where('last_name',   'like', "%{$token}%")
+                                                    ->orWhere('first_name', 'like', "%{$token}%")
+                                                    ->orWhere('email',       'like', "%{$token}%")
+                                                    ->orWhere('fiscal_code', 'like', "%{$token}%");
+                                            });
+                                        }
                                     })
                                     ->orderBy('last_name')
                                     ->orderBy('first_name')
-                                    ->limit(20)
+                                    ->limit(10)
                                     ->get()
-                                    ->mapWithKeys(fn (Student $s) => [
-                                        $s->id => trim($s->last_name . ' ' . $s->first_name) . ($s->email ? " — {$s->email}" : ''),
-                                    ])->toArray();
+                                    ->each(function (BillingProfile $p) use (&$results) {
+                                        $label = '📄 ' . trim(($p->last_name ?? '') . ' ' . ($p->first_name ?? ''));
+                                        if ($p->email) {
+                                            $label .= " — {$p->email}";
+                                        }
+                                        $results["bp_{$p->id}"] = $label;
+                                    });
+
+                                // Studenti
+                                Student::query()
+                                    ->where(function ($q) use ($tokens) {
+                                        // AND: tutti i token devono comparire in qualche campo
+                                        foreach ($tokens as $token) {
+                                            $q->where(function ($sub) use ($token) {
+                                                $sub->where('last_name',   'like', "%{$token}%")
+                                                    ->orWhere('first_name', 'like', "%{$token}%")
+                                                    ->orWhere('email',       'like', "%{$token}%")
+                                                    ->orWhere('fiscal_code', 'like', "%{$token}%")
+                                                    ->orWhere('phone',       'like', "%{$token}%");
+                                            });
+                                        }
+                                    })
+                                    ->orderBy('last_name')
+                                    ->orderBy('first_name')
+                                    ->limit(10)
+                                    ->get()
+                                    ->each(function (Student $s) use (&$results) {
+                                        $label = '🎓 ' . trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? ''));
+                                        if ($s->email) {
+                                            $label .= " — {$s->email}";
+                                        }
+                                        $results["st_{$s->id}"] = $label;
+                                    });
+
+                                return $results;
                             })
-                            ->getOptionLabelUsing(fn ($value): ?string => $value ? Student::find($value)?->full_name : null)
-                            ->live()
+                            ->getOptionLabelUsing(function ($value): ?string {
+                                if (! $value) {
+                                    return null;
+                                }
+                                if (str_starts_with($value, 'bp_')) {
+                                    $p = BillingProfile::find((int) substr($value, 3));
+                                    if (! $p) {
+                                        return null;
+                                    }
+                                    $label = '📄 ' . trim(($p->last_name ?? '') . ' ' . ($p->first_name ?? ''));
+                                    return $label . ($p->email ? " — {$p->email}" : '');
+                                }
+                                if (str_starts_with($value, 'st_')) {
+                                    $s = Student::find((int) substr($value, 3));
+                                    if (! $s) {
+                                        return null;
+                                    }
+                                    $label = '🎓 ' . trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? ''));
+                                    return $label . ($s->email ? " — {$s->email}" : '');
+                                }
+                                return null;
+                            })
                             ->afterStateHydrated(function ($state, Get $get, Set $set) {
-    if (! $state) {
-        return;
-    }
-
-    $s = Student::find((int) $state);
-    if (! $s) {
-        return;
-    }
-
-    $set('billing_first_name', $s->first_name);
-    $set('billing_last_name', $s->last_name);
-    $set('billing_tax_code', $s->fiscal_code);
-    $set('billing_email', $s->email ? Str::lower(trim($s->email)) : null);
-    $set('billing_phone', $s->phone);
-    $set('billing_address', $s->residence_address);
-    $set('billing_city', $s->residence_city);
-    $set('billing_province', $s->residence_province);
-    $set('billing_zip', $s->residence_zip);
-    $set('billing_country', $s->residence_country ?? 'Italia');
-    $set('billing_birth_date', $s->birth_date
-        ? \Illuminate\Support\Carbon::parse($s->birth_date)->format('Y-m-d')
-        : null
-    );
-    $set('billing_birth_place', $s->birth_place ?? null);
-})
+                                // In edit: preseleziona la voce corrispondente al billing_profile_id salvato
+                                if ($state) {
+                                    return;
+                                }
+                                $profileId = $get('billing_profile_id');
+                                if ($profileId) {
+                                    $set('billing_intestatario_search', "bp_{$profileId}");
+                                }
+                            })
                             ->afterStateUpdated(function ($state, Get $get, Set $set) {
                                 if (! $state) {
                                     return;
                                 }
 
-                                $s = Student::find((int) $state);
-                                if (! $s) {
-                                    return;
+                                if (str_starts_with($state, 'bp_')) {
+                                    // ── Profilo di fatturazione esistente ──
+                                    $p = BillingProfile::find((int) substr($state, 3));
+                                    if (! $p) {
+                                        return;
+                                    }
+
+                                    $set('billing_profile_id', $p->id);
+                                    $set('billing_first_name', $p->first_name);
+                                    $set('billing_last_name',  $p->last_name);
+                                    $set('billing_tax_code',   $p->fiscal_code);
+                                    $set('billing_vat_number', $p->vat_number);
+                                    $set('billing_sdi',        $p->sdi_code);
+                                    $set('billing_pec',        $p->pec);
+                                    $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
+                                    $set('billing_phone',      $p->phone);
+                                    $set('billing_address',    $p->address);
+                                    $set('billing_zip',        $p->zip);
+                                    $set('billing_city',       $p->city);
+                                    $set('billing_province',   $p->province);
+                                    $set('billing_country',    $p->country);
+
+                                    // billing_profiles non ha birth_date/birth_place → carica sempre dallo studente collegato
+                                    $birthDate  = null;
+                                    $birthPlace = null;
+
+                                    if (! $birthDate || ! $birthPlace) {
+                                        $student = null;
+                                        if (! empty($p->email)) {
+                                            $student = Student::query()->whereRaw('LOWER(email) = ?', [Str::lower(trim($p->email))])->first();
+                                        }
+                                        if (! $student && ! empty($p->first_name) && ! empty($p->last_name)) {
+                                            $student = Student::query()
+                                                ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower(trim($p->first_name))])
+                                                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower(trim($p->last_name))])
+                                                ->first();
+                                        }
+                                        if ($student) {
+                                            $birthDate  = $birthDate  ?: $student->birth_date;
+                                            $birthPlace = $birthPlace ?: $student->birth_place;
+                                        }
+                                    }
+
+                                    $set('billing_birth_date',  $birthDate  ? Carbon::parse($birthDate)->format('Y-m-d') : null);
+                                    $set('billing_birth_place', $birthPlace);
+
+                                } elseif (str_starts_with($state, 'st_')) {
+                                    // ── Studente: crea o riutilizza profilo di fatturazione ──
+                                    $s = Student::find((int) substr($state, 3));
+                                    if (! $s) {
+                                        return;
+                                    }
+
+                                    // Ricerca profilo esistente per email o codice fiscale
+                                    $p = null;
+                                    if ($s->email) {
+                                        $p = BillingProfile::query()
+                                            ->where('type', 'private')
+                                            ->whereRaw('LOWER(email) = ?', [Str::lower($s->email)])
+                                            ->first();
+                                    }
+                                    if (! $p && $s->fiscal_code) {
+                                        $p = BillingProfile::query()
+                                            ->where('type', 'private')
+                                            ->whereRaw('UPPER(COALESCE(fiscal_code,"")) = ?', [strtoupper($s->fiscal_code)])
+                                            ->first();
+                                    }
+
+                                    if (! $p) {
+                                        $payload = [
+                                            'type'        => 'private',
+                                            'first_name'  => $s->first_name,
+                                            'last_name'   => $s->last_name,
+                                            'email'       => $s->email ? Str::lower(trim($s->email)) : null,
+                                            'phone'       => $s->phone,
+                                            'city'        => $s->residence_city     ?? null,
+                                            'province'    => $s->residence_province ?? null,
+                                            'zip'         => $s->residence_zip      ?? null,
+                                            'country'     => $s->residence_country  ?? 'Italia',
+                                            'address'     => $s->residence_address  ?? null,
+                                            'fiscal_code' => $s->fiscal_code        ?? null,
+                                        ];
+                                        $p = BillingProfile::create($payload);
+                                    }
+
+                                    $set('billing_profile_id', $p->id);
+                                    $set('billing_first_name', $p->first_name);
+                                    $set('billing_last_name',  $p->last_name);
+                                    $set('billing_tax_code',   $p->fiscal_code);
+                                    $set('billing_vat_number', $p->vat_number ?? null);
+                                    $set('billing_sdi',        $p->sdi_code   ?? null);
+                                    $set('billing_pec',        $p->pec        ?? null);
+                                    $set('billing_email',      $p->email ? Str::lower(trim($p->email)) : null);
+                                    $set('billing_phone',      $p->phone);
+                                    $set('billing_address',    $p->address);
+                                    $set('billing_zip',        $p->zip);
+                                    $set('billing_city',       $p->city);
+                                    $set('billing_province',   $p->province);
+                                    $set('billing_country',    $p->country);
+                                    $set('billing_birth_date', $s->birth_date
+                                        ? Carbon::parse($s->birth_date)->format('Y-m-d')
+                                        : null
+                                    );
+                                    $set('billing_birth_place', $s->birth_place ?? null);
                                 }
-
-                                $p = BillingProfile::query()
-                                    ->where('type', 'private')
-                                    ->when($s->email, fn ($q) => $q->whereRaw('LOWER(email)=?', [Str::lower($s->email)]))
-                                    ->first();
-
-                               if (! $p) {
-    $payload = [
-        'type'        => 'private',
-        'first_name'  => $s->first_name,
-        'last_name'   => $s->last_name,
-        'email'       => $s->email ? Str::lower(trim($s->email)) : null,
-        'phone'       => $s->phone,
-        'city'        => $s->residence_city ?? null,
-        'province'    => $s->residence_province ?? null,
-        'zip'         => $s->residence_zip ?? null,
-        'country'     => $s->residence_country ?? 'Italia',
-        'address'     => $s->residence_address ?? null,
-        'fiscal_code' => $s->fiscal_code ?? null,
-    ];
-
-    if (Schema::hasColumn('billing_profiles', 'birth_date')) {
-        $payload['birth_date'] = $s->birth_date ?? null;
-    }
-
-    if (Schema::hasColumn('billing_profiles', 'birth_place')) {
-        $payload['birth_place'] = $s->birth_place ?? null;
-    }
-
-    $p = BillingProfile::create($payload);
-}
-
-                                $set('billing_profile_id', $p->id);
-
-                                $set('billing_first_name', $p->first_name);
-                                $set('billing_last_name',  $p->last_name);
-                                $set('billing_tax_code',   $p->fiscal_code);
-                                $set('billing_email',      $p->email);
-                                $set('billing_phone',      $p->phone);
-                                $set('billing_address',    $p->address);
-                                $set('billing_city',       $p->city);
-                                $set('billing_province',   $p->province);
-                                $set('billing_zip',        $p->zip);
-                                $set('billing_country',    $p->country);
-                                
-                                $set('billing_birth_date', $s->birth_date
-                                    ? \Illuminate\Support\Carbon::parse($s->birth_date)->format('Y-m-d')
-                                    : null
-                                );
-                                $set('billing_birth_place', $s->birth_place ?? null);
 
                                 static::syncSingleBeneficiaryFromBilling($get, $set);
                             })
@@ -562,9 +600,15 @@ $set(
                                     return;
                                 }
 
-                                $set('course_price', (float) ($course->course_price ?? 0));
+                                $set('course_price',   (float) ($course->course_price   ?? 0));
                                 $set('enrollment_fee', (float) ($course->enrollment_fee ?? 0));
-                                $set('hours_purchased', (float) ($course->hours_purchased ?? 0));
+                                $set('hours_purchased',(float) ($course->hours_purchased ?? 0));
+                                $set('hours_full',     (float) ($course->hours_full      ?? 0));
+
+                                // Aggiorna anche la tipologia lezione se definita sul corso
+                                if (! empty($course->lesson_type)) {
+                                    $set('lesson_type', $course->lesson_type);
+                                }
 
                                 static::recalcTotals($get, $set);
                                 static::recalcBeneficiariesAssignedHours($get, $set);
@@ -642,7 +686,7 @@ $set(
                             ->content(fn (Get $get) => number_format(((float) $get('course_price') + (float) $get('enrollment_fee')), 2, ',', '.') . ' €'),
 
                         TextInput::make('hours_purchased')
-                            ->label('Ore')
+                            ->label('Ore totali')
                             ->numeric()
                             ->required()
                             ->default(0)
@@ -651,6 +695,38 @@ $set(
                                 static::recalcBeneficiariesAssignedHours($get, $set);
                                 static::syncSingleBeneficiaryFromBilling($get, $set);
                             }),
+
+                        TextInput::make('hours_full')
+                            ->label('Di cui ore FULL')
+                            ->numeric()
+                            ->default(0)
+                            ->nullable()
+                            ->minValue(0)
+                            ->live(onBlur: true)
+                            ->helperText('Ore full immersion incluse nel totale. Pianificate on-demand, senza slot fisso.')
+                            ->visible(fn (Get $get) => $get('lesson_type') === 'Lezioni personalizzate + FULL')
+                            ->afterStateUpdated(function (Get $get, Set $set) {
+                                static::recalcBeneficiariesAssignedHours($get, $set);
+                                static::syncSingleBeneficiaryFromBilling($get, $set);
+                            }),
+
+                        Placeholder::make('hours_breakdown')
+                            ->label('Ripartizione ore')
+                            ->content(function (Get $get) {
+                                $total    = (float) ($get('hours_purchased') ?? 0);
+                                $full     = (float) ($get('hours_full')      ?? 0);
+                                $personal = max(0.0, $total - $full);
+
+                                return new HtmlString(
+                                    "<span style='font-size:0.92em;'>"
+                                    . "🎓 <strong>Personalizzate:</strong> {$personal} h &nbsp;|&nbsp; "
+                                    . "👥 <strong>Full immersion:</strong> {$full} h &nbsp;|&nbsp; "
+                                    . "📋 <strong>Totale:</strong> {$total} h"
+                                    . "</span>"
+                                );
+                            })
+                            ->visible(fn (Get $get) => $get('lesson_type') === 'Lezioni personalizzate + FULL'
+                                && (float) ($get('hours_purchased') ?? 0) > 0),
                     ]),
 
                 Step::make('Costi e pagamento')
@@ -691,9 +767,11 @@ $set(
                                 ->schema([
                                     Placeholder::make('residual_big')
                                         ->label('Residuo da rateizzare')
+                                        ->helperText('Prezzo corso − Acconto (la tassa iscrizione è fatturata separatamente)')
                                         ->content(function (Get $get) {
-                                            $total = (float) $get('course_price') + (float) $get('enrollment_fee');
-                                            $residual = max(0, $total - (float) $get('deposit'));
+                                            $course  = (float) $get('course_price');
+                                            $deposit = (float) $get('deposit');
+                                            $residual = max(0, $course - $deposit);
 
                                             return number_format($residual, 2, ',', '.') . ' €';
                                         }),
@@ -792,13 +870,20 @@ Select::make('student_id')
     ->searchable()
     ->preload(false)
     ->getSearchResultsUsing(function (string $search): array {
+        // Supporto ricerca multi-parola: "Laura Gulli" → AND tra token, OR tra campi
+        $tokens = array_filter(array_map('trim', explode(' ', $search)));
+
         return Student::query()
-            ->where(function ($q) use ($search) {
-                $q->where('last_name',    'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('email',      'like', "%{$search}%")
-                  ->orWhere('phone',      'like', "%{$search}%")
-                  ->orWhere('fiscal_code','like', "%{$search}%");
+            ->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->where(function ($sub) use ($token) {
+                        $sub->where('last_name',    'like', "%{$token}%")
+                            ->orWhere('first_name', 'like', "%{$token}%")
+                            ->orWhere('email',      'like', "%{$token}%")
+                            ->orWhere('phone',      'like', "%{$token}%")
+                            ->orWhere('fiscal_code','like', "%{$token}%");
+                    });
+                }
             })
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -894,7 +979,38 @@ Select::make('student_id')
                                                 ->disabled(fn (Get $get) => filled($get('student_id')))
                                                 ->dehydrated()
                                                 ->live(debounce: 500)
-                                                ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
+                                                ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                                    static::tryAutoLinkStudentInRepeater($get, $set);
+
+                                                    // Controllo email duplicata tra beneficiari
+                                                    if (! empty($state)) {
+                                                        $allBeneficiaries = $get('../../beneficiaries') ?? [];
+                                                        $emailNorm = strtolower(trim($state));
+                                                        $count = 0;
+                                                        foreach ($allBeneficiaries as $b) {
+                                                            if (strtolower(trim((string) ($b['beneficiary_email'] ?? ''))) === $emailNorm) {
+                                                                $count++;
+                                                            }
+                                                        }
+                                                        $set('email_duplicate_warning', $count > 1
+                                                            ? "⚠️ Questa email è già utilizzata da un altro beneficiario in questo contratto!"
+                                                            : null
+                                                        );
+                                                    } else {
+                                                        $set('email_duplicate_warning', null);
+                                                    }
+                                                }),
+
+                                            Placeholder::make('email_duplicate_warning')
+                                                ->label('')
+                                                ->content(fn (Get $get) => new HtmlString(
+                                                    $get('email_duplicate_warning')
+                                                        ? "<span style='color:#dc2626;font-weight:600;'>" . e($get('email_duplicate_warning')) . "</span>"
+                                                        : ''
+                                                ))
+                                                ->visible(fn (Get $get) => filled($get('email_duplicate_warning')))
+                                                ->dehydrated(false)
+                                                ->columnSpanFull(),
 
                                             TextInput::make('beneficiary_phone')
                                                 ->label('Telefono')
@@ -910,7 +1026,12 @@ Select::make('student_id')
                                             DatePicker::make('beneficiary_birth_date')
                                                 ->label('Nato/a il')
                                                 ->nullable()
-                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                // Abilitato se: nessuno studente selezionato OPPURE studente presente ma data mancante
+                                                ->disabled(fn (Get $get) => filled($get('student_id')) && filled($get('beneficiary_birth_date')))
+                                                ->helperText(fn (Get $get) => filled($get('student_id')) && blank($get('beneficiary_birth_date'))
+                                                    ? '📝 Mancante nell\'anagrafica — verrà salvata automaticamente.'
+                                                    : null
+                                                )
                                                 ->dehydrated()
                                                 ->live()
                                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::tryAutoLinkStudentInRepeater($get, $set)),
@@ -919,7 +1040,12 @@ Select::make('student_id')
                                                 ->label('Nato/a a')
                                                 ->nullable()
                                                 ->maxLength(120)
-                                                ->disabled(fn (Get $get) => filled($get('student_id')))
+                                                // Abilitato se: nessuno studente selezionato OPPURE studente presente ma luogo mancante
+                                                ->disabled(fn (Get $get) => filled($get('student_id')) && filled($get('beneficiary_birth_place')))
+                                                ->helperText(fn (Get $get) => filled($get('student_id')) && blank($get('beneficiary_birth_place'))
+                                                    ? '📝 Mancante nell\'anagrafica — verrà salvato automaticamente.'
+                                                    : null
+                                                )
                                                 ->dehydrated(),
                                         ]),
 
@@ -971,21 +1097,32 @@ Select::make('student_id')
                                         $beneficiaries  = $get('beneficiaries') ?? [];
                                         $totalAssigned  = round(collect($beneficiaries)
                                             ->sum(fn ($row) => (float) ($row['assigned_hours'] ?? 0)), 2);
-                                        $hoursPurchased = (float) ($get('hours_purchased') ?? 0);
-                                        $delta          = round($hoursPurchased - $totalAssigned, 2);
+
+                                        $hoursTotal    = (float) ($get('hours_purchased') ?? 0);
+                                        $hoursFull     = (float) ($get('hours_full')      ?? 0);
+                                        $hoursPersonal = max(0.0, $hoursTotal - $hoursFull);
+
+                                        // Il delta si calcola rispetto alle sole ore personalizzate
+                                        $delta = round($hoursPersonal - $totalAssigned, 2);
 
                                         [$icon, $color, $msg] = match (true) {
-                                            $delta == 0  => ['✅', '#16a34a', 'Ore distribuite correttamente.'],
-                                            $delta > 0   => ['⚠️', '#ca8a04', "{$delta} h del contratto non ancora assegnate ai beneficiari."],
-                                            default      => ['🚨', '#dc2626', 'Assegnate ' . abs($delta) . ' h in più rispetto al totale del contratto!'],
+                                            $delta == 0  => ['✅', '#16a34a', 'Ore personalizzate distribuite correttamente.'],
+                                            $delta > 0   => ['⚠️', '#ca8a04', "{$delta} h personalizzate non ancora assegnate ai beneficiari."],
+                                            default      => ['🚨', '#dc2626', 'Assegnate ' . abs($delta) . ' h in più rispetto alle ore personalizzate!'],
                                         };
 
-                                        return new HtmlString(
-                                            "<span style='color:{$color};font-weight:600;'>{$icon} "
-                                            . "Contratto: <strong>{$hoursPurchased} h</strong> &nbsp;|&nbsp; "
+                                        $html = "<span style='color:{$color};font-weight:600;'>{$icon} "
+                                            . "🎓 Personalizzate: <strong>{$hoursPersonal} h</strong> &nbsp;|&nbsp; "
                                             . "Assegnate: <strong>{$totalAssigned} h</strong> &nbsp;— {$msg}"
-                                            . "</span>"
-                                        );
+                                            . "</span>";
+
+                                        if ($hoursFull > 0) {
+                                            $html .= "<br><span style='color:#6b7280;font-size:0.9em;'>"
+                                                . "👥 <strong>Full immersion: {$hoursFull} h</strong> — pianificate on-demand dall'amministrazione, non distribuite ai beneficiari."
+                                                . "</span>";
+                                        }
+
+                                        return new HtmlString($html);
                                     }),
                             ]),
 
@@ -1072,7 +1209,10 @@ Select::make('student_id')
             return;
         }
 
-        $hoursPurchased = round((float) ($get('hours_purchased') ?? 0), 2);
+        // Le ore assegnate al singolo beneficiario sono solo quelle personalizzate (totale - full)
+        $hoursTotal    = round((float) ($get('hours_purchased') ?? 0), 2);
+        $hoursFull     = round((float) ($get('hours_full')      ?? 0), 2);
+        $hoursPersonal = max(0.0, $hoursTotal - $hoursFull);
 
         $matchedStudent = static::findStudentForBeneficiary([
             'beneficiary_first_name' => (string) $get('billing_first_name'),
@@ -1091,7 +1231,7 @@ Select::make('student_id')
             'beneficiary_birth_date'   => $get('billing_birth_date'),
             'beneficiary_birth_place'  => (string) $get('billing_birth_place'),
             'duration_minutes'         => 60,
-            'assigned_hours'           => $hoursPurchased > 0 ? $hoursPurchased : null,
+            'assigned_hours'           => $hoursPersonal > 0 ? $hoursPersonal : null,
             'auto_birth_province'      => $matchedStudent?->birth_province,
             'auto_match_label'         => $matchedStudent ? 'Trovato in anagrafica: ' . $matchedStudent->full_name : null,
         ]]);
@@ -1100,7 +1240,6 @@ Select::make('student_id')
     protected static function recalcTotals(Get $get, Set $set): void
     {
         $course  = (float) $get('course_price');
-        $fee     = (float) $get('enrollment_fee');
         $deposit = (float) $get('deposit');
 
         if ($deposit < 0) {
@@ -1108,10 +1247,10 @@ Select::make('student_id')
             $deposit = 0;
         }
 
-        $total = $course + $fee;
-
-        if ($deposit > $total) {
-            $set('deposit', $total);
+        // L'acconto si applica solo al prezzo corso (la tassa iscrizione è sempre a parte).
+        // Se l'acconto supera il prezzo corso lo azzeriamo al massimo consentito.
+        if ($deposit > $course) {
+            $set('deposit', $course);
         }
     }
 
@@ -1122,51 +1261,64 @@ Select::make('student_id')
             return;
         }
 
-        $hoursPurchased = round((float) ($get('hours_purchased') ?? 0), 2);
+        // Le ore da distribuire sono solo quelle personalizzate (totale - full).
+        // Le ore full non vengono assegnate ai singoli beneficiari: sono condivise e pianificate on-demand.
+        $hoursTotal    = round((float) ($get('hours_purchased') ?? 0), 2);
+        $hoursFull     = round((float) ($get('hours_full')      ?? 0), 2);
+        $hoursPurchased = max(0.0, $hoursTotal - $hoursFull);
+
         if ($hoursPurchased <= 0) {
             return;
         }
 
+        // Separa i beneficiari con ore già assegnate esplicitamente da quelli senza.
         $filledIndexes = [];
+        $nullIndexes   = [];
+        $sumExplicit   = 0.0;
+
         foreach ($beneficiaries as $index => $row) {
             $value = $row['assigned_hours'] ?? null;
-            if ($value !== null && $value !== '') {
+            if ($value !== null && $value !== '' && (float) $value > 0) {
                 $filledIndexes[] = $index;
+                $sumExplicit    += (float) $value;
+            } else {
+                $nullIndexes[] = $index;
             }
         }
 
-        if (count($filledIndexes) === count($beneficiaries)) {
+        if (empty($nullIndexes)) {
+            // Tutti i beneficiari hanno già ore esplicite, nulla da ricalcolare.
             return;
         }
 
-        $studentsCount = count($beneficiaries);
-        $base = floor(($hoursPurchased / max(1, $studentsCount)) * 2) / 2;
-        $remainder = round($hoursPurchased - ($base * $studentsCount), 2);
+        // Distribuzione: ore residue ÷ beneficiari senza ore, floor a 0,5 h.
+        // Il resto (max ±0,5 h) va all'ULTIMO beneficiario senza ore esplicite.
+        $nullCount    = count($nullIndexes);
+        $hoursForNull = max(0.0, $hoursPurchased - $sumExplicit);
+        $base         = $nullCount > 0 ? floor(($hoursForNull / $nullCount) * 2) / 2 : 0.0;
+        $remainder    = $nullCount > 0 ? round($hoursForNull - ($base * $nullCount), 2) : 0.0;
 
-        foreach ($beneficiaries as $index => &$row) {
-            if (in_array($index, $filledIndexes, true)) {
-                continue;
-            }
-
-            $row['assigned_hours'] = $base;
+        foreach ($nullIndexes as $index) {
+            $beneficiaries[$index]['assigned_hours'] = $base;
         }
-        unset($row);
 
-        if (! empty($beneficiaries)) {
-            $lastIndex = array_key_last($beneficiaries);
-            $current = (float) ($beneficiaries[$lastIndex]['assigned_hours'] ?? 0);
-            $beneficiaries[$lastIndex]['assigned_hours'] = round($current + $remainder, 2);
-        }
+        // Il resto va all'ultimo beneficiario senza ore esplicite (non all'ultimo assoluto).
+        $lastNullIndex = end($nullIndexes);
+        $beneficiaries[$lastNullIndex]['assigned_hours'] = round($base + $remainder, 2);
 
         $set('beneficiaries', $beneficiaries);
     }
 
     protected static function installmentsPreviewHtml(Get $get): string
     {
-        $paymentMode = (string) ($get('payment_mode') ?? 'single');
+        $paymentMode   = (string) ($get('payment_mode') ?? 'single');
+        $coursePrice   = (float) $get('course_price');
+        $enrollmentFee = (float) $get('enrollment_fee');
+        $deposit       = (float) $get('deposit');
 
-        $total = (float) $get('course_price') + (float) $get('enrollment_fee');
-        $deposit = (float) $get('deposit');
+        // La tassa iscrizione è sempre fatturata a parte (installment n. -1).
+        // L'acconto riduce solo il prezzo corso; il residuo da rateizzare = course_price - deposit.
+        $residual = max(0.0, $coursePrice - $deposit);
 
         $admission = $get('admission_date')
             ? Carbon::parse($get('admission_date'))
@@ -1176,18 +1328,26 @@ Select::make('student_id')
             ? Carbon::parse($get('first_installment_date'))
             : $admission->copy()->addDays(15);
 
+        // ── Righe header fissi ────────────────────────────────────────────────
         $rows = '';
 
+        if ($enrollmentFee > 0) {
+            $rows .= '<tr style="background:#fef3c7;">
+                <td style="padding:6px 8px;">🏫 Tassa iscrizione</td>
+                <td style="padding:6px 8px;">' . $admission->format('d/m/Y') . '</td>
+                <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($enrollmentFee, 2, ',', '.') . ' €</td>
+            </tr>';
+        }
+
         if ($deposit > 0) {
-            $rows .= '<tr>
-                <td style="padding:6px 8px;">Rata 0 (Acconto)</td>
+            $rows .= '<tr style="background:#f0fdf4;">
+                <td style="padding:6px 8px;">💶 Acconto</td>
                 <td style="padding:6px 8px;">' . $admission->format('d/m/Y') . '</td>
                 <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($deposit, 2, ',', '.') . ' €</td>
             </tr>';
         }
 
-        $residual = max(0, $total - $deposit);
-
+        // ── Saldo / Rate ──────────────────────────────────────────────────────
         if ($paymentMode !== 'installments') {
             if ($residual > 0) {
                 $rows .= '<tr>
@@ -1195,89 +1355,45 @@ Select::make('student_id')
                     <td style="padding:6px 8px;">' . $first->format('d/m/Y') . '</td>
                     <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($residual, 2, ',', '.') . ' €</td>
                 </tr>';
-            } elseif ($deposit <= 0) {
+            } elseif ($enrollmentFee <= 0 && $deposit <= 0) {
                 return '<div style="color:#6b7280">Nessun importo.</div>';
             }
-
-            return '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#f9fafb;">
-                        <tr>
-                            <th style="text-align:left; padding:8px;">Rata</th>
-                            <th style="text-align:left; padding:8px;">Scadenza</th>
-                            <th style="text-align:right; padding:8px;">Importo</th>
-                        </tr>
-                    </thead>
-                    <tbody>' . $rows . '</tbody>
-                </table>
-            </div>';
-        }
-
-        $count = (int) $get('installments_count');
-        if ($count < 1) {
-            return '<div style="color:#6b7280">Inserisci il numero di rate.</div>';
-        }
-
-        if ($residual <= 0) {
-            return '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#f9fafb;">
-                        <tr>
-                            <th style="text-align:left; padding:8px;">Rata</th>
-                            <th style="text-align:left; padding:8px;">Scadenza</th>
-                            <th style="text-align:right; padding:8px;">Importo</th>
-                        </tr>
-                    </thead>
-                    <tbody>' . $rows . '</tbody>
-                </table>
-            </div>';
-        }
-
-        if ($count === 1) {
-            $rows .= '<tr>
-                <td style="padding:6px 8px;">Rata 1</td>
-                <td style="padding:6px 8px;">' . $first->format('d/m/Y') . '</td>
-                <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($residual, 2, ',', '.') . ' €</td>
-            </tr>';
-
-            return '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
-                <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#f9fafb;">
-                        <tr>
-                            <th style="text-align:left; padding:8px;">Rata</th>
-                            <th style="text-align:left; padding:8px;">Scadenza</th>
-                            <th style="text-align:right; padding:8px;">Importo</th>
-                        </tr>
-                    </thead>
-                    <tbody>' . $rows . '</tbody>
-                </table>
-            </div>';
-        }
-
-        $base = floor(($residual / $count) * 100) / 100;
-        $sum  = $base * $count;
-        $diff = round($residual - $sum, 2);
-
-        for ($i = 1; $i <= $count; $i++) {
-            $date = $first->copy()->addMonths($i - 1)->format('d/m/Y');
-            $amount = $base;
-
-            if ($i === $count && $diff != 0.0) {
-                $amount = round($base + $diff, 2);
+        } else {
+            $count = (int) $get('installments_count');
+            if ($count < 1) {
+                return '<div style="color:#6b7280">Inserisci il numero di rate.</div>';
             }
 
-            $rows .= '<tr>
-                <td style="padding:6px 8px;">Rata ' . $i . '</td>
-                <td style="padding:6px 8px;">' . $date . '</td>
-                <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($amount, 2, ',', '.') . ' €</td>
-            </tr>';
+            if ($residual > 0) {
+                // Il resto (centesimi) va sulla PRIMA rata (coerente con la generazione effettiva).
+                $base        = floor(($residual / $count) * 100) / 100;
+                $firstAmount = round($residual - ($base * ($count - 1)), 2);
+
+                for ($i = 1; $i <= $count; $i++) {
+                    $date   = $first->copy()->addMonths($i - 1)->format('d/m/Y');
+                    $amount = ($i === 1) ? $firstAmount : $base;
+
+                    $rows .= '<tr>
+                        <td style="padding:6px 8px;">Rata ' . $i . '</td>
+                        <td style="padding:6px 8px;">' . $date . '</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:600;">' . number_format($amount, 2, ',', '.') . ' €</td>
+                    </tr>';
+                }
+            }
         }
+
+        // ── Riga totale ───────────────────────────────────────────────────────
+        $grandTotal = $enrollmentFee + $deposit + $residual;
+        $rows .= '<tr style="background:#f9fafb; border-top:2px solid #e5e7eb;">
+            <td style="padding:8px; font-weight:700;" colspan="2">Totale</td>
+            <td style="padding:8px; text-align:right; font-weight:700;">' . number_format($grandTotal, 2, ',', '.') . ' €</td>
+        </tr>';
 
         return '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
             <table style="width:100%; border-collapse:collapse;">
                 <thead style="background:#f9fafb;">
                     <tr>
-                        <th style="text-align:left; padding:8px;">Rata</th>
+                        <th style="text-align:left; padding:8px;">Voce</th>
                         <th style="text-align:left; padding:8px;">Scadenza</th>
                         <th style="text-align:right; padding:8px;">Importo</th>
                     </tr>

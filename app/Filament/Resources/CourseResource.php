@@ -6,6 +6,7 @@ use App\Filament\Concerns\HasAreaPermission;
 use App\Models\Course;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -35,11 +36,30 @@ class CourseResource extends Resource
                 Forms\Components\Textarea::make('description')
                     ->label('Descrizione')->rows(3)->nullable()->columnSpanFull(),
 
+                Forms\Components\Select::make('lesson_type')
+                    ->label('Tipologia lezione')
+                    ->options([
+                        'Lezioni personalizzate'        => 'Lezioni personalizzate',
+                        'Lezioni personalizzate + FULL' => 'Lezioni personalizzate + FULL',
+                        'Lezioni di gruppo'             => 'Lezioni di gruppo',
+                        'Lezioni online'                => 'Lezioni online',
+                        'Corso intensivo'               => 'Corso intensivo',
+                        'Esami e certificazioni'        => 'Esami e certificazioni',
+                    ])
+                    ->nullable()
+                    ->live()
+                    ->columnSpanFull(),
+
                 Forms\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('hours_purchased')
                         ->label('Ore totali del corso')
                         ->numeric()->minValue(0)->default(0)
                         ->helperText('Lo studente sceglie la durata di ogni lezione (30min, 1h, 1.5h, 2h)'),
+                    Forms\Components\TextInput::make('hours_full')
+                        ->label('di cui ore FULL immersion')
+                        ->numeric()->minValue(0)->default(0)
+                        ->helperText('Ore on-demand (non auto-generate). Ore personalizzate = Totali − FULL.')
+                        ->visible(fn (Get $get) => $get('lesson_type') === 'Lezioni personalizzate + FULL'),
                     Forms\Components\TextInput::make('course_price')
                         ->label('Prezzo corso (€)')->numeric()->required()->default(0)
                         ->prefix('€'),
@@ -47,6 +67,25 @@ class CourseResource extends Resource
                         ->label('Quota iscrizione (€)')->numeric()->required()->default(0)
                         ->prefix('€'),
                 ]),
+
+                Forms\Components\Placeholder::make('hours_breakdown_course')
+                    ->label('')
+                    ->content(function (Get $get): \Illuminate\Support\HtmlString {
+                        $total = (float) ($get('hours_purchased') ?? 0);
+                        $full  = (float) ($get('hours_full') ?? 0);
+                        if ($get('lesson_type') !== 'Lezioni personalizzate + FULL' || $total <= 0) {
+                            return new \Illuminate\Support\HtmlString('');
+                        }
+                        $personal = max(0.0, $total - $full);
+                        return new \Illuminate\Support\HtmlString(
+                            '<span style="font-size:.85rem;color:#6b7280">'
+                            . "🎓 Ore personalizzate: <strong>{$personal}</strong> &nbsp;|&nbsp; "
+                            . "👥 Ore FULL immersion: <strong>{$full}</strong> &nbsp;|&nbsp; "
+                            . "📋 Totale: <strong>{$total}</strong>"
+                            . '</span>'
+                        );
+                    })
+                    ->visible(fn (Get $get) => $get('lesson_type') === 'Lezioni personalizzate + FULL'),
             ]),
 
             Forms\Components\Section::make('Visibilità nel catalogo online')->schema([
@@ -79,9 +118,14 @@ class CourseResource extends Resource
                     ->trueColor('success')
                     ->falseColor('gray'),
                 Tables\Columns\TextColumn::make('hours_purchased')
-                    ->label('Ore')
+                    ->label('Ore totali')
                     ->sortable()
                     ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) . ' ore' : '—'),
+                Tables\Columns\TextColumn::make('hours_full')
+                    ->label('di cui FULL')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state, 0) . ' ore' : '—')
+                    ->default('—'),
                 Tables\Columns\TextColumn::make('lesson_type')
                     ->label('Tipo')
                     ->sortable()

@@ -86,9 +86,11 @@ class CheckoutController extends Controller
             'billing_city'       => 'nullable|string|max:100',
             'billing_zip'        => 'nullable|string|max:10',
             'billing_country'    => 'nullable|string|max:5',
-            'billing_tax_code'   => 'nullable|string|max:20',
+            // CF italiano validato con checksum (rule custom)
+            'billing_tax_code'   => ['nullable', 'string', 'max:20', new \App\Rules\CodiceFiscale],
             'company_name'       => 'required_if:billing_type,company|nullable|string|max:200',
-            'vat_number'         => 'nullable|string|max:20',
+            // P.IVA italiana 11 cifre con checksum mod-10
+            'vat_number'         => ['nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
             'payment_method'     => 'required|in:stripe,paypal,bonifico',
             'privacy'            => 'accepted',
         ]);

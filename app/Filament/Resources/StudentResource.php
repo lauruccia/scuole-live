@@ -43,7 +43,11 @@ class StudentResource extends Resource
                     Forms\Components\TextInput::make('last_name')
                         ->label('Cognome')->required()->maxLength(100),
                     Forms\Components\TextInput::make('fiscal_code')
-                        ->label('Codice fiscale')->maxLength(16)->nullable(),
+                        ->label('Codice fiscale')
+                        ->maxLength(16)
+                        ->nullable()
+                        ->rules([new \App\Rules\CodiceFiscale])
+                        ->helperText('16 caratteri, validato con checksum.'),
                     Forms\Components\TextInput::make('email')
                         ->label('Email')->email()->maxLength(190)->nullable(),
                     Forms\Components\TextInput::make('phone')

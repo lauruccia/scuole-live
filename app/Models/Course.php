@@ -19,6 +19,7 @@ class Course extends Model
         // La colonna esiste ancora in DB per compatibilità con dati storici,
         // ma non deve essere modificabile dall'interfaccia.
         'hours_purchased',
+        'hours_full',
         'language_id',
         'lesson_type',
         'course_price',
@@ -29,9 +30,16 @@ class Course extends Model
         'course_price'    => 'decimal:2',
         'enrollment_fee'  => 'decimal:2',
         'hours_purchased' => 'decimal:2',
+        'hours_full'      => 'decimal:2',
         'is_active'       => 'boolean',
         'is_public'       => 'boolean',
     ];
+
+    /** Ore personalizzate = totale - full */
+    public function getHoursPersonalAttribute(): float
+    {
+        return max(0.0, (float) $this->hours_purchased - (float) ($this->hours_full ?? 0));
+    }
 
     public function purchases(): HasMany
     {

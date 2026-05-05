@@ -64,8 +64,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            // opzionale: FK se esiste courses
-            // $table->foreign('course_id')->references('id')->on('courses')->nullOnDelete();
+            // FK course_id aggiunta in migration 2026_05_04_200006_add_course_fk_to_contracts_table
         });
     }
 

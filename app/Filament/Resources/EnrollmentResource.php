@@ -13,6 +13,19 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @deprecated Questo resource è stato sostituito da ContractResource + CoursePurchase.
+ *
+ * EnrollmentResource gestiva i vecchi "moduli di iscrizione" (model Enrollment).
+ * La logica è ora distribuita tra:
+ *   - ContractResource  → contratti didattici con studenti, orari e rate
+ *   - CoursePurchase    → iscrizioni online tramite Stripe / PayPal / Bonifico
+ *
+ * Il resource è tenuto in codebase solo per non perdere le route già generate
+ * da Filament Shield. canAccess() restituisce false in modo permanente.
+ * NON rimuovere senza prima verificare che Shield non abbia permessi orfani
+ * che fanno riferimento a 'page_EnrollmentResource'.
+ */
 class EnrollmentResource extends Resource
 {
     use HasAreaPermission;
@@ -28,10 +41,11 @@ class EnrollmentResource extends Resource
     protected static ?string $pluralModelLabel = 'Moduli iscrizione';
     protected static ?int $navigationSort = 1;
 
+    /** @deprecated Sempre false — resource deprecato. Vedere docblock sopra la classe. */
     public static function canAccess(): bool
-{
-    return false;
-}
+    {
+        return false;
+    }
 
 
 

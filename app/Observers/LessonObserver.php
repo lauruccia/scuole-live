@@ -53,8 +53,13 @@ class LessonObserver
     }
 
     /**
-     * Invia email allo studente quando una lezione viene annullata.
-     * Tre scenari:
+     * Invia email quando una lezione viene annullata.
+     *
+     * Routing:
+     *  - To:  studente (se ha email valida), altrimenti intestatario del contratto.
+     *  - CC:  intestatario, se ha email valida e diversa da quella dello studente.
+     *
+     * Scenari:
      *   'recoverable' → cancellazione con >24h, verrà recuperata
      *   'consumed'    → cancellazione con <24h, le ore vengono scalate
      *   'permanent'   → annullamento definitivo senza scalare ore
@@ -69,8 +74,23 @@ class LessonObserver
             return;
         }
 
-        $student = $lesson->student;
-        if (! $student || empty($student->email)) {
+        $student  = $lesson->student;
+        $contract = $lesson->contract;
+
+        // Risolvi i recipients tramite il contratto (gestisce fallback + CC)
+        if ($contract && $student) {
+            ['to' => $to, 'cc' => $cc] = $contract->lessonNotificationRecipients($student);
+        } elseif ($student && filter_var(trim((string) $student->email), FILTER_VALIDATE_EMAIL)) {
+            // Nessun contratto: manda solo allo studente
+            $to = ['email' => $student->email, 'name' => $student->full_name ?: $student->email];
+            $cc = [];
+        } else {
+            Log::info("LessonObserver: lezione #{$lesson->id} — nessun destinatario valido per notifica cancellazione.");
+            return;
+        }
+
+        if (! $to) {
+            Log::info("LessonObserver: lezione #{$lesson->id} — nessun indirizzo email valido (studente e intestatario).");
             return;
         }
 
@@ -82,16 +102,12 @@ class LessonObserver
             $type = 'permanent';
         }
 
-        $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))
-            ?: $student->email;
-
         $event = match ($type) {
             'recoverable' => 'lesson.cancelled.recoverable',
             'consumed'    => 'lesson.cancelled.consumed',
             default       => 'lesson.cancelled.permanent',
         };
 
-        // Prepara le variabili del template
         $startsAt = $lesson->starts_at
             ? \Illuminate\Support\Carbon::parse($lesson->starts_at)
             : null;
@@ -105,27 +121,35 @@ class LessonObserver
             $docente = $teacher?->name ?? '';
         }
 
+        // 'nome' usa il nome dello studente anche quando il To è l'intestatario
+        // (l'intestatario deve sapere di quale studente si tratta)
+        $nomeStudente = $student
+            ? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) ?: $to['name']
+            : $to['name'];
+
         $variables = [
-            'nome'        => $student->first_name ?? $studentName,
+            'nome'         => $nomeStudente,
             'data_lezione' => $startsAt?->format('d/m/Y') ?? '—',
-            'ora_inizio'  => $startsAt?->format('H:i') ?? '—',
-            'ora_fine'    => $endsAt?->format('H:i') ?? '—',
-            'lingua'      => $lesson->language_id ?? '—',
-            'docente'     => $docente,
-            'motivo'      => '',
+            'ora_inizio'   => $startsAt?->format('H:i') ?? '—',
+            'ora_fine'     => $endsAt?->format('H:i') ?? '—',
+            'lingua'       => $lesson->language_id ?? '—',
+            'docente'      => $docente,
+            'motivo'       => '',
         ];
 
         try {
             app(EmailTemplateService::class)->sendByEvent(
                 $event,
-                $student->email,
-                $studentName,
-                $variables
+                $to['email'],
+                $to['name'],
+                $variables,
+                [],
+                $cc
             );
         } catch (\Throwable $e) {
             Log::warning(
                 "Impossibile inviare notifica cancellazione lezione #{$lesson->id} "
-                . "a {$student->email}: " . $e->getMessage()
+                . "a {$to['email']}: " . $e->getMessage()
             );
         }
     }

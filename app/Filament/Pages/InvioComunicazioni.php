@@ -142,12 +142,33 @@ class InvioComunicazioni extends Page implements Forms\Contracts\HasForms
             return;
         }
 
-        $sent = 0;
-        $errors = 0;
+        // Filtro disiscritti GDPR (lookup bulk per evitare N+1)
+        $unsubscribed = collect();
+        if (\Illuminate\Support\Facades\Schema::hasTable('student_unsubscribes')) {
+            $unsubscribed = collect(
+                \Illuminate\Support\Facades\DB::table('student_unsubscribes')
+                    ->whereIn('email', $students->pluck('email')->filter()->all())
+                    ->pluck('email')
+                    ->map(fn ($e) => strtolower($e))
+                    ->all()
+            );
+        }
+
+        $sent    = 0;
+        $errors  = 0;
+        $skipped = 0;
 
         foreach ($students as $student) {
+            // Skip disiscritti GDPR
+            if ($unsubscribed->contains(strtolower($student->email))) {
+                $skipped++;
+                continue;
+            }
+
             try {
-                Mail::to($student->email)->send(
+                // Mail::queue invia in coda asincrona (no blocking della richiesta)
+                // Il worker queue:work processa effettivamente l'invio.
+                Mail::to($student->email)->queue(
                     new StudentCommunicationMail(
                         studentName: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
                         subjectLine: $state['subject'],
@@ -162,8 +183,12 @@ class InvioComunicazioni extends Page implements Forms\Contracts\HasForms
             }
         }
 
+        $detail = "Email accodate: {$sent}";
+        if ($skipped > 0) $detail .= " | Disiscritti saltati: {$skipped}";
+        if ($errors > 0)  $detail .= " | Errori: {$errors}";
+
         Notification::make()
-            ->title("Invio completato. Email inviate: {$sent}" . ($errors ? " | Errori: {$errors}" : ''))
+            ->title($detail)
             ->success()
             ->send();
 

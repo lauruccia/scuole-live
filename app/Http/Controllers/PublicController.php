@@ -37,31 +37,16 @@ class PublicController extends Controller
             'privacy.accepted'     => 'Devi accettare la privacy policy per procedere.',
         ]);
 
-        // Controlla quali colonne esistono nel DB per compatibilità
-        $hasCourseInterest = \Illuminate\Support\Facades\Schema::hasColumn('leads', 'course_interest');
-        $hasInterestNotes  = \Illuminate\Support\Facades\Schema::hasColumn('leads', 'interest_notes');
-
-        // Costruisce il payload in base alle colonne disponibili
         $payload = [
-            'first_name' => $data['first_name'],
-            'last_name'  => $data['last_name'],
-            'email'      => $data['email'],
-            'phone'      => $data['phone'] ?? null,
-            'source'     => 'website',
-            'status'     => 'new',
+            'first_name'      => $data['first_name'],
+            'last_name'       => $data['last_name'],
+            'email'           => $data['email'],
+            'phone'           => $data['phone'] ?? null,
+            'source'          => 'website',
+            'status'          => 'new',
+            'course_interest' => $data['course_interest'] ?? null,
+            'interest_notes'  => $data['message'] ?? '',
         ];
-
-        if ($hasCourseInterest) {
-            $payload['course_interest'] = $data['course_interest'] ?? null;
-        }
-
-        if ($hasInterestNotes) {
-            // Se course_interest non esiste, lo anteponiamo alle note
-            $notePrefix = (! $hasCourseInterest && ! empty($data['course_interest']))
-                ? 'Corso richiesto: ' . $data['course_interest'] . "\n\n"
-                : '';
-            $payload['interest_notes'] = $notePrefix . ($data['message'] ?? '');
-        }
 
         // Crea il lead nel CRM
         $lead = Lead::create($payload);

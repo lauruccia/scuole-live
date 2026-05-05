@@ -214,8 +214,15 @@ class GoogleCalendarService
         // Il link Meet rimane valido indipendentemente dall'evento.
         try {
             $service->events->delete($calendarId, $created->getId());
-        } catch (\Exception) {
-            // Se la delete fallisce non blocchiamo: il link è già ottenuto
+        } catch (\Throwable $e) {
+            // Se la delete fallisce non blocchiamo: il link e' gia' ottenuto.
+            // Logghiamo comunque per diagnostica futura (Sentry + log Laravel).
+            report($e);
+            \Illuminate\Support\Facades\Log::warning('GoogleCalendarService: delete evento temporaneo fallita', [
+                'calendar_id' => $calendarId,
+                'event_id'    => $created->getId(),
+                'error'       => $e->getMessage(),
+            ]);
         }
 
         return $link ?: null;
@@ -322,9 +329,24 @@ class GoogleCalendarService
             return null;
         }
 
-        $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+        try {
+            $newToken = $client->fetchAccessTokenWithRefreshToken($refresh);
+        } catch (\Throwable $e) {
+            // Errore critico: token refresh fallito. Notifica Sentry + log dettagliato.
+            report($e);
+            \Illuminate\Support\Facades\Log::error('GoogleCalendarService: refresh token fallito (eccezione)', [
+                'account_id' => $acc->id ?? null,
+                'error'      => $e->getMessage(),
+            ]);
+            return null;
+        }
 
         if (! empty($newToken['error'])) {
+            \Illuminate\Support\Facades\Log::error('GoogleCalendarService: refresh token rifiutato dal server Google', [
+                'account_id' => $acc->id ?? null,
+                'error'      => $newToken['error'],
+                'desc'       => $newToken['error_description'] ?? null,
+            ]);
             return null;
         }
 

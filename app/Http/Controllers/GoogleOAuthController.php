@@ -8,6 +8,7 @@ use Google\Service\Calendar;
 use Google\Service\Oauth2;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class GoogleOAuthController extends Controller
 {
@@ -26,7 +27,12 @@ class GoogleOAuthController extends Controller
     {
         $this->ensureCanAccess();
 
+        // Genera e salva in sessione un token CSRF anti-CSRF per il callback OAuth
+        $state = Str::random(40);
+        session(['google_oauth_state' => $state]);
+
         $client = $this->makeClient();
+        $client->setState($state);
 
         return redirect()->away($client->createAuthUrl());
     }
@@ -39,6 +45,16 @@ class GoogleOAuthController extends Controller
             return redirect('/superadmin/google-settings')
                 ->with('danger', 'Collegamento Google annullato o non autorizzato: ' . $request->query('error'));
         }
+
+        // Verifica state anti-CSRF
+        $expectedState = session('google_oauth_state');
+        $returnedState = $request->query('state');
+
+        if (! $expectedState || ! hash_equals($expectedState, (string) $returnedState)) {
+            abort(403, 'OAuth state mismatch — possibile attacco CSRF.');
+        }
+
+        session()->forget('google_oauth_state');
 
         $code = $request->query('code');
         abort_unless($code, 400, 'Missing Google OAuth code.');
