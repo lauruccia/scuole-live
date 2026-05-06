@@ -39,3 +39,8 @@ _server_backup/
 # Backup (spatie/laravel-backup) — i file .zip non vanno nel repo
 /storage/app/backups/*.zip
 /storage/app/backup-temp/
+
+# Claude Code worktrees + sessioni locali (mai committare)
+/.claude/
+.claude/worktrees/
+.claude/sessions/

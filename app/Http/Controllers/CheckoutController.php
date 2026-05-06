@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\CoursePurchase;
+use App\Models\SchoolSetting;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
@@ -67,7 +69,11 @@ class CheckoutController extends Controller
             ];
         }
 
-        return view('checkout.show', compact('course', 'prefill'));
+        // Metodi di pagamento abilitati lato admin (vedi Impostazioni > Metodi di pagamento).
+        // La view nasconde le radio dei metodi disabilitati e mette default sul primo attivo.
+        $enabledPaymentMethods = SchoolSetting::paymentEnabledMethods();
+
+        return view('checkout.show', compact('course', 'prefill', 'enabledPaymentMethods'));
     }
 
     // ── Step 3: Riceve dati + metodo, crea purchase, redirige al gateway ──────
@@ -75,6 +81,17 @@ class CheckoutController extends Controller
     public function store(Request $request, Course $course)
     {
         abort_unless($course->is_public && $course->is_active, 404);
+
+        // Metodi di pagamento ammessi: solo quelli che l'admin ha abilitato.
+        // Difesa-in-profondita': il client puo' aver bypassato la radio nascosta
+        // (es. tampering del form), qui blocchiamo a livello validazione.
+        $enabledPaymentMethods = SchoolSetting::paymentEnabledMethods();
+
+        if (empty($enabledPaymentMethods)) {
+            // Edge case: tutti i metodi disattivi. Non si puo' procedere.
+            return redirect()->route('checkout.show', $course)
+                ->with('danger', 'Al momento non e\' possibile completare il pagamento online. Contatta la segreteria.');
+        }
 
         $data = $request->validate([
             'billing_type'       => 'required|in:private,company',
@@ -91,8 +108,11 @@ class CheckoutController extends Controller
             'company_name'       => 'required_if:billing_type,company|nullable|string|max:200',
             // P.IVA italiana 11 cifre con checksum mod-10
             'vat_number'         => ['nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
-            'payment_method'     => 'required|in:stripe,paypal,bonifico',
+            // Validazione dinamica: solo i metodi abilitati dall'admin sono accettati.
+            'payment_method'     => ['required', Rule::in($enabledPaymentMethods)],
             'privacy'            => 'accepted',
+        ], [
+            'payment_method.in' => 'Il metodo di pagamento selezionato non e\' attualmente disponibile.',
         ]);
 
         $purchase = CoursePurchase::create([

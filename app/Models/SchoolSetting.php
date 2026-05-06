@@ -122,6 +122,46 @@ class SchoolSetting extends Model
         return static::get('bank_intestatario', config('services.bank.intestatario', static::schoolLegalName()));
     }
 
+    // ─── Metodi di pagamento (toggle admin) ──────────────────────────────────
+    //
+    // Default scelti per essere "safe out-of-the-box": solo bonifico attivo.
+    // Stripe e PayPal vanno abilitati esplicitamente da Impostazioni dopo aver
+    // configurato chiavi e webhook in produzione.
+
+    /** Bonifico bancario disponibile come metodo di pagamento? */
+    public static function paymentBonificoEnabled(): bool
+    {
+        return static::bool('payment_bonifico_enabled', true);
+    }
+
+    /** Stripe (carta) disponibile come metodo di pagamento? */
+    public static function paymentStripeEnabled(): bool
+    {
+        return static::bool('payment_stripe_enabled', false);
+    }
+
+    /** PayPal disponibile come metodo di pagamento? */
+    public static function paymentPaypalEnabled(): bool
+    {
+        return static::bool('payment_paypal_enabled', false);
+    }
+
+    /**
+     * Lista dei metodi di pagamento attualmente abilitati.
+     * Es. ['bonifico'] o ['bonifico', 'stripe', 'paypal'].
+     *
+     * Usato dal CheckoutController per la validazione dinamica e dalla view
+     * checkout.show per nascondere le opzioni disabilitate.
+     */
+    public static function paymentEnabledMethods(): array
+    {
+        $methods = [];
+        if (static::paymentStripeEnabled())   $methods[] = 'stripe';
+        if (static::paymentPaypalEnabled())   $methods[] = 'paypal';
+        if (static::paymentBonificoEnabled()) $methods[] = 'bonifico';
+        return $methods;
+    }
+
     // ─── Ricevute PDF ─────────────────────────────────────────────────────────
 
     /** Il download ricevuta rata è abilitato? */

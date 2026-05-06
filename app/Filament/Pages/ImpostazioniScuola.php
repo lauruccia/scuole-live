@@ -68,6 +68,10 @@ class ImpostazioniScuola extends Page implements HasForms
             'ricevuta_disclaimer'       => SchoolSetting::get('ricevuta_disclaimer', ''),
             // Funzionalità
             'digital_signature_enabled' => SchoolSetting::bool('digital_signature_enabled', false),
+            // Metodi di pagamento (toggle pubblici sul checkout)
+            'payment_bonifico_enabled'  => SchoolSetting::paymentBonificoEnabled(),
+            'payment_stripe_enabled'    => SchoolSetting::paymentStripeEnabled(),
+            'payment_paypal_enabled'    => SchoolSetting::paymentPaypalEnabled(),
         ]);
     }
 
@@ -196,6 +200,31 @@ class ImpostazioniScuola extends Page implements HasForms
                             ->columnSpanFull(),
                     ]),
 
+                // ── Metodi di pagamento ───────────────────────────────────────
+                Section::make('Metodi di pagamento')
+                    ->description('Quali metodi di pagamento sono disponibili sul checkout pubblico (/corsi). Disabilitarne uno lo nasconde immediatamente, anche se Stripe/PayPal sono configurati nel .env.')
+                    ->icon('heroicon-o-credit-card')
+                    ->columns(1)
+                    ->schema([
+                        Toggle::make('payment_bonifico_enabled')
+                            ->label('Bonifico bancario')
+                            ->helperText('Lo studente riceve IBAN e causale via email; l\'attivazione del corso avviene dopo conferma manuale dell\'incasso.')
+                            ->onColor('success')
+                            ->offColor('gray'),
+
+                        Toggle::make('payment_stripe_enabled')
+                            ->label('Carta di credito (Stripe)')
+                            ->helperText('Pagamento immediato online tramite Stripe. Richiede STRIPE_KEY, STRIPE_SECRET e STRIPE_WEBHOOK_SECRET configurati nel .env produzione.')
+                            ->onColor('success')
+                            ->offColor('gray'),
+
+                        Toggle::make('payment_paypal_enabled')
+                            ->label('PayPal')
+                            ->helperText('Pagamento via account PayPal. Richiede PAYPAL_CLIENT_ID, PAYPAL_SECRET, PAYPAL_BASE_URL e PAYPAL_WEBHOOK_ID configurati.')
+                            ->onColor('success')
+                            ->offColor('gray'),
+                    ]),
+
                 // ── Firma digitale ────────────────────────────────────────────
                 Section::make('Firma digitale contratti')
                     ->description('Se abilitata, gli studenti potranno firmare il proprio contratto dall\'area riservata tramite un codice OTP ricevuto via email.')
@@ -255,6 +284,11 @@ class ImpostazioniScuola extends Page implements HasForms
 
         // Funzionalità
         SchoolSetting::set('digital_signature_enabled', $state['digital_signature_enabled'] ? '1' : '0');
+
+        // Metodi di pagamento
+        SchoolSetting::set('payment_bonifico_enabled', !empty($state['payment_bonifico_enabled']) ? '1' : '0');
+        SchoolSetting::set('payment_stripe_enabled',   !empty($state['payment_stripe_enabled'])   ? '1' : '0');
+        SchoolSetting::set('payment_paypal_enabled',   !empty($state['payment_paypal_enabled'])   ? '1' : '0');
 
         Notification::make()
             ->title('Impostazioni salvate')

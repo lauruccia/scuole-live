@@ -375,35 +375,61 @@
                 </div>
                 <div class="form-body">
 
+                    @php
+                        // Lista metodi pagamento abilitata dall'admin (Impostazioni > Metodi di pagamento).
+                        // Se la variabile non e' presente (legacy / cache obsoleta) fallback a tutti e 3.
+                        $enabledMethods = $enabledPaymentMethods ?? ['stripe', 'paypal', 'bonifico'];
+                        // Default selezione:
+                        //  - se l'utente aveva gia' scelto (old) e quel metodo e' ancora abilitato → mantiene
+                        //  - altrimenti primo metodo abilitato → fallback a bonifico
+                        $oldMethod     = old('payment_method');
+                        $defaultMethod = ($oldMethod && in_array($oldMethod, $enabledMethods, true))
+                            ? $oldMethod
+                            : ($enabledMethods[0] ?? 'bonifico');
+                    @endphp
+
+                    @if (empty($enabledMethods))
+                        <div class="alert alert-warning" style="padding:16px;border-radius:8px;background:#fff7e6;border:1px solid #ffd591;color:#874d00;">
+                            ⚠️ Al momento non &egrave; possibile completare il pagamento online.
+                            Per iscriverti al corso contatta la segreteria.
+                        </div>
+                    @else
                     <div class="pay-options">
+                        @if (in_array('stripe', $enabledMethods, true))
                         <label class="pay-opt">
                             <input type="radio" name="payment_method" value="stripe"
-                                {{ old('payment_method', 'stripe') === 'stripe' ? 'checked' : '' }}>
+                                {{ $defaultMethod === 'stripe' ? 'checked' : '' }}>
                             <span class="pay-icon">💳</span>
                             <div class="pay-label">
                                 <strong>Carta di credito / debito</strong>
                                 <small>Visa, Mastercard, American Express — pagamento immediato e sicuro</small>
                             </div>
                         </label>
+                        @endif
+                        @if (in_array('paypal', $enabledMethods, true))
                         <label class="pay-opt">
                             <input type="radio" name="payment_method" value="paypal"
-                                {{ old('payment_method') === 'paypal' ? 'checked' : '' }}>
+                                {{ $defaultMethod === 'paypal' ? 'checked' : '' }}>
                             <span class="pay-icon" style="font-size:1.3rem;font-weight:900;color:#003087;">Pay<span style="color:#009cde;">Pal</span></span>
                             <div class="pay-label">
                                 <strong>PayPal</strong>
                                 <small>Paga con il tuo conto PayPal in totale sicurezza</small>
                             </div>
                         </label>
+                        @endif
+                        @if (in_array('bonifico', $enabledMethods, true))
                         <label class="pay-opt">
                             <input type="radio" name="payment_method" value="bonifico"
-                                {{ old('payment_method') === 'bonifico' ? 'checked' : '' }}>
+                                {{ $defaultMethod === 'bonifico' ? 'checked' : '' }}>
                             <span class="pay-icon">🏦</span>
                             <div class="pay-label">
                                 <strong>Bonifico bancario</strong>
                                 <small>Riceverai IBAN e causale via email — attivazione dopo conferma</small>
                             </div>
                         </label>
+                        @endif
                     </div>
+                    @endif
 
                     <div class="privacy-check">
                         <input type="checkbox" name="privacy" id="privacy" {{ old('privacy') ? 'checked' : '' }}>
