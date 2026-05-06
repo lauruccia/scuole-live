@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
@@ -183,13 +184,13 @@ class CheckoutController extends Controller
 
             if ($result === 'paid') {
                 $this->payments->confirmPurchase($purchase, 'stripe', $result);
-                return redirect()->route('checkout.grazie', $purchase)->with('success', true);
+                return redirect()->to($this->signedGrazieUrl($purchase))->with('success', true);
             }
         } catch (\Throwable $e) {
             Log::error('Stripe return error: ' . $e->getMessage());
         }
 
-        return redirect()->route('checkout.errore', $purchase);
+        return redirect()->to($this->signedErroreUrl($purchase));
     }
 
     // ── PayPal: return URL dopo pagamento ─────────────────────────────────────
@@ -204,13 +205,29 @@ class CheckoutController extends Controller
 
             if ($result === 'COMPLETED') {
                 $this->payments->confirmPurchase($purchase, 'paypal', $result);
-                return redirect()->route('checkout.grazie', $purchase)->with('success', true);
+                return redirect()->to($this->signedGrazieUrl($purchase))->with('success', true);
             }
         } catch (\Throwable $e) {
             Log::error('PayPal return error: ' . $e->getMessage());
         }
 
-        return redirect()->route('checkout.errore', $purchase);
+        return redirect()->to($this->signedErroreUrl($purchase));
+    }
+
+    /**
+     * URL firmato (24h) per la pagina di ringraziamento.
+     * Senza la firma, l'accesso alla rotta restituisce 403 — evita che chi
+     * conosce un purchase id arbitrario possa vedere i dati billing.
+     */
+    private function signedGrazieUrl(CoursePurchase $purchase): string
+    {
+        return URL::temporarySignedRoute('checkout.grazie', now()->addHours(24), ['purchase' => $purchase->id]);
+    }
+
+    /** URL firmato (24h) per la pagina di errore. */
+    private function signedErroreUrl(CoursePurchase $purchase): string
+    {
+        return URL::temporarySignedRoute('checkout.errore', now()->addHours(24), ['purchase' => $purchase->id]);
     }
 
     // ── PayPal: cancel URL ────────────────────────────────────────────────────

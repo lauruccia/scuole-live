@@ -71,6 +71,7 @@ class SuperadminPanelProvider extends PanelProvider
 
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\ForceChangePassword::class,
             ])
 
             ->bootUsing(function () {

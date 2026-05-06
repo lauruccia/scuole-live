@@ -83,6 +83,7 @@ class TeacherPanelProvider extends PanelProvider
 
             ->authMiddleware([
                 Authenticate::class,
+                \App\Http\Middleware\ForceChangePassword::class,
             ]);
     }
 }

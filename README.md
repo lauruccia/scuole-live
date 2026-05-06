@@ -179,8 +179,10 @@ routes/
 ### Cron cPanel (OBBLIGATORIO in produzione)
 
 ```
-* * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
+* * * * * /usr/local/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
 ```
+
+> ⚠️ Su Aruba usare `/usr/local/bin/php` (CLI) e NON `/usr/bin/php` (CGI: ignora gli argomenti).
 
 Senza questo cron NON funzionano: backup notturno, promemoria rate, follow-up CRM, monitor backup, notifiche scadute.
 
@@ -212,7 +214,7 @@ php artisan queue:work --tries=3 --timeout=60 --sleep=3
 
 Su shared hosting senza supervisor, attivare almeno un cron ogni minuto:
 ```
-* * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan queue:work --stop-when-empty --tries=3 >> /dev/null 2>&1
+* * * * * /usr/local/bin/php /home/aeacenter/scuole_app/artisan queue:work --stop-when-empty --tries=3 >> /dev/null 2>&1
 ```
 
 ---

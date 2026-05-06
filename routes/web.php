@@ -34,8 +34,15 @@ Route::get('/checkout/bonifico/{purchase}', [CheckoutController::class, 'bonific
 Route::get('/checkout/stripe/return', [CheckoutController::class, 'stripeReturn'])->name('checkout.stripe.return');
 Route::get('/checkout/paypal/return', [CheckoutController::class, 'paypalReturn'])->name('checkout.paypal.return');
 Route::get('/checkout/paypal/cancel', [CheckoutController::class, 'paypalCancel'])->name('checkout.paypal.cancel');
-Route::get('/checkout/grazie/{purchase}', [CheckoutController::class, 'grazie'])->name('checkout.grazie');
-Route::get('/checkout/errore/{purchase}', [CheckoutController::class, 'errore'])->name('checkout.errore');
+// Pagine di esito checkout: protette da signed URL per evitare info leak
+// (chi conosce un purchase id non puo' visitarle senza il token firmato).
+// Il middleware 'signed' valida la firma e l'eventuale scadenza.
+Route::get('/checkout/grazie/{purchase}', [CheckoutController::class, 'grazie'])
+    ->middleware('signed')
+    ->name('checkout.grazie');
+Route::get('/checkout/errore/{purchase}', [CheckoutController::class, 'errore'])
+    ->middleware('signed')
+    ->name('checkout.errore');
 
 // ─── Webhook gateway (CSRF escluso tramite VerifyCsrfToken) ──────────────────
 Route::post('/webhook/stripe', [WebhookController::class, 'stripe'])->name('webhook.stripe');

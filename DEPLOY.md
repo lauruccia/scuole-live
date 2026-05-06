@@ -86,13 +86,15 @@ ln -nfs /home/aeacenter/scuole_app/storage/app/public /home/aeacenter/public_htm
 
 **Schedule (obbligatorio — ogni minuto):**
 ```
-* * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
+* * * * * /usr/local/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
 ```
 
 **Worker code (raccomandato — ogni minuto, lavora finché c'è coda):**
 ```
-* * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan queue:work --stop-when-empty --tries=3 >> /dev/null 2>&1
+* * * * * /usr/local/bin/php /home/aeacenter/scuole_app/artisan queue:work --stop-when-empty --tries=3 >> /dev/null 2>&1
 ```
+
+> ⚠️ **Path PHP:** usare `/usr/local/bin/php` (CLI) e NON `/usr/bin/php` (CGI). Su Aruba/cPanel `/usr/bin/php` è la versione CGI: ignora gli argomenti e fa fallire silenziosamente il cron stampando l'help di artisan. È stata la causa #2 dell'incident del 2026-05-06.
 
 ### 3.7 Configurare i Webhook gateway
 

@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\SchoolSetting;
 use Illuminate\Auth\Notifications\ResetPassword as BaseResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 
@@ -12,7 +13,7 @@ class ResetPasswordBrandNotification extends BaseResetPassword
         $url = $this->resetUrl($notifiable);
 
         return (new MailMessage)
-            ->subject('Reimposta la password — A&A Language Center')
+            ->subject('Reimposta la password — ' . SchoolSetting::schoolName())
             ->view('emails.reset-password-brand', [
                 'url' => $url,
                 'notifiable' => $notifiable,

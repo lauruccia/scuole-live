@@ -40,7 +40,7 @@ class GoogleMeetService
         $service = new Calendar($client);
 
         $event = new Event([
-            'summary' => 'Lezione A&A Language',
+            'summary' => 'Lezione ' . \App\Models\SchoolSetting::schoolName(),
             'description' => 'Lezione generata automaticamente dal sistema.',
             'start' => new EventDateTime([
                 'dateTime' => $lesson->starts_at->toIso8601String(),

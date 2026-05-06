@@ -11,7 +11,11 @@ use Illuminate\Support\Facades\Schedule;
 | Comandi artisan custom + scheduling.
 |
 | ATTENZIONE: in produzione il cron cPanel deve eseguire ogni minuto:
-|   * * * * * /usr/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
+|   * * * * * /usr/local/bin/php /home/aeacenter/scuole_app/artisan schedule:run >> /dev/null 2>&1
+|
+| IMPORTANTE: usare /usr/local/bin/php (CLI) e NON /usr/bin/php (CGI) su Aruba.
+| /usr/bin/php su Aruba e' la versione CGI: ignora gli argomenti e stampa l'help
+| di artisan invece di eseguire i comandi (causa #2 dell'incident 2026-05-06).
 |
 | Senza questo cron NESSUN comando schedulato qui sotto verrà eseguito.
 */
