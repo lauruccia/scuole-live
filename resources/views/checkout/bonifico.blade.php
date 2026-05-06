@@ -1,6 +1,13 @@
 @extends('public.layout')
 
-@section('title', 'Istruzioni bonifico — A&A Language Center')
+@php
+    use App\Models\SchoolSetting;
+    $schoolName    = SchoolSetting::schoolName();
+    $schoolIban    = SchoolSetting::bankIban() ?: 'IBAN non configurato — contatta la scuola';
+    $schoolIntest  = SchoolSetting::bankIntestatario() ?: $schoolName;
+@endphp
+
+@section('title', 'Istruzioni bonifico — ' . $schoolName)
 
 @push('styles')
 <style>
@@ -94,7 +101,7 @@
             <div class="card-body">
 
                 <p style="font-size:15px;margin:0 0 22px;line-height:1.6;">
-                    Grazie per aver scelto <strong>A&A Language Center</strong>!<br>
+                    Grazie per aver scelto <strong>{{ $schoolName }}</strong>!<br>
                     Per completare l'iscrizione al corso <strong>{{ $purchase->course->name }}</strong>,
                     esegui un bonifico con questi dati:
                 </p>
@@ -102,11 +109,11 @@
                 <div class="iban-box">
                     <div class="iban-row">
                         <span class="lbl">Intestatario</span>
-                        <span class="val">{{ config('services.bank.intestatario', 'A&A Language Center Srl') }}</span>
+                        <span class="val">{{ $schoolIntest }}</span>
                     </div>
                     <div class="iban-row">
                         <span class="lbl">IBAN</span>
-                        <span class="val">{{ config('services.bank.iban', 'IT00 0000 0000 0000 0000 0000 0') }}</span>
+                        <span class="val">{{ $schoolIban }}</span>
                     </div>
                     <div class="iban-row">
                         <span class="lbl">Importo</span>

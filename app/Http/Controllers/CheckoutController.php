@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\BonificoInstructionsMail;
 use App\Models\Course;
 use App\Models\CoursePurchase;
 use App\Models\SchoolSetting;
@@ -9,6 +10,7 @@ use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
@@ -136,11 +138,33 @@ class CheckoutController extends Controller
     {
         abort_unless($purchase->payment_method === 'bonifico' && $purchase->payment_status === 'pending', 404);
 
-        // Genera riferimento univoco se non ancora presente
-        if (! $purchase->bank_transfer_ref) {
+        // Genera riferimento univoco se non ancora presente.
+        // E' anche il "marker" per decidere se inviare l'email: la prima volta
+        // che generiamo il ref, mandiamo le istruzioni via email; alle visite
+        // successive saltiamo l'invio (idempotente).
+        $isFirstView = ! $purchase->bank_transfer_ref;
+
+        if ($isFirstView) {
             $purchase->update([
                 'bank_transfer_ref' => CoursePurchase::generateBankRef($purchase->id),
             ]);
+
+            // Invia istruzioni via email (in coda → resiliente a SMTP lento).
+            // Try/catch per evitare che un fallimento mail blocchi il checkout:
+            // l'utente vede comunque la pagina con i dati.
+            try {
+                Mail::to($purchase->billing_email)
+                    ->queue(new BonificoInstructionsMail($purchase));
+                Log::info('Bonifico instructions email queued', [
+                    'purchase_id' => $purchase->id,
+                    'to'          => $purchase->billing_email,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Bonifico email NON accodata: ' . $e->getMessage(), [
+                    'purchase_id' => $purchase->id,
+                ]);
+                report($e);
+            }
         }
 
         return view('checkout.bonifico', compact('purchase'));
