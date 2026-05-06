@@ -28,8 +28,10 @@ return [
     | In produzione impostare 0.1–0.2 per limitare i costi.
     |
     */
-    'traces_sample_rate'   => env('SENTRY_TRACES_SAMPLE_RATE', 0.1),
-    'profiles_sample_rate' => env('SENTRY_PROFILES_SAMPLE_RATE', 0.0),
+    // ⚠️  Cast (float) obbligatorio: env() restituisce SEMPRE stringa, ma Sentry
+    //     pretende null|int|float. Senza cast, l'app va in 500 al boot.
+    'traces_sample_rate'   => (float) env('SENTRY_TRACES_SAMPLE_RATE', 0.1),
+    'profiles_sample_rate' => (float) env('SENTRY_PROFILES_SAMPLE_RATE', 0.0),
 
     /*
     |--------------------------------------------------------------------------
