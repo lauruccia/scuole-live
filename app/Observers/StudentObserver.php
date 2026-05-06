@@ -8,6 +8,9 @@ use App\Services\EmailTemplateService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
 
 class StudentObserver
 {
@@ -20,6 +23,8 @@ class StudentObserver
         $existingUser = User::where('email', $student->email)->first();
 
         if ($existingUser) {
+            // Esiste già — assicurati almeno che abbia il ruolo Studente
+            $this->ensureStudenteRole($existingUser);
             return;
         }
 
@@ -28,7 +33,10 @@ class StudentObserver
             $name = $student->email;
         }
 
-        $plainPassword = 'Password123!';
+        // SICUREZZA: password casuale per ogni studente.
+        // Str::password(16) genera 16 char con upper/lower/digits/symbols.
+        // L'utente DEVE cambiarla al primo login (flag must_change_password).
+        $plainPassword = Str::password(16);
 
         $userData = [
             'name' => $name,
@@ -36,7 +44,17 @@ class StudentObserver
             'password' => Hash::make($plainPassword),
         ];
 
+        // must_change_password forza il reset al primo login (vedi middleware
+        // ForceChangePassword). La colonna è opzionale: se non c'è ancora la
+        // migrazione, non blocchiamo la creazione.
+        if (Schema::hasColumn('users', 'must_change_password')) {
+            $userData['must_change_password'] = true;
+        }
+
         $user = User::create($userData);
+
+        // Assegna il ruolo Studente in modo idempotente.
+        $this->ensureStudenteRole($user);
 
         // Invia email di benvenuto DOPO il commit della transazione
         // (evita l'invio se la transazione va in rollback)
@@ -61,10 +79,46 @@ class StudentObserver
                     ]
                 );
             } catch (\Throwable $e) {
-                // Non bloccare la creazione dello studente se l'email fallisce
-                Log::warning('Impossibile inviare email di benvenuto a ' . $studentEmail . ': ' . $e->getMessage());
+                // CRITICO: la password e' casuale e non e' salvata da nessuna
+                // parte. Se la mail fallisce, lo studente non potra' loggarsi
+                // finche' non gli si manda manualmente un reset password.
+                // Logghiamo come ERROR (non warning) per intercettarlo in Sentry.
+                Log::error('Email benvenuto NON inviata: studente ' . $studentEmail . ' bloccato finche\' non si invia un reset password manuale. Errore: ' . $e->getMessage());
+                report($e);
             }
         });
+    }
+
+    /**
+     * Assegna il ruolo Studente in modo idempotente.
+     *
+     * Skipped silenziosamente se:
+     *  - il pacchetto spatie/laravel-permission non e' caricato (es. in test minimali)
+     *  - la tabella roles non esiste ancora
+     *  - il ruolo "Studente" non e' stato seedato
+     *
+     * Cio' garantisce che la creazione dello studente non si rompa in casi limite,
+     * e che il ruolo venga riassegnato se per qualche motivo era stato rimosso.
+     */
+    private function ensureStudenteRole(User $user): void
+    {
+        try {
+            if (! Schema::hasTable('roles')) {
+                return;
+            }
+
+            $roleExists = Role::where('name', 'Studente')->exists();
+            if (! $roleExists) {
+                Log::warning('Ruolo "Studente" non presente in DB — skip assignRole per ' . $user->email);
+                return;
+            }
+
+            if (! $user->hasRole('Studente')) {
+                $user->assignRole('Studente');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('assignRole(Studente) fallito per ' . $user->email . ': ' . $e->getMessage());
+        }
     }
 
     public function updated(Student $student): void

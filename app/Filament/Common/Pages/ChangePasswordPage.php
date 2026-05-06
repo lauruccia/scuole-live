@@ -82,6 +82,8 @@ class ChangePasswordPage extends Page implements Forms\Contracts\HasForms
 
         $user->update([
             'password' => $data['password'],
+            'must_change_password' => false,
+            'password_changed_at' => now(),
         ]);
 
         $this->form->fill([

@@ -18,6 +18,13 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        // Idempotente: skip se la tabella e' gia' stata creata da una run precedente
+        // (es. quando la riga corrispondente nella tabella `migrations` e' stata persa
+        // a causa di un rollback parziale o di un restore manuale).
+        if (Schema::hasTable('student_unsubscribes')) {
+            return;
+        }
+
         Schema::create('student_unsubscribes', function (Blueprint $table) {
             $table->id();
             $table->string('email', 200)->unique();

@@ -21,6 +21,8 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
         'name',
         'email',
         'password',
+        'must_change_password',
+        'password_changed_at',
         'first_name',
         'last_name',
         'phone',
@@ -46,6 +48,8 @@ class User extends Authenticatable implements CanResetPasswordContract, Filament
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'password_changed_at' => 'datetime',
+        'must_change_password' => 'boolean',
         'birth_date' => 'date',
         'teacher_hourly_rate_gross' => 'decimal:2',
         'teacher_subjects' => 'array',

@@ -263,7 +263,7 @@ class EmailTemplateResource extends Resource
                             'nome'              => 'Mario',
                             'cognome'           => 'Rossi',
                             'email'             => 'mario.rossi@example.com',
-                            'password'          => 'Password123!',
+                            'password'          => '••••••••••••', // placeholder anteprima — nessuna credenziale reale
                             'portale_url'       => url('/'),
                             'app_name'          => config('app.name', 'A&A Language Center'),
                             'data_lezione'      => now()->format('d/m/Y'),
@@ -319,7 +319,7 @@ class EmailTemplateResource extends Resource
                                 'nome'             => 'Mario',
                                 'cognome'          => 'Rossi',
                                 'email'            => $user->email,
-                                'password'         => 'Password123!',
+                                'password'         => '••••••••••••', // placeholder test — nessuna credenziale reale
                                 'portale_url'      => url('/'),
                                 'app_name'         => config('app.name'),
                                 'data_lezione'     => now()->format('d/m/Y'),
