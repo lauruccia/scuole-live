@@ -839,7 +839,7 @@ Filter::make('missing_homework')
             ->color('info')
             ->requiresConfirmation()
             ->modalHeading('Crea lezione di recupero')
-            ->modalDescription('Verrà creata automaticamente una lezione di recupero dalla settimana successiva, nello stesso giorno e orario, spostandola alla prima settimana libera se necessario.')
+            ->modalDescription('Verrà creata automaticamente una lezione di recupero nella prima settimana dopo la fine delle altre lezioni del contratto, nello stesso giorno e orario, spostandola alla prima settimana libera se necessario in caso di chiusura o docente occupato.')
             ->visible(function (Lesson $record) use ($isTeacher): bool {
                 if ($isTeacher) return false;
                 if (! $record->cancelled_at) return false;

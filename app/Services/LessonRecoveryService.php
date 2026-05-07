@@ -49,10 +49,32 @@ class LessonRecoveryService
 
         /**
          * REGOLA:
-         * Il recupero parte SEMPRE dalla settimana successiva
-         * rispetto alla lezione annullata, stesso giorno e stessa ora.
+         * Il recupero parte dalla prima settimana di calendario DOPO
+         * l'ultima lezione regolare (non annullata, non di recupero) del contratto,
+         * nello stesso giorno della settimana e alla stessa ora della lezione annullata.
+         *
+         * Se non esistono altre lezioni pianificate, fallback alla settimana successiva.
          */
-        $candidate = $originalStarts->copy()->addWeek();
+        $lastOtherStart = Lesson::query()
+            ->where('contract_id', $lesson->contract_id)
+            ->where('id', '!=', $lesson->id)
+            ->whereNull('cancelled_at')
+            ->whereNull('deleted_at')
+            ->whereNull('recovery_of_lesson_id')
+            ->max('starts_at');
+
+        if ($lastOtherStart) {
+            // Prima settimana di calendario DOPO l'ultima lezione regolare,
+            // nello stesso giorno della settimana della lezione annullata.
+            $lastLesson   = Carbon::parse($lastOtherStart);
+            $nextWeekStart = $lastLesson->copy()->addWeek()->startOfWeek(Carbon::MONDAY);
+            $targetDow     = $originalStarts->dayOfWeek; // 0=dom, 1=lun, …, 6=sab
+            $daysToAdd     = ($targetDow - $nextWeekStart->dayOfWeek + 7) % 7;
+            $candidate     = $nextWeekStart->copy()->addDays($daysToAdd);
+        } else {
+            // Nessuna altra lezione pianificata nel contratto: fallback alla settimana successiva.
+            $candidate = $originalStarts->copy()->addWeek();
+        }
 
         [$candidate, $movedReason] = $this->findFirstAvailableRecoverySlot(
             lesson: $lesson,

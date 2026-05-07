@@ -239,7 +239,7 @@ class LessonsRelationManager extends RelationManager
                     ->icon('heroicon-o-x-circle')
                     ->requiresConfirmation()
                     ->modalHeading('Annulla lezione')
-                    ->modalDescription('Se annulli almeno 24h prima, la lezione sarà “da recuperare” e verrà creata automaticamente una nuova lezione nel primo giorno utile.')
+                    ->modalDescription('Se annulli almeno 24h prima, la lezione sarà “da recuperare” e verrà creata automaticamente una nuova lezione nella prima settimana dopo la fine delle altre lezioni del contratto, stesso giorno e orario.')
                     ->form([
                         DateTimePicker::make('cancelled_at')
                             ->label('Data e ora annullamento')
