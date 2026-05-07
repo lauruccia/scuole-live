@@ -18,8 +18,17 @@ return [
     |   php artisan activitylog:clean
     | Impostare a null per non eliminare mai.
     |
+    | 730 giorni (2 anni) è il default ragionevole per un audit log
+    | che traccia dati GDPR e finanziari: copre la maggior parte delle
+    | richieste di accesso (Subject Access Request) e debug post-incident,
+    | senza far esplodere la tabella.
+    |
+    | Override per ambiente con: ACTIVITY_LOG_RETENTION_DAYS=...
+    | (per disattivare la pulizia in produzione, mettere a stringa "null"
+    | nel .env e gestirla a livello applicativo).
+    |
     */
-    'delete_records_older_than_days' => 90,
+    'delete_records_older_than_days' => env('ACTIVITY_LOG_RETENTION_DAYS', 730),
 
     /*
     |--------------------------------------------------------------------------

@@ -243,6 +243,55 @@ In caso di deploy con bug critico:
 
 ---
 
+## 8.bis Audit log & GDPR (esposto in Filament)
+
+Da maggio 2026 il pannello Admin/Superadmin espone l'**Audit log** sotto
+`Impostazioni → Audit log`. Tracciamento attivo su:
+
+| Categoria (`log_name`) | Model | Note |
+|---|---|---|
+| `gdpr` | Student, BillingProfile | Dati personali ex Art. 5 GDPR |
+| `payments` | CoursePurchase | Transazioni finanziarie |
+| `contracts` | Contract, Installment | Già attivo da hardening pre-go-live |
+| `users` | User | NON tracciate password/remember_token/cv_path/id_doc_path |
+| `permissions` | Role, Permission | Cambi ruolo / privilegi |
+
+### Retention
+
+`config/activitylog.php` → `delete_records_older_than_days = 730` (2 anni),
+override via env `ACTIVITY_LOG_RETENTION_DAYS=...`.
+
+Il comando `activitylog:clean` è già schedulato in `routes/console.php` —
+parte ogni 1° del mese alle 04:00.
+
+### Subject Access Request (Art. 15 GDPR)
+
+Per esportare TUTTI i dati personali di un interessato in un singolo JSON:
+
+```bash
+# Una di queste tre opzioni
+php artisan school:gdpr-export-user --email=mario.rossi@example.com
+php artisan school:gdpr-export-user --student-id=42
+php artisan school:gdpr-export-user --user-id=7
+```
+
+L'output finisce in `storage/app/gdpr-exports/{slug}-{timestamp}.json`
+e include: User, Student, BillingProfile, contratti, acquisti, lezioni,
+log email inviate, log GDPR di modifica dati, eventuali disiscrizioni,
+attività causate dall'utente stesso (se è uno staff member).
+
+> **Trasmettere all'interessato in modo sicuro**: link firmato a scadenza,
+> NON allegato non cifrato. Cancellare il file dal server entro 30 giorni
+> dall'invio (best practice ICO/Garante).
+
+### Su cPanel (no SSH)
+
+I comandi sopra si eseguono via cron one-off con redirect dell'output a file —
+vedere memoria progetto / sessione operativa per il pattern. Per leggere
+l'audit log non serve console: tutto è in Filament UI.
+
+---
+
 ## 9. Checklist di go-live
 
 - [ ] `.env` produzione compilato (vedere README.md § 8)

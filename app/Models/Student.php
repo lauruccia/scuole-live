@@ -10,10 +10,39 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Contract;
 use App\Models\Lesson;
 use App\Models\User;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Student extends Model
 {
-    use SoftDeletes;
+    use LogsActivity, SoftDeletes;
+
+    // ─── Activity Log (GDPR) ──────────────────────────────────────────────────
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('gdpr')
+            ->logOnly([
+                'first_name', 'last_name', 'email', 'phone',
+                'fiscal_code',
+                'birth_date', 'birth_place', 'birth_province', 'birth_country',
+                'residence_address', 'residence_zip', 'residence_city',
+                'residence_province', 'residence_country',
+                'parent_first_name', 'parent_last_name', 'parent_email', 'parent_phone',
+                'is_minor',
+                'employer_name', 'employer_vat_number',
+                'user_id',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName): string => match ($eventName) {
+                'created' => "Studente #{$this->id} creato — {$this->full_name}",
+                'updated' => "Studente #{$this->id} aggiornato — {$this->full_name}",
+                'deleted' => "Studente #{$this->id} eliminato — {$this->full_name}",
+                default   => "Studente #{$this->id} — {$eventName}",
+            });
+    }
+
     protected $fillable = [
         'user_id',
 

@@ -5,10 +5,42 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class CoursePurchase extends Model
 {
-    use SoftDeletes;
+    use LogsActivity, SoftDeletes;
+
+    // ─── Activity Log (transazioni finanziarie) ──────────────────────────────
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('payments')
+            ->logOnly([
+                'course_id', 'user_id', 'contract_id',
+                'payment_method', 'payment_status', 'amount',
+                'stripe_session_id', 'stripe_payment_intent',
+                'paypal_order_id', 'bank_transfer_ref',
+                'billing_type',
+                'billing_first_name', 'billing_last_name', 'billing_email',
+                'company_name', 'vat_number', 'billing_tax_code',
+                'paid_at',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(function (string $eventName): string {
+                $buyer = $this->buyer_name ?: ($this->billing_email ?? "#{$this->id}");
+                $amount = number_format((float) $this->amount, 2, ',', '.');
+                return match ($eventName) {
+                    'created' => "Acquisto corso #{$this->id} creato — {$buyer} ({$amount} €)",
+                    'updated' => "Acquisto corso #{$this->id} aggiornato — {$buyer} (stato: {$this->payment_status})",
+                    'deleted' => "Acquisto corso #{$this->id} eliminato — {$buyer}",
+                    default   => "Acquisto corso #{$this->id} — {$eventName}",
+                };
+            });
+    }
+
 
     protected $fillable = [
         'course_id',
