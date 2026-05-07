@@ -173,6 +173,7 @@ class InvioComunicazioni extends Page implements Forms\Contracts\HasForms
                         studentName: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
                         subjectLine: $state['subject'],
                         htmlBody: $state['body'],
+                        recipientEmail: $student->email ?? '',
                     )
                 );
 

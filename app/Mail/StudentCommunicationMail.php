@@ -14,6 +14,7 @@ class StudentCommunicationMail extends Mailable
         public string $studentName,
         public string $subjectLine,
         public string $htmlBody,
+        public string $recipientEmail = '',
     ) {}
 
     public function build()

@@ -1,3 +1,9 @@
+@php
+    use App\Support\UnsubscribeToken;
+    $unsubUrl = $recipientEmail
+        ? url('/unsubscribe/' . UnsubscribeToken::generate($recipientEmail))
+        : '';
+@endphp
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -43,5 +49,16 @@
             </td>
         </tr>
     </table>
+    @if ($unsubUrl)
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f5; padding:10px 0 20px;">
+        <tr>
+            <td align="center">
+                <p style="margin:0; font-size:11px; color:#aaa;">
+                    <a href="{{ $unsubUrl }}" style="color:#aaa;">Disiscriviti</a> da queste comunicazioni
+                </p>
+            </td>
+        </tr>
+    </table>
+    @endif
 </body>
 </html>

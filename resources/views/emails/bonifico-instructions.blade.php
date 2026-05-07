@@ -1,5 +1,6 @@
 @php
     use App\Models\SchoolSetting;
+    use App\Support\UnsubscribeToken;
     $schoolName = SchoolSetting::schoolName();
     $iban       = SchoolSetting::bankIban();
     $intest     = SchoolSetting::bankIntestatario();
@@ -8,6 +9,10 @@
     $ref        = $purchase->bank_transfer_ref;
     $supportPhone  = SchoolSetting::schoolPhone();
     $supportEmail  = SchoolSetting::schoolEmail();
+    $recipientEmail = $purchase->billing_email ?? '';
+    $unsubUrl = $recipientEmail
+        ? url('/unsubscribe/' . UnsubscribeToken::generate($recipientEmail))
+        : '';
 @endphp
 <!DOCTYPE html>
 <html lang="it">
@@ -113,6 +118,9 @@
               <br>{{ SchoolSetting::schoolFullAddress() }}
             @endif
             <br>Email automatica generata dal sistema di iscrizione &mdash; non rispondere a questo indirizzo.
+            @if ($unsubUrl)
+              &middot; <a href="{{ $unsubUrl }}" style="color:#7a8ca8;">Disiscriviti</a>
+            @endif
           </p>
         </td>
       </tr>

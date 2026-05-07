@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Mail\TemplateMail;
 use App\Models\EmailTemplate;
 use App\Models\SchoolSetting;
+use App\Support\UnsubscribeToken;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -49,7 +50,7 @@ HTML;
      * Avvolge il contenuto del template in un layout email responsive.
      * Header e footer leggono nome e indirizzo da SchoolSetting.
      */
-    private function wrapInLayout(string $bodyContent): string
+    private function wrapInLayout(string $bodyContent, string $recipientEmail = ''): string
     {
         $signature  = $this->signature();
         $name       = e(SchoolSetting::schoolName());
@@ -57,6 +58,14 @@ HTML;
         $address    = e(SchoolSetting::schoolFullAddress());
         $website    = SchoolSetting::schoolWebsite();
         $privacyUrl = rtrim($website, '/') . '/privacy';
+
+        // Link disiscrizione (GDPR art. 13)
+        $unsubRow = '';
+        if ($recipientEmail) {
+            $token     = UnsubscribeToken::generate($recipientEmail);
+            $unsubUrl  = url('/unsubscribe/' . $token);
+            $unsubRow  = " &middot; <a href=\"{$unsubUrl}\" style=\"color:#888;\">Disiscriviti</a>";
+        }
 
         // Mostra solo il dominio nell'header (senza https://)
         $websiteDisplay = preg_replace('#^https?://(www\.)?#', '', $website);
@@ -90,7 +99,7 @@ HTML;
         <td style="background:#f0f4f8; border-top:1px solid #dde5ef; padding:16px 40px; text-align:center;">
           <p style="margin:0; font-size:12px; color:#888;">
             {$legalName} — {$address}<br>
-            <a href="{$privacyUrl}" style="color:#888;">Privacy Policy</a>
+            <a href="{$privacyUrl}" style="color:#888;">Privacy Policy</a>{$unsubRow}
           </p>
         </td>
       </tr>
@@ -173,7 +182,7 @@ HTML;
         [$subject, $rawBody] = array_values($template->render($variables));
 
         // Avvolge il contenuto nel layout completo con firma
-        $fullHtml = $this->wrapInLayout($rawBody);
+        $fullHtml = $this->wrapInLayout($rawBody, $toEmail);
 
         try {
             $mailable = new TemplateMail($fullHtml, $subject, $attachments);
