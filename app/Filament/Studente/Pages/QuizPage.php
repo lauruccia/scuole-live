@@ -50,10 +50,10 @@ class QuizPage extends Page
 
         $questions = QuizQuestion::forQuiz($this->selectedLanguage, 3);
 
-        if ($questions->count() < 6) {
+        if ($questions->count() < 1) {
             Notification::make()
                 ->title('Quiz non disponibile')
-                ->body('Non ci sono abbastanza domande per questa lingua. Contatta la segreteria.')
+                ->body('Non ci sono domande per questa lingua. Contatta la segreteria.')
                 ->warning()
                 ->send();
             return;
