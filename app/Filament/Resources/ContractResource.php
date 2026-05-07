@@ -1157,7 +1157,7 @@ Select::make('student_id')
                         Section::make('Firma digitale')
                             ->icon('heroicon-o-pencil-square')
                             ->description('Informazioni sulla firma digitale del contratto tramite OTP email.')
-                            ->collapsed()
+                            ->collapsed(fn ($record) => ! $record?->signed_at)
                             ->schema([
                                 Grid::make(2)->schema([
                                     Placeholder::make('firma_status')
@@ -1503,7 +1503,7 @@ Select::make('student_id')
                         : 'Non ancora firmato')
                     ->icon(fn ($record) => $record->signed_at ? 'heroicon-s-check-badge' : 'heroicon-o-clock')
                     ->color(fn ($record) => $record->signed_at ? 'success' : 'gray')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->filters([
                 \Filament\Tables\Filters\SelectFilter::make('academic_year')
