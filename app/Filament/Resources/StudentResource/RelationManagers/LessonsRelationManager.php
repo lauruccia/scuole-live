@@ -107,9 +107,9 @@ class LessonsRelationManager extends RelationManager
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (da recuperare)',
+                        'annullata_recover' => 'Da recuperare',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Recuperata',
+                        'recuperata'        => 'Recupero da svolgere',
                         default             => ucfirst((string) $state),
                     }),
             ])
@@ -150,9 +150,9 @@ class LessonsRelationManager extends RelationManager
                     ->options([
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (da recuperare)',
+                        'annullata_recover' => 'Da recuperare',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Recuperata',
+                        'recuperata'        => 'Recupero da svolgere',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;

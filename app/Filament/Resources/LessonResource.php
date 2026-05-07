@@ -249,9 +249,9 @@ Select::make('language_id')
                         ->options([
                             'programmata'       => 'Programmata',
                             'completata'        => 'Completata',
-                            'annullata_recover' => 'Annullata (recupero)',
+                            'annullata_recover' => 'Da recuperare',
                             'annullata'         => 'Annullata',
-                            'recuperata'        => 'Da recuperare',
+                            'recuperata'        => 'Recupero da svolgere',
                         ])
                         ->dehydrated(false)
                         ->live()
@@ -478,9 +478,9 @@ Select::make('language_id')
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (recupero)',
+                        'annullata_recover' => 'Da recuperare',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Da Recuperare',
+                        'recuperata'        => 'Recupero da svolgere',
                         default             => ucfirst((string) $state),
                     }),
 
@@ -558,9 +558,9 @@ Filter::make('missing_homework')
                     ->options([
                         'programmata'       => 'Programmata',
                         'completata'        => 'Completata',
-                        'annullata_recover' => 'Annullata (recupero)',
+                        'annullata_recover' => 'Da recuperare',
                         'annullata'         => 'Annullata',
-                        'recuperata'        => 'Da Recuperare',
+                        'recuperata'        => 'Recupero da svolgere',
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         $value = $data['value'] ?? null;
