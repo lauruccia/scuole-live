@@ -31,7 +31,7 @@ class TemplateMail extends Mailable implements ShouldQueue
     public function __construct(
         private readonly string $htmlContent,
         private readonly string $mailSubject,
-        private readonly array  $attachments = [],
+        private readonly array  $mailAttachments = [],
     ) {}
 
     public function envelope(): Envelope
@@ -52,7 +52,7 @@ class TemplateMail extends Mailable implements ShouldQueue
 
     public function attachments(): array
     {
-        return collect($this->attachments)
+        return collect($this->mailAttachments)
             ->map(fn ($att) => \Illuminate\Mail\Mailables\Attachment::fromData(
                 fn () => $att['data'],
                 $att['name'] ?? 'allegato'
