@@ -98,7 +98,7 @@ class StudentContractResource extends Resource
                     ->label('Apri contratto')
                     ->icon('heroicon-o-printer')
                     ->color('primary')
-                    ->url(fn (Contract $record): string => route('student.contracts.print', ['contract' => $record]))
+                    ->url(fn (Contract $record): string => route('studente.contratto.print', ['contract' => $record]))
                     ->openUrlInNewTab(),
             ])
             ->bulkActions([]);

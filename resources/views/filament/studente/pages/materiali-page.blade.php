@@ -5,7 +5,9 @@
     @if($materials->isEmpty())
         <x-filament::section>
             <div class="text-center py-10 text-gray-500 dark:text-gray-400">
-                <x-heroicon-o-document-arrow-down class="mx-auto h-12 w-12 opacity-40 mb-3"/>
+                <div class="mx-auto mb-3 opacity-40 text-gray-400" style="width:3rem;height:3rem;">
+                    <x-heroicon-o-document-arrow-down class="w-full h-full" />
+                </div>
                 <p class="font-medium">Nessun materiale disponibile</p>
                 <p class="text-sm mt-1">I tuoi materiali didattici appariranno qui quando il docente o la segreteria li caricheranno.</p>
             </div>
