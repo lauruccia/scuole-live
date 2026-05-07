@@ -5,12 +5,33 @@ namespace App\Filament\Resources\LessonResource\Pages;
 use App\Filament\Resources\LessonResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Resources\Pages\ListRecords\Tab;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ListLessons extends ListRecords
 {
     protected static string $resource = LessonResource::class;
+
+    public function getTabs(): array
+    {
+        return [
+            'tutte' => Tab::make('Tutte le lezioni')
+                ->icon('heroicon-o-list-bullet'),
+
+            'recuperi' => Tab::make('Recuperi')
+                ->icon('heroicon-o-arrow-path-rounded-square')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('recovery_of_lesson_id')),
+
+            'da_recuperare' => Tab::make('Da recuperare')
+                ->icon('heroicon-o-exclamation-circle')
+                ->modifyQueryUsing(fn (Builder $query) => $query
+                    ->whereNotNull('cancelled_at')
+                    ->where('is_recoverable', true)
+                    ->whereDoesntHave('recoveryLesson')),
+        ];
+    }
 
     protected function shouldPersistTableFiltersInSession(): bool
     {

@@ -104,18 +104,20 @@ class StudentLessonResource extends Resource
                             return 'Annullata';
                         }
 
-                        if ($record->completed_at) {
-                            return 'Svolta';
+                        // Allineato con la logica admin: usa counts_as_consumed
+                        // (che viene settato sia da completed_at che da annullamento <24h)
+                        if ($record->counts_as_consumed) {
+                            return 'Completata';
                         }
 
                         return 'Programmata';
                     })
                     ->color(function (string $state): string {
                         return match ($state) {
-                            'Svolta' => 'success',
-                            'Annullata' => 'danger',
+                            'Completata'    => 'success',
+                            'Annullata'     => 'danger',
                             'Da recuperare' => 'warning',
-                            default => 'info',
+                            default         => 'info',
                         };
                     }),
 
