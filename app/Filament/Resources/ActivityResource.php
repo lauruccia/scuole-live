@@ -33,7 +33,9 @@ class ActivityResource extends Resource
         $u = auth()->user();
         if (! $u) return false;
 
-        return $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin', 'Amministrazione']);
+        // Solo Superadmin: l'audit log contiene log GDPR, finanziari e di permessi
+        // che né Amministrazione né Segreteria devono vedere.
+        return $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
     }
 
     public static function canViewAny(): bool

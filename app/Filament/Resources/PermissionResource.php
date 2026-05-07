@@ -21,17 +21,31 @@ class PermissionResource extends Resource
 protected static ?int $navigationSort = 999;
 
     public static function shouldRegisterNavigation(): bool
-{
-    $u = auth()->user();
-    if (! $u) return false;
+    {
+        $u = auth()->user();
+        if (! $u) return false;
 
-    return $u->hasRole('superadmin'); // solo superadmin
-}
+        return $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
+    }
 
     public static function canViewAny(): bool
     {
-        $u = auth()->user();
-        return (bool) $u && $u->hasRole('superadmin');
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canCreate(): bool
+    {
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return self::shouldRegisterNavigation();
     }
 
     public static function form(Form $form): Form

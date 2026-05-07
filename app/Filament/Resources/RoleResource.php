@@ -36,7 +36,27 @@ class RoleResource extends Resource
         $u = auth()->user();
         if (! $u) return false;
 
-        return $u->hasAnyRole(['superadmin', 'super_admin']);
+        return $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
+    }
+
+    public static function canViewAny(): bool
+    {
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canCreate(): bool
+    {
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return self::shouldRegisterNavigation();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return self::shouldRegisterNavigation();
     }
 
     public static function form(Form $form): Form

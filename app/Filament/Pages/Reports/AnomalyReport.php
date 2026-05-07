@@ -34,7 +34,17 @@ class AnomalyReport extends Page implements Forms\Contracts\HasForms
     {
         $u = Filament::auth()->user();
         if (! $u) return false;
-        if ($u->hasAnyRole(['super_admin', 'superadmin', 'admin', 'Amministrazione'])) return true;
+
+        // Deny esplicito su Segreteria: il controllo anomalie incrocia dati
+        // di docenti e contratti — non deve essere accessibile.
+        if ($u->hasRole('Segreteria')) {
+            return false;
+        }
+
+        if ($u->hasAnyRole(['Superadmin', 'super_admin', 'superadmin', 'admin', 'Amministrazione'])) {
+            return true;
+        }
+
         return $u->can('page_' . class_basename(static::class));
     }
 

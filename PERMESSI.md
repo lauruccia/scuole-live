@@ -1,6 +1,6 @@
 # ScuoleLive — Audit ruoli e permessi
 
-> Aggiornato 05/05/2026
+> Aggiornato 07/05/2026 (revisione matrice menu Superadmin/Amministrazione/Segreteria)
 
 ---
 
@@ -20,25 +20,36 @@ I ruoli sono case-sensitive su Spatie Permission.
 
 ## 2. Matrice permessi per funzione
 
-| Funzione | superadmin | Amministrazione | Segreteria | Docente | Studente |
+| Funzione | Superadmin | Amministrazione | Segreteria | Docente | Studente |
 |----------|:---------:|:---------------:|:----------:|:-------:|:--------:|
 | GestioneOperazioni | ✅ | ✅ | ❌ | ❌ | ❌ |
 | Comandi sistema (SuperadminCommands) | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Audit log (ActivityResource)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Google scuola (GoogleSettings)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Permessi (PermissionResource)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Ruoli (RoleResource)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Log invii email (NotificationEmailLogResource)** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | TeacherPayReport (paghe) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | TeacherHoursReport | ✅ | ✅ | ✅ | ❌ | ❌ |
-| TeacherResource (dati fiscali) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| TeacherResource (Docenti) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| AnomalyReport (Controllo anomalie) | ✅ | ✅ | ❌ | ❌ | ❌ |
 | StudentResource | ✅ | ✅ | ✅ | ❌ | ❌ |
 | ContractResource | ✅ | ✅ | ✅ | ❌ | ❌ |
 | LessonResource | ✅ | ✅ | ✅ | ❌ | ❌ |
-| PaymentsReport | ✅ | da verificare | ❌ | ❌ | ❌ |
-| AnomalyReport | ✅ | da verificare | ❌ | ❌ | ❌ |
-| StudentHoursReport | ✅ | da verificare | ❌ | ❌ | ❌ |
+| PaymentsReport | ✅ | ✅ | ✅ | ❌ | ❌ |
+| StudentHoursReport | ✅ | ✅ | ✅ | ❌ | ❌ |
 | ImpostazioniScuola | ✅ | ✅ | ✅ | ❌ | ❌ |
 | StudentUnsubscribeResource | ✅ | ✅ | ✅ | ❌ | ❌ |
-| NotificationEmailLogResource | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **UserResource (Users)** | ✅ tutti | ✅ no Superadmin* | ✅ no Superadmin* | ❌ | ❌ |
 | Stampa contratto / PDF | ✅ | ✅ | ✅ | ❌ | propri |
 | Materiali / Compiti / Quiz | ✅ | ✅ | ✅ | ✅ | leggi |
 | Calendario lezioni | ✅ | ✅ | ✅ | proprio | proprio |
+
+**\* Users — comportamento per Amministrazione/Segreteria:**
+- I record con ruolo Superadmin sono filtrati dall'elenco (via `getEloquentQuery`)
+- Il bottone Modifica/Elimina restituisce 403 se il record è Superadmin (via `canEdit`/`canDelete`)
+- Il Select dei ruoli in fase di creazione/modifica nasconde l'opzione Superadmin (via `Select::make('roles')->options(...)`)
+- Accesso diretto via URL `/users/{id}/edit` di un Superadmin → 404 (record fuori query)
 
 ---
 

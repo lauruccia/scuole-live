@@ -43,14 +43,32 @@ class NotificationEmailLogResource extends Resource
 
     public static function canDelete($record): bool
     {
-        $u = auth()->user();
-        return $u?->hasRole('superadmin') ?? false;
+        return self::isSuperadmin();
     }
 
     public static function canAccess(): bool
     {
+        return self::isSuperadmin();
+    }
+
+    public static function canViewAny(): bool
+    {
+        return self::isSuperadmin();
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return self::isSuperadmin();
+    }
+
+    /**
+     * Solo Superadmin: i log invii email possono contenere indirizzi email,
+     * timestamp e metadati che non vogliamo esporre a Segreteria/Amministrazione.
+     */
+    private static function isSuperadmin(): bool
+    {
         $u = auth()->user();
-        return $u?->hasAnyRole(['superadmin', 'Amministrazione', 'Segreteria']) ?? false;
+        return $u?->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']) ?? false;
     }
 
     public static function form(Form $form): Form

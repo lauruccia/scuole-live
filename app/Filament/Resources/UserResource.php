@@ -33,14 +33,96 @@ class UserResource extends Resource
    protected static ?int $navigationSort = 999;
 
     /**
-     * Dashboard docente pulita: il docente non vede "Users".
+     * Visibilità menu Users:
+     *  - Superadmin: vede tutto
+     *  - Amministrazione / Segreteria: vedono Users ma con i record Superadmin
+     *    filtrati (vedi getEloquentQuery) e impossibilitati a modificarli
+     *    (vedi canEdit/canDelete) o ad assegnare il ruolo Superadmin
+     *    (vedi Select::make('roles') nella form()).
+     *  - Docente / Studente: NON vedono Users.
      */
-public static function shouldRegisterNavigation(): bool
-{
-    $u = Filament::auth()->user();
+    public static function shouldRegisterNavigation(): bool
+    {
+        return self::userCanViewUsers();
+    }
 
-    return $u && $u->hasRole('superadmin');
-}
+    public static function canViewAny(): bool
+    {
+        return self::userCanViewUsers();
+    }
+
+    public static function canCreate(): bool
+    {
+        return self::userCanViewUsers();
+    }
+
+    /**
+     * Solo Superadmin può modificare un altro Superadmin.
+     * Amministrazione / Segreteria possono modificare gli altri utenti.
+     */
+    public static function canEdit($record): bool
+    {
+        $u = auth()->user();
+        if (! $u || ! self::userCanViewUsers()) return false;
+
+        // Se il record è Superadmin, solo un Superadmin può modificarlo
+        if (self::recordIsSuperadmin($record)) {
+            return self::isSuperadmin($u);
+        }
+
+        return true;
+    }
+
+    public static function canDelete($record): bool
+    {
+        $u = auth()->user();
+        if (! $u || ! self::userCanViewUsers()) return false;
+
+        // Mai cancellare un Superadmin se non sei Superadmin
+        if (self::recordIsSuperadmin($record)) {
+            return self::isSuperadmin($u);
+        }
+
+        return self::isSuperadmin($u);
+    }
+
+    public static function canView($record): bool
+    {
+        $u = auth()->user();
+        if (! $u || ! self::userCanViewUsers()) return false;
+
+        if (self::recordIsSuperadmin($record)) {
+            return self::isSuperadmin($u);
+        }
+
+        return true;
+    }
+
+    /* ─── Helpers permessi ─── */
+
+    private static function userCanViewUsers(): bool
+    {
+        $u = Filament::auth()->user();
+        return $u && $u->hasAnyRole([
+            'Superadmin', 'superadmin', 'super_admin',
+            'Amministrazione',
+            'Segreteria',
+        ]);
+    }
+
+    private static function isSuperadmin($u): bool
+    {
+        return $u && $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
+    }
+
+    private static function recordIsSuperadmin($record): bool
+    {
+        if (! $record) return false;
+        if (method_exists($record, 'hasAnyRole')) {
+            return $record->hasAnyRole(['Superadmin', 'superadmin', 'super_admin']);
+        }
+        return false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -75,9 +157,10 @@ Select::make('roles')
 
         $q = Role::query()->orderBy('name');
 
-        // chi non è superadmin non può assegnare superadmin
-        if ($u && ! $u->hasRole('superadmin')) {
-            $q->where('name', '!=', 'superadmin');
+        // Chi non è Superadmin non può assegnare il ruolo Superadmin
+        // (in nessuna delle sue varianti canoniche).
+        if ($u && ! self::isSuperadmin($u)) {
+            $q->whereNotIn('name', ['Superadmin', 'superadmin', 'super_admin']);
         }
 
         return $q->pluck('name', 'id')->toArray();
@@ -255,9 +338,15 @@ public static function getEloquentQuery(): Builder
     $q = parent::getEloquentQuery();
 
     $u = auth()->user();
-    if ($u && ! $u->hasRole('superadmin')) {
-        // non mostrare utenti superadmin
-        $q->whereDoesntHave('roles', fn ($r) => $r->where('name', 'superadmin'));
+
+    // Chi non è Superadmin non vede in lista utenti con ruolo Superadmin
+    // (alias canonici: Superadmin / superadmin / super_admin).
+    // Se cerca di accedere via URL diretto a /users/{id}/edit di un Superadmin,
+    // canEdit($record) ritornerà false e canView/getEloquentQuery → 404 record.
+    if ($u && ! self::isSuperadmin($u)) {
+        $q->whereDoesntHave('roles', fn ($r) => $r->whereIn('name', [
+            'Superadmin', 'superadmin', 'super_admin',
+        ]));
     }
 
     return $q;
