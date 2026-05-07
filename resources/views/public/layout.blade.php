@@ -127,7 +127,6 @@
         <a href="{{ route('home') }}" class="hide-mobile">Home</a>
         <a href="{{ route('checkout.catalogo') }}" class="hide-mobile">Corsi</a>
         <a href="{{ $contattiUrl }}" class="hide-mobile">Contatti</a>
-        <a href="{{ route('checkout.catalogo') }}" class="btn btn-outline hide-mobile">Info</a>
         <a href="{{ route('iscrizione') }}" class="btn btn-primary">Iscriviti</a>
     </div>
 </nav>
