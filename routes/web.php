@@ -96,26 +96,36 @@ Route::middleware(['auth'])
 
 // ─── Download backup (solo Superadmin) ───────────────────────────────────────
 Route::middleware(['auth'])
-    ->get('/admin/backup/download/{filename}', function (string $filename) {
+    ->get('/admin/backup/download/{filename}', function (\Illuminate\Http\Request $request, string $filename) {
         // Solo Superadmin
         if (! auth()->user()?->hasAnyRole(['Superadmin', 'superadmin', 'super_admin'])) {
             abort(403);
         }
 
-        // Sanity check: solo .zip, nessun path traversal
+        // Sanity check: solo .zip, nessun path traversal nel filename
         if (! str_ends_with($filename, '.zip') || str_contains($filename, '/') || str_contains($filename, '\\')) {
             abort(400, 'Nome file non valido.');
         }
 
-        $appName = config('backup.backup.name', config('app.name', 'ScuoleLive'));
-        $path    = $appName . '/' . $filename;
         $disk    = \Illuminate\Support\Facades\Storage::disk('local-backups');
+        $appName = config('backup.backup.name', config('app.name', 'ScuoleLive'));
 
-        if (! $disk->exists($path)) {
-            abort(404, 'Backup non trovato.');
+        // Prova il percorso con folder passato come query param, poi con appName, poi root
+        $folder    = $request->query('folder', $appName);
+        $candidate = $folder && $folder !== '.' ? ltrim($folder, '/\\') . '/' . $filename : $filename;
+
+        // Sanity check sul folder (nessun traversal)
+        if (str_contains($candidate, '..')) {
+            abort(400, 'Percorso non valido.');
         }
 
-        return response()->download($disk->path($path), $filename);
+        foreach ([$candidate, $appName . '/' . $filename, $filename] as $path) {
+            if ($disk->exists($path)) {
+                return response()->download($disk->path($path), $filename);
+            }
+        }
+
+        abort(404, 'Backup non trovato.');
     })
     ->name('backup.download');
 

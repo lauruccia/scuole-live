@@ -69,7 +69,7 @@
                                 <td class="py-3 text-right">
                                     <div class="inline-flex items-center gap-2">
                                         {{-- Download --}}
-                                        <a href="{{ route('backup.download', ['filename' => $file['name']]) }}"
+                                        <a href="{{ route('backup.download', ['filename' => $file['name'], 'folder' => dirname($file['path'])]) }}"
                                            class="inline-flex items-center gap-1.5 rounded-md bg-info-50 dark:bg-info-900/30 px-3 py-1.5 text-xs font-medium text-info-700 dark:text-info-400 hover:bg-info-100 dark:hover:bg-info-900/50 transition-colors">
                                             <x-heroicon-m-arrow-down-tray class="h-3.5 w-3.5" />
                                             Scarica
@@ -77,7 +77,7 @@
 
                                         {{-- Elimina --}}
                                         <button
-                                            wire:click="deleteBackup('{{ $file['name'] }}')"
+                                            wire:click="deleteBackup('{{ addslashes($file['path']) }}')"
                                             wire:confirm="Sei sicuro di voler eliminare questo backup? L'operazione è irreversibile."
                                             class="inline-flex items-center gap-1.5 rounded-md bg-danger-50 dark:bg-danger-900/30 px-3 py-1.5 text-xs font-medium text-danger-700 dark:text-danger-400 hover:bg-danger-100 dark:hover:bg-danger-900/50 transition-colors"
                                         >
