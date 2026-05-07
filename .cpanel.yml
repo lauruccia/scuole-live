@@ -70,9 +70,16 @@ deployment:
     #    --delete tiene scuole_app perfettamente allineato al repo
     #    ATTENZIONE: i file in --exclude NON vengono toccati
     #
-    #    --exclude='vendor/' è CRITICO: il repo non contiene il vendor completo
-    #    (solo i file autoload). Senza esclusione, rsync --delete cancella il
-    #    vendor reale dal server, mandando giù il sito.
+    #    --exclude='/vendor/' (slash iniziale) è CRITICO: il repo non contiene
+    #    il vendor completo (solo i file autoload). Senza esclusione, rsync
+    #    --delete cancella il vendor reale dal server, mandando giù il sito.
+    #
+    #    ⚠️  GOTCHA RSYNC: i pattern senza slash iniziale matchano cartelle
+    #    a QUALSIASI livello. Es. --exclude='public/' senza slash escludeva
+    #    anche resources/views/public/ → layout.blade.php non si aggiornava
+    #    mai dopo i deploy. Da qui in poi: leading slash per cartelle
+    #    pensate solo alla radice del progetto (public, vendor, tests,
+    #    node_modules, _server_backup).
     # ----------------------------------------------------------------
     - >
       /usr/bin/rsync -av --delete
@@ -83,11 +90,11 @@ deployment:
       --exclude='.env'
       --exclude='.env.*'
       --exclude='.envOLD'
-      --exclude='node_modules/'
-      --exclude='public/'
-      --exclude='tests/'
-      --exclude='_server_backup/'
-      --exclude='vendor/'
+      --exclude='/node_modules/'
+      --exclude='/public/'
+      --exclude='/tests/'
+      --exclude='/_server_backup/'
+      --exclude='/vendor/'
       --exclude='*.docx'
       --exclude='*.bat'
       --exclude='*.bak'

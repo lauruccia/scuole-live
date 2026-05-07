@@ -173,6 +173,23 @@ cd /home/aeacenter/scuole_app && php artisan migrate:status
 
 ## 6. Gotcha noti
 
+### File in `resources/views/public/` non si aggiornano dopo deploy
+**Sintomo:** modifiche a `layout.blade.php` o ad altri Blade del sito pubblico
+non si vedono in produzione, anche dopo `Deploy HEAD Commit` riuscito e cache
+svuotata. Il file su `scuole_app/resources/views/public/layout.blade.php` resta
+con timestamp vecchio.
+
+**Causa:** in passato `.cpanel.yml` aveva `--exclude='public/'` senza slash
+iniziale. Rsync interpreta i pattern senza leading slash come "ovunque nel
+progetto" → escludeva ANCHE `resources/views/public/`. Risolto 07/05/2026
+mettendo `--exclude='/public/'` (slash davanti).
+
+**Cosa controllare se ricapita:** `cat .cpanel.yml | grep exclude` — tutte le
+cartelle che devono stare solo alla radice del repo (public, vendor, tests,
+node_modules, _server_backup) devono iniziare con `/`. Se qualcuna non ce l'ha
+e nel codebase esiste una cartella omonima annidata, quella verrà saltata da
+rsync.
+
 ### "Bottone Deploy HEAD Commit grigio"
 Verifica:
 - `.cpanel.yml` presente nella branch `main` su GitHub.
