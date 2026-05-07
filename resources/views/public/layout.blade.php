@@ -138,6 +138,9 @@
 <footer>
     <div class="container">
         <p>© {{ date('Y') }} {{ config('app.name') }} — Tutti i diritti riservati</p>
+        <p style="margin-top:.25rem; font-size:.9em; opacity:.85;">
+            P.IVA 09121441001
+        </p>
         <p style="margin-top:.5rem;">
             <a href="{{ route('iscrizione') }}">Iscrizioni</a> ·
             <a href="{{ route('home') }}#contatti">Contatti</a> ·
