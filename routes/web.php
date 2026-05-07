@@ -94,6 +94,31 @@ Route::middleware(['auth'])
     ->get('/studente/contratto/{contract}/print', StudentContractPrintController::class)
     ->name('studente.contratto.print');
 
+// ─── Download backup (solo Superadmin) ───────────────────────────────────────
+Route::middleware(['auth'])
+    ->get('/admin/backup/download/{filename}', function (string $filename) {
+        // Solo Superadmin
+        if (! auth()->user()?->hasAnyRole(['Superadmin', 'superadmin', 'super_admin'])) {
+            abort(403);
+        }
+
+        // Sanity check: solo .zip, nessun path traversal
+        if (! str_ends_with($filename, '.zip') || str_contains($filename, '/') || str_contains($filename, '\\')) {
+            abort(400, 'Nome file non valido.');
+        }
+
+        $appName = config('backup.backup.name', config('app.name', 'ScuoleLive'));
+        $path    = $appName . '/' . $filename;
+        $disk    = \Illuminate\Support\Facades\Storage::disk('local-backups');
+
+        if (! $disk->exists($path)) {
+            abort(404, 'Backup non trovato.');
+        }
+
+        return response()->download($disk->path($path), $filename);
+    })
+    ->name('backup.download');
+
 // ─── Disiscrizione GDPR (token HMAC autocontenuto, no auth necessaria) ────────
 Route::get('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'show'])
     ->name('unsubscribe.show');
