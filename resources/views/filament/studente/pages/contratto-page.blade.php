@@ -99,7 +99,10 @@
                                 <button
                                     wire:click="confirmSignature"
                                     wire:loading.attr="disabled"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60"
+                                    class="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow focus:outline-none focus:ring-2 disabled:opacity-60"
+                                    style="background-color:#f59e0b; color:#fff;"
+                                    onmouseover="this.style.backgroundColor='#d97706'"
+                                    onmouseout="this.style.backgroundColor='#f59e0b'"
                                 >
                                     <span wire:loading.remove wire:target="confirmSignature">
                                         <x-heroicon-s-check class="w-4 h-4 inline"/>
@@ -143,7 +146,10 @@
                             <button
                                 wire:click="requestOtp"
                                 wire:loading.attr="disabled"
-                                class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-60"
+                                class="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold shadow focus:outline-none focus:ring-2 disabled:opacity-60"
+                                style="background-color:#f59e0b; color:#fff;"
+                                onmouseover="this.style.backgroundColor='#d97706'"
+                                onmouseout="this.style.backgroundColor='#f59e0b'"
                             >
                                 <span wire:loading.remove wire:target="requestOtp">
                                     <x-heroicon-o-pencil-square class="w-4 h-4 inline"/>
