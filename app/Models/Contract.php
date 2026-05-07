@@ -659,22 +659,29 @@ class Contract extends Model
                 continue;
             }
 
-            ContractLessonSlot::updateOrCreate(
-                [
-                    'contract_id' => $contract->id,
-                    'student_id'  => (int) $cs->student_id,
-                    'weekly_day'  => (int) $cs->weekly_day,
-                    'weekly_time' => $time,
-                ],
-                [
-                    'teacher_id'       => $cs->teacher_id ?: null,
-                    'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
-                    'is_active'        => true,
-                    'starts_at'        => $contract->starts_at ? Carbon::parse($contract->starts_at)->toDateString() : null,
-                    'ends_at'          => null,
-                    'meet_url'         => $cs->meet_url,
-                ]
-            );
+            // Usiamo withoutObservers per evitare che l'observer ContractLessonSlotObserver
+            // scheduli una rigenerazione lezioni qui: il pipeline del Contract saved
+            // gestisce già la rigenerazione a valle (riga ~605). Senza questa guardia,
+            // entrambi i percorsi chiamerebbero generateForContract() producendo
+            // lezioni duplicate (violazione unique key 'uniq_lesson_slot').
+            ContractLessonSlot::withoutObservers(function () use ($contract, $cs, $time) {
+                ContractLessonSlot::updateOrCreate(
+                    [
+                        'contract_id' => $contract->id,
+                        'student_id'  => (int) $cs->student_id,
+                        'weekly_day'  => (int) $cs->weekly_day,
+                        'weekly_time' => $time,
+                    ],
+                    [
+                        'teacher_id'       => $cs->teacher_id ?: null,
+                        'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
+                        'is_active'        => true,
+                        'starts_at'        => $contract->starts_at ? Carbon::parse($contract->starts_at)->toDateString() : null,
+                        'ends_at'          => null,
+                        'meet_url'         => $cs->meet_url,
+                    ]
+                );
+            });
         }
 
         $keep = $contract->beneficiaries
