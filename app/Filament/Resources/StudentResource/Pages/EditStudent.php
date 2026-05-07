@@ -40,12 +40,10 @@ class EditStudent extends EditRecord
                         ->label('Per confermare digita esattamente: ANONIMIZZA')
                         ->placeholder('ANONIMIZZA')
                         ->required()
-                        ->rules([
-                            function (string $attribute, mixed $value, \Closure $fail) {
-                                if ($value !== 'ANONIMIZZA') {
-                                    $fail('Devi digitare esattamente "ANONIMIZZA" per confermare.');
-                                }
-                            },
+                        ->rules(['in:ANONIMIZZA'])
+                        ->validationMessages([
+                            'in'       => 'Devi digitare esattamente "ANONIMIZZA" per confermare.',
+                            'required' => 'La conferma è obbligatoria.',
                         ]),
                 ])
                 ->visible(function (): bool {
