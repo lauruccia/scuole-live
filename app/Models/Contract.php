@@ -659,12 +659,13 @@ class Contract extends Model
                 continue;
             }
 
-            // Usiamo withoutObservers per evitare che l'observer ContractLessonSlotObserver
+            // Usiamo withoutEvents per evitare che l'observer ContractLessonSlotObserver
             // scheduli una rigenerazione lezioni qui: il pipeline del Contract saved
             // gestisce già la rigenerazione a valle (riga ~605). Senza questa guardia,
             // entrambi i percorsi chiamerebbero generateForContract() producendo
             // lezioni duplicate (violazione unique key 'uniq_lesson_slot').
-            ContractLessonSlot::withoutObservers(function () use ($contract, $cs, $time) {
+            // Nota: withoutEvents() è il metodo corretto in Eloquent (withoutObservers non esiste).
+            ContractLessonSlot::withoutEvents(function () use ($contract, $cs, $time) {
                 ContractLessonSlot::updateOrCreate(
                     [
                         'contract_id' => $contract->id,

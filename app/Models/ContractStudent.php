@@ -298,11 +298,12 @@ class ContractStudent extends Model
 
                     $contract = Contract::query()->find($contractId);
 
-                    // withoutObservers: evita che ContractLessonSlotObserver scheduli
+                    // withoutEvents: evita che ContractLessonSlotObserver scheduli
                     // una rigenerazione lezioni in parallelo. Il ramo Contract::saved()
                     // gestisce già la rigenerazione principale; una seconda chiamata a
                     // generateForContract() causerebbe Duplicate entry su uniq_lesson_slot.
-                    ContractLessonSlot::withoutObservers(function () use ($contractId, $cs, $time, $contract) {
+                    // Nota: withoutEvents() è il metodo corretto in Eloquent (withoutObservers non esiste).
+                    ContractLessonSlot::withoutEvents(function () use ($contractId, $cs, $time, $contract) {
                         ContractLessonSlot::updateOrCreate(
                             [
                                 'contract_id' => $contractId,
