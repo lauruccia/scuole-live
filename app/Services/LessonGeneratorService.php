@@ -51,12 +51,18 @@ class LessonGeneratorService
                     // non ancora completate né cancellate, indipendentemente da counts_as_consumed
                     // o da eventuali modifiche manuali. Questo garantisce che il ricalcolo
                     // ridistribuisca correttamente le ore tra tutti gli slot attivi aggiornati.
+                    //
+                    // IMPORTANTE: forceDelete() invece di delete() perché la tabella usa soft delete.
+                    // Le lezioni future non ancora svolte non devono restare come righe soft-deleted:
+                    // il vincolo UNIQUE (contract_student_id, starts_at) include anche le righe con
+                    // deleted_at valorizzato, quindi una delete() "morbida" seguita da create() sulla
+                    // stessa slot provocherebbe un Integrity constraint violation (1062 Duplicate entry).
                     Lesson::query()
                         ->where('contract_id', $contract->id)
                         ->whereNull('cancelled_at')
                         ->whereNull('completed_at')
                         ->whereDate('starts_at', '>=', $today)
-                        ->delete();
+                        ->forceDelete();
                 } else {
                     // Comportamento standard: cancella solo lezioni auto-generate non modificate
                     $deleteQuery = Lesson::query()
@@ -72,7 +78,9 @@ class LessonGeneratorService
                         $deleteQuery->whereDate('starts_at', '>=', $today);
                     }
 
-                    $deleteQuery->delete();
+                    // forceDelete() per lo stesso motivo del ramo sopra: il UNIQUE su
+                    // (contract_student_id, starts_at) copre anche le righe soft-deleted.
+                    $deleteQuery->forceDelete();
                 }
 
                 $beneficiaries = DB::table('contract_students')

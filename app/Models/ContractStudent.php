@@ -298,22 +298,28 @@ class ContractStudent extends Model
 
                     $contract = Contract::query()->find($contractId);
 
-                    ContractLessonSlot::updateOrCreate(
-                        [
-                            'contract_id' => $contractId,
-                            'student_id'  => (int) $cs->student_id,
-                            'weekly_day'  => (int) $cs->weekly_day,
-                            'weekly_time' => $time,
-                        ],
-                        [
-                            'teacher_id'       => $cs->teacher_id ?: null,
-                            'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
-                            'is_active'        => true,
-                            'starts_at'        => $contract?->starts_at?->toDateString(),
-                            'ends_at'          => null,
-                            'meet_url'         => $cs->meet_url,
-                        ]
-                    );
+                    // withoutObservers: evita che ContractLessonSlotObserver scheduli
+                    // una rigenerazione lezioni in parallelo. Il ramo Contract::saved()
+                    // gestisce già la rigenerazione principale; una seconda chiamata a
+                    // generateForContract() causerebbe Duplicate entry su uniq_lesson_slot.
+                    ContractLessonSlot::withoutObservers(function () use ($contractId, $cs, $time, $contract) {
+                        ContractLessonSlot::updateOrCreate(
+                            [
+                                'contract_id' => $contractId,
+                                'student_id'  => (int) $cs->student_id,
+                                'weekly_day'  => (int) $cs->weekly_day,
+                                'weekly_time' => $time,
+                            ],
+                            [
+                                'teacher_id'       => $cs->teacher_id ?: null,
+                                'duration_minutes' => max(1, (int) ($cs->duration_minutes ?? 60)),
+                                'is_active'        => true,
+                                'starts_at'        => $contract?->starts_at?->toDateString(),
+                                'ends_at'          => null,
+                                'meet_url'         => $cs->meet_url,
+                            ]
+                        );
+                    });
                 } finally {
                     optional($lock)->release();
                 }
