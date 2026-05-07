@@ -18,6 +18,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redirect test — tutte le email vanno a questo indirizzo
+    |--------------------------------------------------------------------------
+    | Imposta MAIL_REDIRECT_TO=indirizzo@esempio.com nel .env per redirezionare
+    | TUTTE le email (TO, CC, BCC sostituiti) a un unico destinatario.
+    | Utile durante test in produzione. Lascia vuoto o rimuovi per disabilitare.
+    */
+    'redirect_to' => env('MAIL_REDIRECT_TO'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |

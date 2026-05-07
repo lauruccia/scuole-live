@@ -9,9 +9,11 @@ use App\Observers\ContractLessonSlotObserver;
 use App\Observers\LessonMeetObserver;
 use App\Observers\LessonObserver;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
@@ -29,7 +31,21 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Student::observe(StudentObserver::class);
-        
+
+        // ── MAIL REDIRECT (solo test) ──────────────────────────────────────────
+        // Se MAIL_REDIRECT_TO è valorizzato nel .env, tutte le email vengono
+        // redirezionate a quell'indirizzo (TO, CC e BCC sostituiti).
+        // Per disabilitare: rimuovere o svuotare MAIL_REDIRECT_TO nel .env
+        // + cancellare la cache config (run_clear_cache.php sul server).
+        if ($redirectTo = config('mail.redirect_to')) {
+            Event::listen(MessageSending::class, function (MessageSending $event) use ($redirectTo) {
+                $msg = $event->message;
+                $msg->to($redirectTo);   // sostituisce TO
+                $msg->cc();              // svuota CC
+                $msg->bcc();             // svuota BCC
+            });
+        }
+
         // Forza lingua app + Carbon in italiano
         // Carbon::setLocale() è indipendente da App::setLocale() e necessario
         // per translatedFormat(), isoFormat() e diffForHumans() in italiano.
