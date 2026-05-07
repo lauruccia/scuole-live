@@ -1456,7 +1456,7 @@ Select::make('student_id')
                     ->badge()
                     ->color('gray')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Stato')
@@ -1477,8 +1477,8 @@ Select::make('student_id')
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('hours_purchased')->label('Ore')->toggleable(),
-                Tables\Columns\TextColumn::make('hours_consumed')->label('Fruite')->toggleable(),
+                Tables\Columns\TextColumn::make('hours_purchased')->label('Ore acq.')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('hours_consumed')->label('Fruite')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('hours_remaining_badge')
                     ->label('Residue')
                     ->toggleable()
