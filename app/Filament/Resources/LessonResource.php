@@ -671,6 +671,7 @@ Filter::make('missing_homework')
         ->action(function (Lesson $record): void {
             $record->counts_as_consumed = true;
             $record->is_recoverable = false;
+            $record->completed_at = $record->completed_at ?? now();
             $record->save();
 
             Notification::make()
@@ -751,6 +752,7 @@ Filter::make('missing_homework')
             })
             ->action(function (Lesson $record): void {
                 $record->counts_as_consumed = false;
+                $record->completed_at = null;
                 $record->save();
 
                 Notification::make()
