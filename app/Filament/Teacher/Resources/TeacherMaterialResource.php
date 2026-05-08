@@ -179,11 +179,7 @@ class TeacherMaterialResource extends Resource
                                 ->preload(false)
                                 ->getSearchResultsUsing(function (string $search) use ($teacherId): array {
                                     return Contract::query()
-                                        ->whereExists(fn ($q) => $q
-                                            ->from('contract_students')
-                                            ->whereColumn('contract_students.contract_id', 'contracts.id')
-                                            ->where('contract_students.teacher_id', $teacherId)
-                                        )
+                                        ->whereHas('lessons', fn ($q) => $q->where('lessons.teacher_id', $teacherId))
                                         ->where(fn ($q) => $q
                                             ->where('billing_last_name', 'like', "%{$search}%")
                                             ->orWhere('billing_first_name', 'like', "%{$search}%")
