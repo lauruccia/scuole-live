@@ -139,6 +139,28 @@ class CheckoutController extends Controller
     {
         abort_unless($purchase->payment_method === 'bonifico' && $purchase->payment_status === 'pending', 404);
 
+        // ── Ownership check (IDOR fix) ────────────────────────────────────────
+        // Se il purchase è associato a un utente autenticato, solo quell'utente
+        // (o lo staff) può vedere la pagina. Se user_id è null (checkout guest),
+        // l'acquisto non è collegato a nessun account → lasciamo passare.
+        if ($purchase->user_id !== null) {
+            $currentUser = Auth::user();
+
+            if (! $currentUser) {
+                // Acquisto registrato a un utente ma visitatore non autenticato.
+                abort(403, 'Accesso non autorizzato.');
+            }
+
+            $isStaff = $currentUser->hasAnyRole([
+                'Superadmin', 'superadmin', 'super_admin',
+                'Amministrazione', 'Segreteria',
+            ]);
+
+            if (! $isStaff && (int) $purchase->user_id !== (int) $currentUser->id) {
+                abort(403, 'Non puoi accedere a questo ordine.');
+            }
+        }
+
         // Genera riferimento univoco se non ancora presente.
         // E' anche il "marker" per decidere se inviare l'email: la prima volta
         // che generiamo il ref, mandiamo le istruzioni via email; alle visite
@@ -230,29 +252,4 @@ class CheckoutController extends Controller
         return URL::temporarySignedRoute('checkout.errore', now()->addHours(24), ['purchase' => $purchase->id]);
     }
 
-    // ── PayPal: cancel URL ────────────────────────────────────────────────────
-
-    public function paypalCancel(Request $request)
-    {
-        $orderId  = $request->get('token');
-        if ($orderId) {
-            CoursePurchase::where('paypal_order_id', $orderId)
-                ->update(['payment_status' => 'cancelled']);
-        }
-        return redirect()->route('checkout.catalogo')->with('info', 'Pagamento annullato.');
-    }
-
-    // ── Pagina di ringraziamento ───────────────────────────────────────────────
-
-    public function grazie(CoursePurchase $purchase)
-    {
-        return view('checkout.grazie', compact('purchase'));
-    }
-
-    // ── Pagina errore ─────────────────────────────────────────────────────────
-
-    public function errore(CoursePurchase $purchase)
-    {
-        return view('checkout.errore', compact('purchase'));
-    }
-}
+    // ── PayPal: cancel URL ────────────────────────────────────────�
