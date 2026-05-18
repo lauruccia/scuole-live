@@ -13,7 +13,7 @@ class ListCourseMaterials extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Carica materiale'),
+            Actions\CreateAction::make(),
         ];
     }
 }
