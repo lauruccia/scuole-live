@@ -40,6 +40,55 @@ class ContractService
     }
 
     /**
+     * Distribuisce le ore personalizzate ai beneficiari senza assigned_hours esplicite.
+     *
+     * Algoritmo unificato usato sia da CreateContract che da LessonGeneratorService:
+     * - round(x, 2) per massima compatibilità con qualsiasi durata di slot
+     *   (30 / 60 / 90 min e frazioni arbitrarie come 1.5h).
+     * - L'ultimo beneficiario null riceve il resto esatto per garantire che
+     *   la somma totale non perda frazioni da arrotondamento.
+     *
+     * Esempio corretto: 9h, 2 studenti null, slot 1.5h
+     *   base = round(9/2, 2) = 4.5h → 3 lezioni da 1.5h ciascuno ✓
+     *
+     * Esempio corretto: 9h, studente A=1h esplicito, studente B=null, slot A=1h slot B=2h
+     *   hoursLeft = 9-1 = 8h → base = 8h per B → 4 lezioni da 2h ✓
+     *   (o 8 lezioni da 1h se lo slot di B è 1h)
+     *
+     * NOTA: le ore personalizzate devono già escludere hours_full
+     * (usare resolveContractHoursTotal, non hours_purchased diretto).
+     *
+     * @param  float  $personalHours  Ore personalizzate (hours_purchased − hours_full)
+     * @param  int    $nullCount      Numero di beneficiari senza ore esplicite
+     * @param  float  $sumExplicit    Somma ore dei beneficiari con ore esplicite già assegnate
+     * @return array{base: float, lastExtra: float}
+     *   base      = ore da assegnare a ciascun beneficiario null
+     *   lastExtra = ore aggiuntive solo per l'ULTIMO beneficiario null (compensa arrotondamenti)
+     */
+    public function distributePersonalHoursToNull(
+        float $personalHours,
+        int $nullCount,
+        float $sumExplicit
+    ): array {
+        if ($nullCount <= 0 || $personalHours <= 0.0) {
+            return ['base' => 0.0, 'lastExtra' => 0.0];
+        }
+
+        $hoursLeft = max(0.0, round($personalHours - $sumExplicit, 2));
+
+        if ($hoursLeft <= 0.0) {
+            return ['base' => 0.0, 'lastExtra' => 0.0];
+        }
+
+        $base      = round($hoursLeft / $nullCount, 2);
+        // lastExtra compensa eventuali perdite da arrotondamento:
+        // es. 10h / 3 = 3.33h × 3 = 9.99h → lastExtra = 0.01h → ultimo riceve 3.34h (totale esatto 10h)
+        $lastExtra = round($hoursLeft - ($base * $nullCount), 2);
+
+        return ['base' => $base, 'lastExtra' => $lastExtra];
+    }
+
+    /**
      * Ore full immersion del contratto (pianificate on-demand, non auto-generate).
      */
     public function resolveContractFullHours(Contract $contract): float

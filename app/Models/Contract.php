@@ -589,6 +589,10 @@ class Contract extends Model
                         // Cambiare le ore acquistate modifica quante lezioni vanno generate:
                         // la rigenerazione (non forzata) aggiunge le lezioni mancanti.
                         'hours_purchased',
+                        // Cambiare hours_full ridistribuisce le ore personalizzate:
+                        // es. da 10h full=0 a 10h full=4 → hours_personal scende da 10 a 6
+                        // → le lezioni personalizzate già generate sono in eccesso.
+                        'hours_full',
                     ];
 
                     $shouldRegen = empty($changes)

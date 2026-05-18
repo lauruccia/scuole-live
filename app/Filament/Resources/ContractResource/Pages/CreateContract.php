@@ -147,19 +147,15 @@ class CreateContract extends CreateRecord
             $contractHoursTotal = app(ContractService::class)->resolveContractHoursTotal($contract);
 
             // Pre-calcola le ore di fallback per i beneficiari senza assigned_hours.
-            // Usa floor a 0,5 h e aggiunge il resto all'ultimo, come fa recalcBeneficiariesAssignedHours nel form,
-            // per garantire che la somma non superi mai hours_purchased (evita over-generation di lezioni).
+            // Bug 5: usa l'algoritmo unificato ContractService::distributePersonalHoursToNull()
+            // con round(x,2) invece di floor-a-0.5h: compatibile con qualsiasi durata di slot
+            // (1h, 1.5h, 2h, ecc.). L'ultimo beneficiario null riceve il resto esatto per
+            // garantire che la somma totale non perda frazioni da arrotondamento.
             $nullBenefCount    = count(array_filter($beneficiaries, fn ($b) => ! isset($b['assigned_hours']) || $b['assigned_hours'] === '' || (float) $b['assigned_hours'] <= 0));
             $sumExplicit       = round(array_sum(array_map(fn ($b) => (float) ($b['assigned_hours'] ?? 0), array_filter($beneficiaries, fn ($b) => isset($b['assigned_hours']) && $b['assigned_hours'] !== '' && (float) $b['assigned_hours'] > 0))), 2);
-            $hoursForNull      = max(0.0, $contractHoursTotal - $sumExplicit);
 
-            // ore base per ogni beneficiario null (floor a 0,5 h)
-            $baseHoursPerNull  = $nullBenefCount > 0
-                ? floor(($hoursForNull / $nullBenefCount) * 2) / 2
-                : 0.0;
-            $remainderHours    = $nullBenefCount > 0
-                ? round($hoursForNull - ($baseHoursPerNull * $nullBenefCount), 2)
-                : 0.0;
+            ['base' => $baseHoursPerNull, 'lastExtra' => $remainderHours] =
+                app(ContractService::class)->distributePersonalHoursToNull($contractHoursTotal, $nullBenefCount, $sumExplicit);
 
             $nullIndex = 0; // contatore per sapere quando siamo all'ultimo beneficiario null
 

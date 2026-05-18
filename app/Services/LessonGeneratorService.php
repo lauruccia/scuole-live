@@ -6,6 +6,7 @@ use App\Models\ClosureDay;
 use App\Models\Contract;
 use App\Models\ContractLessonSlot;
 use App\Models\Lesson;
+use App\Services\ContractService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,15 @@ use Illuminate\Support\Facades\Log;
 
 class LessonGeneratorService
 {
+    /**
+     * Cache dei giorni di chiusura per l'intera generazione corrente.
+     * Caricata una volta all'inizio di generateForContract() per evitare
+     * N+1 query DB nel loop di creazione lezioni (Bug 7).
+     *
+     * @var array<\App\Models\ClosureDay>
+     */
+    private array $closureDaysCache = [];
+
     /**
      * Genera le lezioni per un contratto.
      *
@@ -35,8 +45,18 @@ class LessonGeneratorService
         $lock = Cache::lock("contract:{$contract->id}:generate_lessons", 120);
 
         if (! $lock->get()) {
+            // Bug 6: rende visibile nei log il lock contention silenzioso.
+            // Questo avviene quando due pipeline di rigenerazione vengono schedulate
+            // quasi in contemporanea (es. Contract::saved + ContractLessonSlotObserver).
+            Log::info('LessonGeneratorService: lock non acquisito, generazione saltata.', [
+                'contract_id' => $contract->id,
+            ]);
             return;
         }
+
+        // Bug 7: carica i giorni di chiusura UNA SOLA VOLTA per l'intera generazione,
+        // evitando N+1 query DB (una per ogni candidato lezione nel loop).
+        $this->closureDaysCache = ClosureDay::all()->all();
 
         try {
             DB::transaction(function () use ($contract, $force, $slotChanged) {
@@ -101,26 +121,53 @@ class LessonGeneratorService
 
                 $maxEnd = null;
 
-                // Pre-calcola le ore di default per i beneficiari senza assigned_hours.
-                // Se c'è un solo beneficiario → usa l'intero hours_purchased.
-                // Se ci sono più beneficiari → dividi equamente per evitare over-assignment.
-                $totalHours       = (float) ($contract->hours_purchased ?? 0);
+                // ── Bug 5: distribuzione ore unificata con CreateContract ──────────────
+                //
+                // Usa le ore PERSONALIZZATE (hours_purchased − hours_full), non il totale.
+                // Per contratti MIX, hours_full sono gestite da FullLessonService e non
+                // devono rientrare nel monte ore delle lezioni personalizzate auto-generate.
+                // Contratti pre-migrazione hanno hours_full = 0/null → comportamento invariato.
+                //
+                // Algoritmo: ContractService::distributePersonalHoursToNull()
+                //   → round(x, 2) compatibile con qualsiasi durata slot (30/60/90/custom min)
+                //   → l'ultimo beneficiario null riceve il resto esatto (nessuna perdita da arrotondamento)
+                //
+                // Esempio: 9h, 2 studenti, slot 1.5h
+                //   base = round(9/2, 2) = 4.5h → 3 lezioni × 1.5h = 4.5h ✓
+                //
+                // Esempio: 9h, studente A=1h (esplicito, slot 1h), studente B=null (slot 2h)
+                //   hoursLeft = 9-1 = 8h → B riceve 8h → 4 lezioni × 2h ✓
+                $personalHours = max(0.0,
+                    (float) ($contract->hours_purchased ?? 0) - (float) ($contract->hours_full ?? 0)
+                );
                 $countBeneficiaries = $beneficiaries->count();
-                $nullCount         = $beneficiaries->whereNull('assigned_hours')->count();
-                $sumAssigned       = $beneficiaries->sum(fn($b) => (float) ($b->assigned_hours ?? 0));
-                $hoursLeftForNull  = max(0.0, $totalHours - $sumAssigned);
-                $defaultHoursPerNull = ($nullCount > 0)
-                    ? round($hoursLeftForNull / $nullCount, 2)
-                    : 0.0;
+                $nullCount          = $beneficiaries->whereNull('assigned_hours')->count();
+                $sumAssigned        = (float) $beneficiaries->sum(fn ($b) => (float) ($b->assigned_hours ?? 0));
+
+                ['base' => $defaultHoursPerNull, 'lastExtra' => $lastNullExtra] =
+                    app(ContractService::class)->distributePersonalHoursToNull(
+                        $personalHours,
+                        $nullCount,
+                        $sumAssigned
+                    );
+
+                // Contatore dei beneficiari null già processati.
+                // Serve a identificare l'ultimo (che riceve il resto esatto).
+                $nullBenefCounter = 0;
 
                 foreach ($beneficiaries as $contractStudent) {
                     $studentId = (int) $contractStudent->student_id;
                     $contractStudentId = (int) $contractStudent->id;
+
                     // Usa assigned_hours del beneficiario se impostato (anche se 0 esplicito).
-                    // Fallback: distribuisce le ore rimanenti equamente tra i beneficiari non configurati.
+                    // Fallback unificato: distribuisce le ore rimanenti tra i beneficiari null.
+                    // L'ultimo null riceve il resto esatto per non perdere frazioni.
                     $rawHours = $contractStudent->assigned_hours;
                     if ($rawHours === null) {
-                        $assignedHours = $defaultHoursPerNull;
+                        $nullBenefCounter++;
+                        $assignedHours = ($nullBenefCounter === $nullCount)
+                            ? round($defaultHoursPerNull + $lastNullExtra, 2)
+                            : $defaultHoursPerNull;
                     } else {
                         $assignedHours = (float) $rawHours;
                     }
@@ -487,13 +534,21 @@ class LessonGeneratorService
 
     private function isClosureDay(Carbon $dt): bool
     {
-        // closure_days usa start_date / end_date (colonna 'date' non esiste)
-        return ClosureDay::query()
-            ->whereDate('start_date', '<=', $dt->toDateString())
-            ->where(function ($q) use ($dt) {
-                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $dt->toDateString());
-            })
-            ->exists();
+        // Bug 7: usa $closureDaysCache caricato una volta all'inizio di generateForContract()
+        // per evitare N+1 query DB (una per ogni candidato lezione nel loop).
+        // ClosureDay casta start_date / end_date come Carbon ('date' cast nel model).
+        $dateStr = $dt->toDateString();
+
+        foreach ($this->closureDaysCache as $cd) {
+            $startStr = $cd->start_date->toDateString();
+            $endStr   = $cd->end_date?->toDateString();
+
+            if ($dateStr >= $startStr && ($endStr === null || $dateStr <= $endStr)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function shiftOutOfClosures(Carbon $dt): Carbon

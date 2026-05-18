@@ -31,12 +31,12 @@ class ContractLessonSlotObserver
                 return;
             }
 
-            // Lock per evitare rigenerazioni multiple ravvicinate dall'Observer.
+            // Bug 6: usa la stessa chiave del lock in Contract::saved (contract_post_save_pipeline)
+            // così il salvataggio di uno slot concorrente al salvataggio del contratto
+            // non avvia una rigenerazione parallela che produrrebbe lezioni duplicate.
             // Usiamo get() invece di blockFor() per compatibilità con driver cache 'file'.
-            // Durata 120s allineata al lock in LessonGeneratorService: contratti con molte
-            // ore possono richiedere più di 30s e un secondo lock scaduto avvierebbe
-            // una rigenerazione parallela producendo lezioni duplicate.
-            $lock = Cache::lock("contract:{$contractId}:auto_regen_lessons", 120);
+            // Durata 120s allineata al lock in LessonGeneratorService.
+            $lock = Cache::lock("contract_post_save_pipeline:{$contractId}", 120);
             if (! $lock->get()) {
                 return;
             }
