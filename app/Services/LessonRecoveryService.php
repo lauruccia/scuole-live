@@ -260,22 +260,45 @@ class LessonRecoveryService
 
     private function getBusyLessonForSlot(Lesson $lesson, Carbon $candidate): ?Lesson
     {
-        return Lesson::query()
-            ->where('teacher_id', $lesson->teacher_id)
+        $duration     = $lesson->duration_minutes ?: 60;
+        $endCandidate = $candidate->copy()->addMinutes($duration);
+
+        // ── Controllo sovrapposizione STUDENTE ────────────────────────────────
+        // Verifica che lo studente non abbia già un'altra lezione attiva nello
+        // stesso intervallo (su qualsiasi contratto). Usa strict < / > per non
+        // considerare lezioni adiacenti (es. fine alle 11:00 / inizio alle 11:00)
+        // come conflitti — stesso pattern del LessonGeneratorService.
+        $studentBusy = Lesson::query()
+            ->where('student_id', $lesson->student_id)
             ->where('id', '!=', $lesson->id)
             ->whereNull('cancelled_at')
             ->whereNull('deleted_at')
-            ->where(function ($q) use ($candidate, $lesson) {
-                $endCandidate = $candidate->copy()->addMinutes(
-                    $lesson->duration_minutes ?: 60
-                );
-                $q->whereBetween('starts_at', [$candidate, $endCandidate])
-                  ->orWhereBetween('ends_at', [$candidate, $endCandidate])
-                  ->orWhere(function ($inner) use ($candidate, $endCandidate) {
-                      $inner->where('starts_at', '<=', $candidate)
-                            ->where('ends_at', '>=', $endCandidate);
-                  });
-            })
+            ->where('starts_at', '<', $endCandidate)
+            ->where('ends_at', '>', $candidate)
+            ->first();
+
+        if ($studentBusy) {
+            return $studentBusy;
+        }
+
+        // ── Controllo sovrapposizione DOCENTE ─────────────────────────────────
+        // Se la lezione non ha docente assegnato, questo check non è applicabile:
+        // WHERE teacher_id = NULL è sempre false in SQL (serve IS NULL), quindi
+        // saltiamo la query per evitare un controllo silenziosamente inutile.
+        if (! $lesson->teacher_id) {
+            return null;
+        }
+
+        // Strict < / > coerente con il LessonGeneratorService: evita falsi positivi
+        // su lezioni adiacenti (es. una lezione che finisce esattamente quando
+        // inizia il candidato non è un conflitto reale).
+        return Lesson::query()
+            ->where('teacher_id', (int) $lesson->teacher_id)
+            ->where('id', '!=', $lesson->id)
+            ->whereNull('cancelled_at')
+            ->whereNull('deleted_at')
+            ->where('starts_at', '<', $endCandidate)
+            ->where('ends_at', '>', $candidate)
             ->first();
     }
 }

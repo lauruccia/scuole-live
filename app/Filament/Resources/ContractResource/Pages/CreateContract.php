@@ -85,6 +85,20 @@ class CreateContract extends CreateRecord
 
             $this->halt();
         }
+
+        // 2b) Ore FULL non possono superare le ore totali acquistate
+        // Senza questo controllo hours_personal diventerebbe negativo (clamped a 0)
+        // e nessuna lezione personalizzata verrebbe generata, senza alcun feedback.
+        if ($hoursFull > 0 && $hoursTotal > 0 && $hoursFull > $hoursTotal + 0.01) {
+            Notification::make()
+                ->title('Ore FULL eccedenti')
+                ->body("Le ore FULL ({$hoursFull} h) non possono superare le ore totali acquistate ({$hoursTotal} h). Riduci le ore FULL o aumenta le ore totali del contratto.")
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
         // ────────────────────────────────────────────────────────────────────
 
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));

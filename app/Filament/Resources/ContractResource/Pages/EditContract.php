@@ -97,6 +97,21 @@ class EditContract extends EditRecord
         }
         // ────────────────────────────────────────────────────────────────────
 
+        // 2b) Ore FULL non possono superare le ore totali acquistate
+        // Senza questo controllo hours_personal diventerebbe negativo (clamped a 0)
+        // e nessuna lezione personalizzata verrebbe generata, senza alcun feedback.
+        if ($hoursFull > 0 && $hoursTotal > 0 && $hoursFull > $hoursTotal + 0.01) {
+            Notification::make()
+                ->title('Ore FULL eccedenti')
+                ->body("Le ore FULL ({$hoursFull} h) non possono superare le ore totali acquistate ({$hoursTotal} h). Riduci le ore FULL o aumenta le ore totali del contratto.")
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         // 3) Validazione ore FULL (solo per contratti MIX)
         if (($data['lesson_type'] ?? '') === 'Lezioni personalizzate + FULL') {
             $hoursFull        = round((float) ($data['hours_full'] ?? 0), 2);
@@ -473,34 +488,47 @@ class EditContract extends EditRecord
                 $student = new Student();
             }
 
-            $fill = [];
+            // ── Fill condizionale: aggiorna SOLO i campi vuoti nell'anagrafica ──
+            // Non sovrascrivere dati già presenti nello studente: se la segreteria
+            // ha corretto telefono/email direttamente nell'anagrafica, il salvataggio
+            // del contratto non deve ripristinare il valore precedente del beneficiario.
+            // Stesso pattern usato in ContractStudent::booted(), syncBillingBeneficiaryStudent()
+            // e tutti gli altri percorsi di sync del progetto.
+            $dirty = false;
 
-            if ($first !== '') {
-                $fill['first_name'] = $first;
+            if ($first !== '' && empty($student->first_name)) {
+                $student->first_name = $first;
+                $dirty = true;
             }
 
-            if ($last !== '') {
-                $fill['last_name'] = $last;
+            if ($last !== '' && empty($student->last_name)) {
+                $student->last_name = $last;
+                $dirty = true;
             }
 
-            if ($email !== '') {
-                $fill['email'] = $email;
+            if ($email !== '' && empty($student->email)) {
+                $student->email = $email;
+                $dirty = true;
             }
 
-            if ($phone !== '') {
-                $fill['phone'] = $phone;
+            if ($phone !== '' && empty($student->phone)) {
+                $student->phone = $phone;
+                $dirty = true;
             }
 
-            if (! empty($beneficiary->beneficiary_birth_date)) {
-                $fill['birth_date'] = $beneficiary->beneficiary_birth_date;
+            if (! empty($beneficiary->beneficiary_birth_date) && empty($student->birth_date)) {
+                $student->birth_date = $beneficiary->beneficiary_birth_date;
+                $dirty = true;
             }
 
-            if (! empty($beneficiary->beneficiary_birth_place)) {
-                $fill['birth_place'] = $beneficiary->beneficiary_birth_place;
+            if (! empty($beneficiary->beneficiary_birth_place) && empty($student->birth_place)) {
+                $student->birth_place = $beneficiary->beneficiary_birth_place;
+                $dirty = true;
             }
 
-            $student->fill($fill);
-            $student->save();
+            if ($dirty) {
+                $student->save();
+            }
 
             if ((int) ($beneficiary->student_id ?? 0) !== (int) $student->id) {
                 $beneficiary->student_id = $student->id;
