@@ -738,6 +738,7 @@
 </section>
 
 {{-- ══ FAQ ══ --}}
+{{-- @cache-bust-faq 2026-05-18 --}}
 @php
     $faqItems = [
         ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti madrelingua qualificati. Vedi il <a href="' . route('checkout.catalogo') . '">catalogo completo</a>.</p>'],

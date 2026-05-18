@@ -194,6 +194,7 @@
 </section>
 
 {{-- FAQ --}}
+{{-- @cache-bust-faq 2026-05-18 --}}
 @php
     $faqItems = [
         ['q' => 'Quanto costa un corso di inglese aziendale a Roma?', 'a' => '<p>I costi dipendono dal numero di partecipanti, dalle ore totali, dalla modalità (in sede o online) e dal livello del corso. Per un preventivo personalizzato <a href="' . route('contattaci') . '">contattaci</a> — rispondiamo entro 24 ore con un\'analisi dei fabbisogni e una proposta dettagliata.</p>'],

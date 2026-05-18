@@ -1,27 +1,32 @@
+{{-- @generated cache-bust 2026-05-18 v3 — non rimuovere il commento --}}
 @props([
     'title'    => 'Domande frequenti',
     'subtitle' => '',
     'items'    => [],
 ])
 
+@php
+    // Build JSON-LD via array PHP + json_encode (mai direttive @type/@context
+    // letterali nel template, così Blade non rischia di confondersi).
+    $faqJsonLd = [
+        '@context'   => 'https://schema.org',
+        '@type'      => 'FAQPage',
+        'mainEntity' => array_map(function ($item) {
+            return [
+                '@type'          => 'Question',
+                'name'           => strip_tags($item['q'] ?? ''),
+                'acceptedAnswer' => [
+                    '@type' => 'Answer',
+                    'text'  => strip_tags($item['a'] ?? ''),
+                ],
+            ];
+        }, $items ?? []),
+    ];
+@endphp
+
 {{-- JSON-LD FAQPage Schema --}}
 <script type="application/ld+json">
-{
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-        @foreach($items as $i => $item)
-        {
-            "@type": "Question",
-            "name": {{ json_encode(strip_tags($item['q'])) }},
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": {{ json_encode(strip_tags($item['a'])) }}
-            }
-        }{{ !$loop->last ? ',' : '' }}
-        @endforeach
-    ]
-}
+{!! json_encode($faqJsonLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
 </script>
 
 <section class="faq-section" aria-labelledby="faq-title">
@@ -84,13 +89,11 @@
 <script>
 function toggleFaq(btn) {
     const expanded = btn.getAttribute('aria-expanded') === 'true';
-    // chiudi tutti
     document.querySelectorAll('.faq-question').forEach(b => {
         b.setAttribute('aria-expanded', 'false');
         const ans = document.getElementById(b.getAttribute('aria-controls'));
         if (ans) ans.hidden = true;
     });
-    // apri quello cliccato se era chiuso
     if (!expanded) {
         btn.setAttribute('aria-expanded', 'true');
         const ans = document.getElementById(btn.getAttribute('aria-controls'));

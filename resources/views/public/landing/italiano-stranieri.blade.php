@@ -167,6 +167,7 @@
 </section>
 
 {{-- FAQ --}}
+{{-- @cache-bust-faq 2026-05-18 --}}
 @php
     $faqItems = [
         ['q' => 'Quanto costa un corso di italiano per stranieri a Roma?', 'a' => '<p>I prezzi partono da €15/ora in mini gruppo e da €30/ora individuale. Offriamo pacchetti settimanali intensivi (15–20 ore/settimana) e corsi mensili a frequenza bisettimanale. <a href="' . route('checkout.catalogo') . '">Vedi i corsi disponibili</a>.</p>'],

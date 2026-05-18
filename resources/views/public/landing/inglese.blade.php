@@ -245,6 +245,7 @@
 </section>
 
 {{-- FAQ --}}
+{{-- @cache-bust-faq 2026-05-18 --}}
 @php
     $faqItems = [
         ['q' => 'Quanto costa un corso di inglese a Roma in A&A Language Center?', 'a' => '<p>I prezzi variano in base alla modalità (individuale, mini gruppo, online), al numero di ore e al livello target. Una lezione individuale parte da circa €30/ora, un mini gruppo da €15/ora. Puoi consultare il <a href="' . route('checkout.catalogo') . '">catalogo corsi</a> per i pacchetti completi con prezzo trasparente.</p>'],
