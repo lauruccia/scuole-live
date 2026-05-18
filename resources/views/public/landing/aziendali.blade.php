@@ -198,7 +198,7 @@
     title="Domande frequenti — Corsi aziendali"
     subtitle="Le risposte alle domande più comuni di HR manager, training manager e responsabili formazione."
     :items="[
-        ['q' => 'Quanto costa un corso di inglese aziendale a Roma?', 'a' => '<p>I costi dipendono dal numero di partecipanti, dalle ore totali, dalla modalità (in sede o online) e dal livello del corso. Per un preventivo personalizzato <a href=\"' . route('contattaci') . '\">contattaci</a> — rispondiamo entro 24 ore con un\'analisi dei fabbisogni e una proposta dettagliata.</p>'],
+        ['q' => 'Quanto costa un corso di inglese aziendale a Roma?', 'a' => '<p>I costi dipendono dal numero di partecipanti, dalle ore totali, dalla modalità (in sede o online) e dal livello del corso. Per un preventivo personalizzato <a href="' . route('contattaci') . '">contattaci</a> — rispondiamo entro 24 ore con un\'analisi dei fabbisogni e una proposta dettagliata.</p>'],
         ['q' => 'Quanto dura tipicamente un corso aziendale?', 'a' => '<p>I cicli tipici sono 40, 60 o 90 ore, distribuite su 3–9 mesi a seconda dell\'intensità. Lavoriamo bene anche su programmi annuali e biennali con monitoraggio continuo del livello CEFR.</p>'],
         ['q' => 'Venite a fare lezione direttamente nella nostra sede?', 'a' => '<p>Sì. I nostri docenti si spostano nella sede aziendale a Roma e provincia. Per sedi fuori Roma valutiamo modalità mista (in presenza + online) per ottimizzare i costi.</p>'],
         ['q' => 'Rilasciate certificazioni utili per la formazione finanziata?', 'a' => '<p>Sì. Rilasciamo attestati nominativi validi per concorsi pubblici, aggiornamento professionale, formazione del personale finanziata (Fondimpresa, Fondoprofessioni, Fondirigenti) e crediti formativi.</p>'],

@@ -381,6 +381,11 @@ Select::make('language_id')
 
                 Tables\Columns\TextColumn::make('student.full_name')
                     ->label('Studente')
+                    ->icon(fn (Lesson $record) => $record->is_full_lesson ? 'heroicon-m-user-group' : null)
+                    ->iconColor('info')
+                    ->tooltip(fn (Lesson $record) => $record->is_full_lesson
+                        ? 'Lezione FULL — full immersion, pianificata on-demand'
+                        : null)
                     ->sortable()
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         $search = trim($search);
