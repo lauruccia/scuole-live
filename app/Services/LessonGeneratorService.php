@@ -57,16 +57,22 @@ class LessonGeneratorService
                     // il vincolo UNIQUE (contract_student_id, starts_at) include anche le righe con
                     // deleted_at valorizzato, quindi una delete() "morbida" seguita da create() sulla
                     // stessa slot provocherebbe un Integrity constraint violation (1062 Duplicate entry).
+                    //
+                    // NOTA: i segnaposto FULL (is_full_lesson = true) vengono esclusi — vengono
+                    // gestiti esclusivamente da FullLessonService, mai dal generatore di slot.
                     Lesson::query()
                         ->where('contract_id', $contract->id)
+                        ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                         ->whereNull('cancelled_at')
                         ->whereNull('completed_at')
                         ->whereDate('starts_at', '>=', $today)
                         ->forceDelete();
                 } else {
-                    // Comportamento standard: cancella solo lezioni auto-generate non modificate
+                    // Comportamento standard: cancella solo lezioni auto-generate non modificate.
+                    // NOTA: i segnaposto FULL (is_full_lesson = true) vengono esclusi.
                     $deleteQuery = Lesson::query()
                         ->where('contract_id', $contract->id)
+                        ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                         ->whereNull('cancelled_at')
                         ->where(function ($q) {
                             $q->whereNull('counts_as_consumed')
@@ -136,9 +142,11 @@ class LessonGeneratorService
                         continue;
                     }
 
+                    // Escludi i segnaposto FULL: non influenzano la generazione delle personalizzate
                     $hasAnyLessons = Lesson::query()
                         ->where('contract_id', $contract->id)
                         ->where('student_id', $studentId)
+                        ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                         ->exists();
 
                     $nextLessonNumber = (int) (
@@ -159,12 +167,14 @@ class LessonGeneratorService
                         ? Carbon::parse($contract->starts_at)->startOfDay()
                         : now();
 
-                    // Conta le ore già coperte da lezioni esistenti non cancellate.
+                    // Conta le ore già coperte da lezioni PERSONALIZZATE esistenti non cancellate.
                     // Dopo la cancellazione delle lezioni future, questo valore rappresenta
                     // solo le ore delle lezioni passate (già avvenute o consumate).
+                    // I segnaposto FULL vengono esclusi: non concorrono al monte ore personalizzate.
                     $existingFutureHours = Lesson::query()
                         ->where('contract_id', $contract->id)
                         ->where('student_id', $studentId)
+                        ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                         ->whereNull('cancelled_at')
                         ->get(['duration_minutes', 'starts_at', 'ends_at'])
                         ->sum(fn (Lesson $lesson): float => Lesson::computeLessonHours(

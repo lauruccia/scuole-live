@@ -252,4 +252,29 @@ class CheckoutController extends Controller
         return URL::temporarySignedRoute('checkout.errore', now()->addHours(24), ['purchase' => $purchase->id]);
     }
 
-    // ── PayPal: cancel URL ────────────────────────────────────────�
+    // ── PayPal: cancel URL ────────────────────────────────────────────────────
+
+    public function paypalCancel(Request $request)
+    {
+        $orderId  = $request->get('token');
+        if ($orderId) {
+            CoursePurchase::where('paypal_order_id', $orderId)
+                ->update(['payment_status' => 'cancelled']);
+        }
+        return redirect()->route('checkout.catalogo')->with('info', 'Pagamento annullato.');
+    }
+
+    // ── Pagina di ringraziamento ───────────────────────────────────────────────
+
+    public function grazie(CoursePurchase $purchase)
+    {
+        return view('checkout.grazie', compact('purchase'));
+    }
+
+    // ── Pagina errore ─────────────────────────────────────────────────────────
+
+    public function errore(CoursePurchase $purchase)
+    {
+        return view('checkout.errore', compact('purchase'));
+    }
+}

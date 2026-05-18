@@ -37,6 +37,7 @@ class ContractStudent extends Model
         'beneficiary_country',
 
         'assigned_hours',
+        'assigned_hours_full',
 
         // legacy / compatibilità
         'weekly_day',
@@ -53,6 +54,7 @@ class ContractStudent extends Model
         'duration_minutes'       => 'integer',
         'beneficiary_birth_date' => 'date',
         'assigned_hours'         => 'decimal:2',
+        'assigned_hours_full'    => 'decimal:2',
     ];
 
     protected $appends = [
@@ -103,6 +105,15 @@ class ContractStudent extends Model
                 }
             } else {
                 $cs->assigned_hours = null;
+            }
+
+            // normalizza assigned_hours_full: stringa vuota o 0 → null
+            // (null = "non ancora configurato", permette la distribuzione automatica)
+            if ($cs->assigned_hours_full !== null && $cs->assigned_hours_full !== '') {
+                $fullValue = round((float) $cs->assigned_hours_full, 2);
+                $cs->assigned_hours_full = $fullValue > 0 ? $fullValue : null;
+            } else {
+                $cs->assigned_hours_full = null;
             }
 
             // Se già c'è student_id, aggiorna i campi mancanti nell'anagrafica studente

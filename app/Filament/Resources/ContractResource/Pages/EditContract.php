@@ -9,6 +9,7 @@ use App\Services\ContractService;
 use App\Models\ContractLessonSlot;
 use App\Models\Installment;
 use App\Models\Student;
+use App\Services\FullLessonService;
 use App\Services\LessonGeneratorService;
 use Carbon\Carbon;
 use Filament\Actions;
@@ -96,6 +97,29 @@ class EditContract extends EditRecord
         }
         // ────────────────────────────────────────────────────────────────────
 
+        // 3) Validazione ore FULL (solo per contratti MIX)
+        if (($data['lesson_type'] ?? '') === 'Lezioni personalizzate + FULL') {
+            $hoursFull        = round((float) ($data['hours_full'] ?? 0), 2);
+            $totalFullAssigned = round(
+                array_sum(array_map(fn ($b) => (float) ($b['assigned_hours_full'] ?? 0), $beneficiaries)),
+                2
+            );
+
+            // Se almeno un beneficiario ha ore FULL configurate, la somma deve corrispondere
+            $hasAnyFullConfigured = array_filter($beneficiaries, fn ($b) => ($b['assigned_hours_full'] ?? null) !== null);
+            if (! empty($hasAnyFullConfigured) && $hoursFull > 0 && abs($totalFullAssigned - $hoursFull) > 0.01) {
+                Notification::make()
+                    ->title('Ore FULL non bilanciate')
+                    ->body("La somma delle ore FULL assegnate ai beneficiari ({$totalFullAssigned} h) non corrisponde alle ore FULL del contratto ({$hoursFull} h). Correggi la distribuzione prima di salvare.")
+                    ->danger()
+                    ->persistent()
+                    ->send();
+
+                $this->halt();
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
 
@@ -114,7 +138,7 @@ class EditContract extends EditRecord
     {
         return [
             Actions\Action::make('generate_lessons_safe')
-                ->label('Genera / completa lezioni')
+                ->label('Completa lezioni')
                 ->icon('heroicon-o-calendar-days')
                 ->color('success')
                 ->visible(fn (): bool => $this->canManageLessons())
@@ -139,7 +163,7 @@ class EditContract extends EditRecord
                 }),
 
             Actions\Action::make('regenerate_lessons_future')
-                ->label('Rigenera lezioni (cancella future)')
+                ->label('Rigenera lezioni')
                 ->icon('heroicon-o-arrow-path')
                 ->color('danger')
                 ->visible(fn (): bool => $this->canManageLessons())
@@ -163,8 +187,38 @@ class EditContract extends EditRecord
                     }
                 }),
 
+            Actions\Action::make('generate_full_placeholders')
+                ->label('Genera lezioni FULL')
+                ->icon('heroicon-o-user-group')
+                ->color('info')
+                ->visible(fn (): bool => $this->canManageLessons()
+                    && ($this->record->lesson_type ?? '') === 'Lezioni personalizzate + FULL')
+                ->requiresConfirmation()
+                ->modalHeading('Genera lezioni FULL')
+                ->modalDescription('Distribuisce le ore FULL tra i beneficiari (se non ancora assegnate) e aggiunge le lezioni FULL mancanti. Le lezioni già pianificate, completate o annullate non vengono modificate.')
+                ->action(function (): void {
+                    $ok = $this->runLocked('generateFullPlaceholders', function (): int {
+                        $contract = $this->record->fresh();
+                        $service  = app(FullLessonService::class);
+                        $contract->load('beneficiaries');
+
+                        $service->distributeFullHours($contract);
+                        $contract->load('beneficiaries');
+                        $service->generatePlaceholders($contract);
+
+                        return 1;
+                    });
+
+                    if ($ok) {
+                        Notification::make()
+                            ->title('Lezioni FULL generate correttamente')
+                            ->success()
+                            ->send();
+                    }
+                }),
+
             Actions\Action::make('regenerate_installments')
-                ->label('Rigenera scadenze e pagamenti')
+                ->label('Rigenera scadenze')
                 ->icon('heroicon-o-banknotes')
                 ->color('warning')
                 ->visible(fn (): bool => $this->canManagePayments())
@@ -497,6 +551,36 @@ class EditContract extends EditRecord
                 ->warning()
                 ->send();
         }
+
+        // ── Gestione lezioni FULL (contratti MIX) ───────────────────────────
+        $freshContract = $contract->fresh();
+        if (FullLessonService::isMixContract($freshContract)) {
+            try {
+                $fullService = app(FullLessonService::class);
+
+                // Distribuzione automatica se i beneficiari non hanno ancora ore FULL configurate
+                $freshContract->load('beneficiaries');
+                $anyFullMissing = $freshContract->beneficiaries
+                    ->contains(fn ($cs) => is_null($cs->assigned_hours_full) || (float) $cs->assigned_hours_full <= 0);
+
+                if ($anyFullMissing) {
+                    $fullService->distributeFullHours($freshContract);
+                    $freshContract->load('beneficiaries'); // ricarica dopo la distribuzione
+                }
+
+                // Genera i segnaposto mancanti
+                $fullService->generatePlaceholders($freshContract);
+            } catch (\Throwable $e) {
+                report($e);
+
+                Notification::make()
+                    ->title('Lezioni FULL non generate')
+                    ->body('Verifica le ore FULL assegnate ai beneficiari del contratto. Dettaglio: ' . $e->getMessage())
+                    ->warning()
+                    ->send();
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
     }
 
 }

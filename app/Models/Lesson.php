@@ -43,6 +43,7 @@ class Lesson extends Model
         'is_auto_recovery',
 
         'language_id',
+        'is_full_lesson',
     ];
 
     protected $casts = [
@@ -52,9 +53,10 @@ class Lesson extends Model
         'counts_as_consumed' => 'boolean',
         'is_recoverable'     => 'boolean',
         'is_auto_recovery'   => 'boolean',
+        'is_full_lesson'     => 'boolean',
         'duration_minutes'   => 'integer',
         'completed_at'       => 'datetime',
-        'language_id' => 'string',
+        'language_id'        => 'string',
     ];
 
     /* RELATIONS */
@@ -92,6 +94,26 @@ class Lesson extends Model
     public function recoveryLesson(): HasOne
     {
         return $this->hasOne(self::class, 'recovery_of_lesson_id');
+    }
+
+    /* SCOPES */
+
+    public function scopeFull($query)
+    {
+        return $query->where('is_full_lesson', true);
+    }
+
+    public function scopePersonalized($query)
+    {
+        return $query->where('is_full_lesson', false);
+    }
+
+    public function scopeFullDaDefinire($query)
+    {
+        return $query->where('is_full_lesson', true)
+                     ->whereNull('starts_at')
+                     ->whereNull('completed_at')
+                     ->whereNull('cancelled_at');
     }
 
     /* HELPERS */
@@ -152,6 +174,14 @@ class Lesson extends Model
     {
         $cancelledAt = $cancelledAt ?: $this->cancelled_at;
 
+        // SEGNAPOSTO FULL "da definire" (starts_at = null, non completata/annullata)
+        // Non consuma ore finché non viene pianificata o completata.
+        if ($this->is_full_lesson && is_null($this->starts_at) && ! $this->isCompleted() && ! $cancelledAt) {
+            $this->is_recoverable = false;
+            $this->counts_as_consumed = false;
+            return;
+        }
+
         // COMPLETATA → consuma sempre
         if ($this->isCompleted()) {
             $this->is_recoverable = false;
@@ -162,6 +192,12 @@ class Lesson extends Model
         // ANNULLATA → regola 24h
         if ($cancelledAt) {
             if (! $this->starts_at) {
+                // Lezione FULL annullata senza data → non consuma
+                if ($this->is_full_lesson) {
+                    $this->is_recoverable = false;
+                    $this->counts_as_consumed = false;
+                    return;
+                }
                 $this->is_recoverable = false;
                 $this->counts_as_consumed = true;
                 return;

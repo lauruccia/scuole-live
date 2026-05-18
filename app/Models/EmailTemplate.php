@@ -31,6 +31,7 @@ class EmailTemplate extends Model
         'lesson.cancelled.consumed'    => 'Lezione annullata (ore scalate)',
         'lesson.cancelled.permanent'   => 'Lezione annullata (definitivo)',
         'contract.sent'                => 'Contratto inviato',
+        'material.assigned'            => 'Materiale didattico assegnato',
     ];
 
     // ─── Helper: recupera per slug ────────────────────────────────────────────

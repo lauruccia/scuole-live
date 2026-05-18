@@ -1,7 +1,21 @@
 @extends('public.layout')
 
-@section('title', 'Corsi di Lingue - A&A Language Center Roma')
-@section('description', 'Scegli il tuo corso di lingue a Roma. Inglese, spagnolo, arabo, francese, tedesco, italiano per stranieri. Iscriviti online con pagamento sicuro.')
+@section('title', 'Corsi di Lingue a Roma — Catalogo | A&A Language Center')
+@section('description', 'Catalogo dei corsi di lingue di A&A Language Center a Roma San Paolo: inglese, spagnolo, arabo, francese, tedesco, italiano per stranieri. Iscriviti online con pagamento sicuro.')
+@section('keywords', 'corsi di lingue Roma catalogo, acquista corso lingue online Roma, corsi inglese Roma, corsi spagnolo Roma, corsi francese Roma, corsi tedesco Roma, corsi arabo Roma, corsi italiano stranieri Roma, iscrizione online corsi lingue')
+
+@section('breadcrumb-jsonld')
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@@type": "ListItem", "position": 1, "name": "Home", "item": "{{ route('home') }}" },
+        { "@@type": "ListItem", "position": 2, "name": "Corsi", "item": "{{ route('checkout.catalogo') }}" }
+    ]
+}
+</script>
+@endsection
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/catalogo.css') }}">

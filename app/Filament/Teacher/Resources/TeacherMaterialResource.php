@@ -5,6 +5,7 @@ namespace App\Filament\Teacher\Resources;
 use App\Filament\Teacher\Resources\TeacherMaterialResource\Pages;
 use App\Models\Contract;
 use App\Models\CourseMaterial;
+use App\Services\EmailTemplateService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -19,6 +20,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class TeacherMaterialResource extends Resource
@@ -32,7 +34,6 @@ class TeacherMaterialResource extends Resource
     protected static ?string $pluralModelLabel = 'Biblioteca materiali';
     protected static ?int    $navigationSort  = 3;
 
-    // Il docente vede solo i materiali che ha caricato lui
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->where('uploaded_by', Auth::id());
@@ -78,8 +79,8 @@ class TeacherMaterialResource extends Resource
                 \Filament\Forms\Components\Radio::make('content_type')
                     ->label('Tipo di contenuto')
                     ->options([
-                        'file' => '📎  File (PDF, Word, immagine…)',
-                        'link' => '🔗  Link esterno (YouTube, Vimeo, sito web…)',
+                        'file' => 'File (PDF, Word, immagine)',
+                        'link' => 'Link esterno (YouTube, Vimeo, sito web)',
                     ])
                     ->default('file')
                     ->inline()
@@ -164,7 +165,6 @@ class TeacherMaterialResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                // ── Assegna ai propri studenti ────────────────────────────────
                 Tables\Actions\Action::make('assign')
                     ->label('Assegna')
                     ->icon('heroicon-o-user-plus')
@@ -209,6 +209,11 @@ class TeacherMaterialResource extends Resource
                         ];
                     })
                     ->action(function (CourseMaterial $record, array $data): void {
+                        $alreadyAssigned = $record->contracts()
+                            ->pluck('contracts.id')
+                            ->map(fn ($id) => (int) $id)
+                            ->toArray();
+
                         $syncData = [];
                         foreach ($data['contracts'] as $contractId) {
                             $syncData[(int) $contractId] = [
@@ -218,13 +223,23 @@ class TeacherMaterialResource extends Resource
                         }
                         $record->contracts()->syncWithoutDetaching($syncData);
 
+                        if ($data['is_visible']) {
+                            $newContractIds = array_diff(
+                                array_map('intval', $data['contracts']),
+                                $alreadyAssigned
+                            );
+
+                            if (! empty($newContractIds)) {
+                                self::sendMaterialNotification($record, $newContractIds);
+                            }
+                        }
+
                         Notification::make()
                             ->title('Materiale assegnato a ' . count($data['contracts']) . ' studente/i')
                             ->success()
                             ->send();
                     }),
 
-                // ── Mostra assegnazioni ───────────────────────────────────────
                 Tables\Actions\Action::make('view_assignments')
                     ->label('Assegnazioni')
                     ->icon('heroicon-o-users')
@@ -262,15 +277,49 @@ class TeacherMaterialResource extends Resource
         ];
     }
 
+    private static function sendMaterialNotification(CourseMaterial $material, array $contractIds): void
+    {
+        $contracts = Contract::with('students')
+            ->whereIn('id', $contractIds)
+            ->get();
+
+        $svc         = app(EmailTemplateService::class);
+        $teacherName = trim(Auth::user()?->name ?? 'il docente');
+        $portaleUrl  = rtrim(config('app.url'), '/') . '/studente/materiali';
+
+        foreach ($contracts as $contract) {
+            $recipients = $contract->contractNotificationRecipients();
+            $to = $recipients['to'] ?? null;
+            $cc = $recipients['cc'] ?? [];
+
+            if (! $to) {
+                Log::info("TeacherMaterialResource: contratto #{$contract->id} senza email valida, skip notifica materiale.");
+                continue;
+            }
+
+            $variables = [
+                'nome'             => explode(' ', $to['name'])[0] ?? $to['name'],
+                'titolo_materiale' => $material->title,
+                'tipo_materiale'   => CourseMaterial::MATERIAL_TYPES[$material->material_type] ?? $material->material_type,
+                'lingua'           => $material->language ?? '',
+                'descrizione'      => $material->description ?? '',
+                'docente'          => $teacherName,
+                'portale_url'      => $portaleUrl,
+            ];
+
+            $svc->sendByEvent('material.assigned', $to['email'], $to['name'], $variables, [], $cc);
+        }
+    }
+
     private static function contractLabel(?Contract $c): string
     {
-        if (! $c) return '—';
+        if (! $c) return '---';
         $name = ($c->billing_type ?? 'private') === 'company'
-            ? ($c->company_name ?? '—')
+            ? ($c->company_name ?? '---')
             : trim(($c->billing_last_name ?? '') . ' ' . ($c->billing_first_name ?? ''));
         $langs = is_array($c->languages) && count($c->languages)
-            ? ' · ' . implode(', ', $c->languages)
+            ? ' - ' . implode(', ', $c->languages)
             : '';
-        return '#' . $c->id . ' — ' . $name . $langs;
+        return '#' . $c->id . ' - ' . $name . $langs;
     }
 }

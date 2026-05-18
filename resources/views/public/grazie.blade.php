@@ -4,26 +4,9 @@
 
 @push('styles')
 <style>
-    /* ── OVERRIDE NAV blu navy ── */
-    nav {
-        background: linear-gradient(90deg, #001126, #061b3f) !important;
-        border-bottom: none !important;
-        height: 92px !important;
-        padding: 0 max(20px, calc((100vw - 1120px) / 2)) !important;
-        box-shadow: 0 8px 30px rgba(0,0,0,.18) !important;
-    }
-    .nav-brand { color: #fff !important; }
-    .nav-brand img { height: 74px !important; }
-    .nav-links a { color: rgba(255,255,255,.9) !important; font-size: 14px !important; font-weight: 700 !important; }
-    .nav-links a:hover { color: #49a1ff !important; }
-    .nav-links .btn-primary {
-        background: #0069f2 !important;
-        color: #fff !important;
-        font-size: 14px !important;
-        font-weight: 800 !important;
-        padding: 18px 28px !important;
-        border-radius: 7px !important;
-    }
+    /* Navbar e container .c sono gestiti dal layout globale.
+       Le precedenti regole nav/.nav-brand/.nav-links !important
+       rompevano l'header — sono state rimosse. */
 
     /* ── PAGINA ── */
     .grazie-section {

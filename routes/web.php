@@ -7,15 +7,29 @@ use App\Http\Controllers\HomeworkGradeController;
 use App\Http\Controllers\MaterialVisibilityController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\PublicController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StudentContractPrintController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\Reports\TeacherHoursPdfController;
+
+// ─── SEO: sitemap dinamica ───────────────────────────────────────────────────
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 // ─── Pagine pubbliche ─────────────────────────────────────────────────────────
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/iscriviti', [PublicController::class, 'iscriviti'])->name('iscrizione');
 Route::get('/grazie', [PublicController::class, 'grazie'])->name('iscrizione.grazie');
 Route::get('/privacy', [PublicController::class, 'privacy'])->name('privacy');
+Route::get('/la-scuola', [PublicController::class, 'laScuola'])->name('la-scuola');
+Route::get('/per-le-aziende', [PublicController::class, 'perLeAziende'])->name('per-le-aziende');
+Route::get('/servizi', [PublicController::class, 'servizi'])->name('servizi');
+Route::get('/lavora-con-noi', [PublicController::class, 'lavoraConNoi'])->name('lavora-con-noi');
+Route::get('/contattaci', [PublicController::class, 'contattaci'])->name('contattaci');
+
+// ─── SEO Landing pages (long-tail keyword) ───────────────────────────────────
+Route::get('/corsi-inglese-roma', [PublicController::class, 'landingInglese'])->name('landing.inglese');
+Route::get('/corsi-italiano-stranieri-roma', [PublicController::class, 'landingItalianoStranieri'])->name('landing.italiano-stranieri');
+Route::get('/corsi-aziendali-roma', [PublicController::class, 'landingAziendali'])->name('landing.aziendali');
 
 // Throttle anti-spam: max 5 invii per IP al minuto
 Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])

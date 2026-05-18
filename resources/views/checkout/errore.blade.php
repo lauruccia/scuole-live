@@ -8,18 +8,7 @@
     body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f6faff; color: #06152f; }
     :root { --blue:#0057d9; --blue-dark:#001b3f; --border:#dbe7f4; --muted:#526173; --shadow:0 18px 50px rgba(0,37,91,.16); }
 
-    nav {
-        background: linear-gradient(90deg, #001126, #061b3f) !important;
-        border-bottom: none !important; height: 92px !important;
-        padding: 0 max(20px, calc((100vw - 1120px) / 2)) !important;
-        box-shadow: 0 8px 30px rgba(0,0,0,.18) !important;
-    }
-    .nav-brand { color: #fff !important; }
-    .nav-brand img { height: 74px !important; }
-    .nav-links a { color: rgba(255,255,255,.9) !important; font-size: 14px !important; font-weight: 700 !important; }
-    .nav-links .btn-primary { background: #0069f2 !important; color: #fff !important; font-size: 14px !important; font-weight: 800 !important; padding: 18px 28px !important; border-radius: 7px !important; }
-    .nav-links .btn-outline { background: transparent !important; color: rgba(255,255,255,.85) !important; border: 1.5px solid rgba(255,255,255,.35) !important; font-size: 13px !important; padding: 10px 20px !important; border-radius: 7px !important; }
-
+    /* Navbar gestita dal layout. .c ristretto a 600px per la pagina errore. */
     .c { width: min(600px, calc(100% - 40px)); margin: 0 auto; }
     .page-wrap { padding: 60px 0 80px; text-align: center; }
 

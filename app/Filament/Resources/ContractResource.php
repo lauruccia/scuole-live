@@ -1050,13 +1050,24 @@ Select::make('student_id')
                                         ]),
 
                                         TextInput::make('assigned_hours')
-                                            ->label('Ore assegnate')
+                                            ->label('Ore personalizzate assegnate')
                                             ->numeric()
                                             ->step(0.5)
                                             ->minValue(0.5)
                                             ->nullable()
                                             ->live(onBlur: true)
                                             ->helperText('Supporta mezze ore. Default automatico distribuito sui beneficiari.')
+                                            ->columnSpanFull(),
+
+                                        TextInput::make('assigned_hours_full')
+                                            ->label('Ore FULL assegnate')
+                                            ->numeric()
+                                            ->step(1)
+                                            ->minValue(0)
+                                            ->nullable()
+                                            ->live(onBlur: true)
+                                            ->helperText('Ore lezioni FULL per questo beneficiario (1 ora = 1 segnaposto). Distribuzione equa automatica; modificabile.')
+                                            ->visible(fn (Get $get) => $get('../../../../lesson_type') === 'Lezioni personalizzate + FULL')
                                             ->columnSpanFull(),
 
                                         Placeholder::make('auto_birth_province')
@@ -2014,6 +2025,7 @@ protected static function fillBeneficiaryFormFromStudent(Student $student, Set $
     {
         return [
             RelationManagers\LessonSlotsRelationManager::class,
+            RelationManagers\FullLessonsRelationManager::class,
         ];
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\CourseMaterialResource\Pages;
 use App\Models\Contract;
 use App\Models\CourseMaterial;
+use App\Services\EmailTemplateService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
@@ -18,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class CourseMaterialResource extends Resource
@@ -219,6 +221,9 @@ class CourseMaterialResource extends Resource
                             ->default(true),
                     ])
                     ->action(function (CourseMaterial $record, array $data): void {
+                        // Contratti già assegnati PRIMA del sync (per non reinviare email a chi aveva già il materiale)
+                        $alreadyAssigned = $record->contracts()->pluck('contracts.id')->map(fn ($id) => (int) $id)->toArray();
+
                         $syncData = [];
                         foreach ($data['contracts'] as $contractId) {
                             $syncData[(int) $contractId] = [
@@ -227,6 +232,18 @@ class CourseMaterialResource extends Resource
                             ];
                         }
                         $record->contracts()->syncWithoutDetaching($syncData);
+
+                        // Invia email solo ai contratti nuovamente assegnati (visibili subito)
+                        if ($data['is_visible']) {
+                            $newContractIds = array_diff(
+                                array_map('intval', $data['contracts']),
+                                $alreadyAssigned
+                            );
+
+                            if (! empty($newContractIds)) {
+                                self::sendMaterialNotification($record, $newContractIds);
+                            }
+                        }
 
                         Notification::make()
                             ->title('Materiale assegnato a ' . count($data['contracts']) . ' contratto/i')
@@ -261,10 +278,6 @@ class CourseMaterialResource extends Resource
                     ->iconButton()
                     ->after(fn (CourseMaterial $r) => Storage::disk('public')->delete($r->file_path)),
             ]);
-    }
-
-    public static function getPages(): array
-    {
         return [
             'index'  => Pages\ListCourseMaterials::route('/'),
             'create' => Pages\CreateCourseMaterial::route('/create'),
@@ -272,16 +285,50 @@ class CourseMaterialResource extends Resource
         ];
     }
 
-    // ── Label leggibile per un contratto ─────────────────────────────────────
+    private static function sendMaterialNotification(CourseMaterial $material, array $contractIds): void
+    {
+        $contracts = Contract::with('students')
+            ->whereIn('id', $contractIds)
+            ->get();
+
+        $svc         = app(EmailTemplateService::class);
+        $uploader    = $material->uploadedBy;
+        $teacherName = $uploader ? trim($uploader->name ?? '') : 'il docente';
+        $portaleUrl  = rtrim(config('app.url'), '/') . '/studente/materiali';
+
+        foreach ($contracts as $contract) {
+            $recipients = $contract->contractNotificationRecipients();
+            $to = $recipients['to'] ?? null;
+            $cc = $recipients['cc'] ?? [];
+
+            if (! $to) {
+                Log::info("CourseMaterialResource: contratto #{$contract->id} senza email valida, skip notifica materiale.");
+                continue;
+            }
+
+            $variables = [
+                'nome'             => explode(' ', $to['name'])[0] ?? $to['name'],
+                'titolo_materiale' => $material->title,
+                'tipo_materiale'   => CourseMaterial::MATERIAL_TYPES[$material->material_type] ?? $material->material_type,
+                'lingua'           => $material->language ?? '',
+                'descrizione'      => $material->description ?? '',
+                'docente'          => $teacherName,
+                'portale_url'      => $portaleUrl,
+            ];
+
+            $svc->sendByEvent('material.assigned', $to['email'], $to['name'], $variables, [], $cc);
+        }
+    }
+
     private static function contractLabel(?Contract $c): string
     {
-        if (! $c) return '—';
+        if (! $c) return '---';
         $name = ($c->billing_type ?? 'private') === 'company'
-            ? ($c->company_name ?? '—')
+            ? ($c->company_name ?? '---')
             : trim(($c->billing_last_name ?? '') . ' ' . ($c->billing_first_name ?? ''));
         $langs = is_array($c->languages) && count($c->languages)
-            ? ' · ' . implode(', ', $c->languages)
+            ? ' - ' . implode(', ', $c->languages)
             : '';
-        return '#' . $c->id . ' — ' . $name . $langs;
+        return '#' . $c->id . ' - ' . $name . $langs;
     }
 }

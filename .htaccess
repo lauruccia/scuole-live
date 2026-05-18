@@ -1,0 +1,36 @@
+# ============================================================
+# .htaccess ROOT — Protezione file sensibili
+# Posizionato nella root del progetto Laravel (non in /public)
+# ============================================================
+
+# Blocca accesso diretto a file sensibili
+<FilesMatch "^\.env(\..*)?$|^\.env$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "\.(sql|log|md|sh|bat|conf|lock|json|yaml|yml|xml|ini|gitignore|gitattributes)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Blocca script helper temporanei (run_*.php)
+<FilesMatch "^run_.*\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Blocca accesso a cartelle interne Laravel
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Blocca accesso diretto a app/, config/, database/, resources/, routes/, storage/, tests/, vendor/
+    RewriteRule ^(app|config|database|resources|routes|storage|tests|vendor|bootstrap|lang)/ - [F,L]
+
+    # Tutto il traffico legittimo va verso /public
+    # (questo vale solo se il DocumentRoot punta alla root del progetto)
+    # Se DocumentRoot punta gia' a /public, queste regole non servono ma non fanno danno.
+</IfModule>
+
+# Disabilita directory listing
+Options -Indexes

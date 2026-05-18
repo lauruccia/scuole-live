@@ -13,7 +13,15 @@ class PublicController extends Controller
 {
     public function home()
     {
-        return view('public.home');
+        // Lingue con almeno un corso pubblico/attivo, ordinate per nome lingua
+        $coursesByLanguage = \App\Models\Course::where('is_public', true)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->groupBy('language_id')
+            ->filter(fn ($group, $key) => ! empty($key));
+
+        return view('public.home', compact('coursesByLanguage'));
     }
 
     public function iscriviti()
@@ -99,5 +107,52 @@ class PublicController extends Controller
     public function privacy()
     {
         return view('public.privacy');
+    }
+
+    public function laScuola()
+    {
+        return view('public.la-scuola');
+    }
+
+    public function perLeAziende()
+    {
+        return view('public.per-le-aziende');
+    }
+
+    public function servizi()
+    {
+        return view('public.servizi');
+    }
+
+    public function lavoraConNoi()
+    {
+        return view('public.lavora-con-noi');
+    }
+
+    public function contattaci()
+    {
+        return view('public.contattaci');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Landing SEO — long-tail keyword per lingua/segmento
+    |--------------------------------------------------------------------------
+    | Pagine dedicate progettate per posizionarsi su keyword specifiche che
+    | la home (troppo generica) non riesce a coprire.
+    */
+    public function landingInglese()
+    {
+        return view('public.landing.inglese');
+    }
+
+    public function landingItalianoStranieri()
+    {
+        return view('public.landing.italiano-stranieri');
+    }
+
+    public function landingAziendali()
+    {
+        return view('public.landing.aziendali');
     }
 }

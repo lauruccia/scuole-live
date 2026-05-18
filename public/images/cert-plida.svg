@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 90">
+  <!-- Red Dante Alighieri CIR symbol (top right) -->
+  <g transform="translate(210,5)">
+    <circle cx="22" cy="22" r="20" fill="none" stroke="#C00" stroke-width="3"/>
+    <path d="M14,22 Q22,8 30,22 Q22,36 14,22 Z" fill="#C00"/>
+    <circle cx="22" cy="22" r="6" fill="#C00"/>
+  </g>
+  <!-- PLIDA main text -->
+  <text x="10" y="58" font-family="Georgia,'Times New Roman',serif" font-size="44" font-weight="bold" fill="#1a1a1a">PLIDA</text>
+  <!-- Tagline -->
+  <text x="10" y="78" font-family="Georgia,'Times New Roman',serif" font-size="10" fill="#333" font-style="italic">L'italiano scritto. Parlato. Certificato.</text>
+</svg>

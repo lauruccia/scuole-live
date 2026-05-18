@@ -1,11 +1,76 @@
 @extends('public.layout')
 
-@section('title', 'Iscrizione — ' . $course->name . ' — A&A Language Center')
+@section('title', $course->name . ' a Roma — Iscrizione | A&A Language Center')
+@section('description', \Illuminate\Support\Str::limit(strip_tags($course->short_description ?? $course->description ?? ('Corso di ' . ($course->language_id ?? 'lingue') . ' a Roma con docenti madrelingua. Iscriviti subito ad A&A Language Center.')), 158))
+@section('keywords', 'corso ' . strtolower($course->language_id ?? 'lingue') . ' Roma, ' . strtolower($course->name) . ', scuola di ' . strtolower($course->language_id ?? 'lingue') . ' Roma San Paolo, iscrizione corso ' . strtolower($course->language_id ?? 'lingue') . ' Roma, A&A Language Center')
+
+@section('breadcrumb-jsonld')
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@@type": "ListItem", "position": 1, "name": "Home", "item": "{{ route('home') }}" },
+        { "@@type": "ListItem", "position": 2, "name": "Corsi", "item": "{{ route('checkout.catalogo') }}" },
+        { "@@type": "ListItem", "position": 3, "name": @json($course->name), "item": "{{ route('checkout.show', $course->id) }}" }
+    ]
+}
+</script>
+@endsection
+
+@section('extra-jsonld')
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "Course",
+    "name": @json($course->name),
+    "description": @json(strip_tags($course->description ?? $course->short_description ?? 'Corso di ' . ($course->language_id ?? 'lingue') . ' a Roma con docenti madrelingua.')),
+    "url": "{{ route('checkout.show', $course->id) }}",
+    "inLanguage": "it",
+    "educationalLevel": @json($course->level ?? 'Tutti i livelli (A1–C2 CEFR)'),
+    "teaches": @json($course->language_id ?? 'Lingua straniera'),
+    "courseMode": ["onsite","online"],
+    "provider": {
+        "@@type": "EducationalOrganization",
+        "name": "A&A Language Center",
+        "sameAs": "{{ config('app.url') }}",
+        "url": "{{ config('app.url') }}",
+        "address": {
+            "@@type": "PostalAddress",
+            "streetAddress": "Viale Leonardo da Vinci, 193",
+            "addressLocality": "Roma",
+            "postalCode": "00145",
+            "addressCountry": "IT"
+        }
+    },
+    "hasCourseInstance": {
+        "@@type": "CourseInstance",
+        "courseMode": "Blended",
+        "courseWorkload": @json($course->hours_purchased ? 'PT' . (int)$course->hours_purchased . 'H' : 'PT40H'),
+        "location": {
+            "@@type": "Place",
+            "name": "A&A Language Center — Roma San Paolo",
+            "address": "Viale Leonardo da Vinci 193, 00145 Roma"
+        }
+    },
+    "offers": {
+        "@@type": "Offer",
+        "price": @json(number_format((float)$course->total_price, 2, '.', '')),
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock",
+        "url": "{{ route('checkout.show', $course->id) }}",
+        "category": "language course",
+        "validFrom": "{{ now()->toIso8601String() }}"
+    }
+}
+</script>
+@endsection
 
 @push('styles')
 <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #f6faff; color: #06152f; }
+    /* NB: la navbar e il container .c sono gestiti dal layout globale.
+       Le precedenti regole nav/.nav-brand/.nav-links con !important
+       sovrascrivevano il layout e rompevano l'header. Rimosse. */
 
     :root {
         --blue:      #0057d9;
@@ -18,31 +83,6 @@
         --border:    #dbe7f4;
         --shadow:    0 18px 50px rgba(0,37,91,.16);
     }
-
-    nav {
-        background: linear-gradient(90deg, #001126, #061b3f) !important;
-        border-bottom: none !important; height: 92px !important;
-        padding: 0 max(20px, calc((100vw - 1120px) / 2)) !important;
-        box-shadow: 0 8px 30px rgba(0,0,0,.18) !important;
-    }
-    .nav-brand { color: #fff !important; }
-    .nav-brand img { height: 74px !important; }
-    .nav-links a { color: rgba(255,255,255,.9) !important; font-size: 14px !important; font-weight: 700 !important; }
-    .nav-links a:hover { color: #49a1ff !important; }
-    .nav-links .btn-primary {
-        background: #0069f2 !important; color: #fff !important;
-        font-size: 14px !important; font-weight: 800 !important;
-        padding: 18px 28px !important; border-radius: 7px !important;
-        box-shadow: 0 10px 25px rgba(0,105,242,.3) !important;
-    }
-    .nav-links .btn-primary:hover { background: #0051c4 !important; transform: translateY(-2px) !important; }
-    .nav-links .btn-outline {
-        background: transparent !important; color: rgba(255,255,255,.85) !important;
-        border: 1.5px solid rgba(255,255,255,.35) !important;
-        font-size: 13px !important; padding: 10px 20px !important; border-radius: 7px !important;
-    }
-
-    .c { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
 
     /* ── Breadcrumb ── */
     .breadcrumb {

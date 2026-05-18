@@ -1,663 +1,766 @@
 @extends('public.layout')
 
-@section('title', 'A&A Language Center — Scuola di Lingue Roma')
-@section('description', 'Scuola di lingue a Roma, quartiere San Paolo. Corsi di inglese, spagnolo, arabo, francese, tedesco e italiano per stranieri con insegnanti madrelingua qualificati da oltre 20 anni.')
+@section('title', 'Scuola di Lingue a Roma | A&A Language Center San Paolo')
+@section('description', 'Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri con docenti madrelingua. Sede esami Trinity College London. Test di livello gratuito.')
+@section('keywords', 'scuola di lingue Roma, scuola di lingue Roma San Paolo, corsi di lingue Roma, corsi di inglese Roma, docenti madrelingua Roma, Trinity College Roma, certificazioni internazionali lingue Roma, A&A Language Center')
+
+@section('breadcrumb-jsonld')
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@@type": "ListItem", "position": 1, "name": "Home", "item": "{{ route('home') }}" }
+    ]
+}
+</script>
+@endsection
 
 @push('styles')
 <style>
-    /* ── RESET LAYOUT ── */
-    *, *::before, *::after { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #fff; color: #06152f; }
-    a { text-decoration: none; color: inherit; }
+/* ════════════════════════════════════════════════════════
+   HOME — DESIGN PREMIUM
+   Colori layout: --navy #071428 | --blue #1A56DB | --gold #C9A42C
+════════════════════════════════════════════════════════ */
 
-    /* ── VARIABILI ── */
-    :root {
-        --blue:      #0057d9;
-        --blue-dark: #001b3f;
-        --blue-deep: #001126;
-        --light:     #f6faff;
-        --text:      #06152f;
-        --muted:     #526173;
-        --yellow:    #ffd800;
-        --border:    #dbe7f4;
-        --shadow:    0 18px 50px rgba(0,37,91,.16);
-    }
+/* Override nav CTA colore blu */
+.btn-nav-cta {
+    background: var(--blue) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 16px rgba(26,86,219,.35);
+}
+.btn-nav-cta:hover {
+    background: var(--blue-h) !important;
+    box-shadow: 0 8px 24px rgba(26,86,219,.45) !important;
+}
 
-    /* ── OVERRIDE LAYOUT NAV ── */
-    nav {
-        background: linear-gradient(90deg, #001126, #061b3f) !important;
-        border-bottom: none !important;
-        height: 92px !important;
-        padding: 0 max(20px, calc((100vw - 1120px) / 2)) !important;
-        box-shadow: 0 8px 30px rgba(0,0,0,.18) !important;
-    }
-    .nav-brand { color: #fff !important; }
-    .nav-brand img { height: 74px !important; }
-    .nav-links a { color: rgba(255,255,255,.9) !important; font-size: 14px !important; font-weight: 700 !important; }
-    .nav-links a:hover { color: #49a1ff !important; }
-    .nav-links .btn-primary {
-        background: #0069f2 !important;
-        color: #fff !important;
-        font-size: 14px !important;
-        font-weight: 800 !important;
-        padding: 18px 28px !important;
-        border-radius: 7px !important;
-        box-shadow: 0 10px 25px rgba(0,105,242,.3) !important;
-    }
-    .nav-links .btn-primary:hover { background: #0051c4 !important; transform: translateY(-2px) !important; }
+/* ── HERO ─────────────────────────────────────────── */
+.hero {
+    /* Stile "discreto":
+       - Overlay scuro DENSO a sinistra (0–45%) per leggibilità del testo
+       - Sfumatura rapida a metà
+       - Foto PIENAMENTE VISIBILE a destra (60–100%, overlay quasi nullo)
+       - Fondo navy come fallback in caso l'immagine non risponda
+    */
+    background:
+        linear-gradient(95deg,
+            rgba(7,20,40,.97) 0%,
+            rgba(7,20,40,.94) 30%,
+            rgba(7,20,40,.78) 45%,
+            rgba(7,20,40,.30) 60%,
+            rgba(7,20,40,.05) 100%),
+        url('https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85')
+            center right / cover no-repeat,
+        linear-gradient(135deg, #071428 0%, #0d1f3c 50%, #112350 100%);
+    min-height: 620px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+.hero::before {
+    /* Texture leggera a griglia SOLO sul lato sinistro (sotto al testo) */
+    content: '';
+    position: absolute; inset: 0 50% 0 0;
+    background-image:
+        linear-gradient(rgba(26,86,219,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(26,86,219,.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+    pointer-events: none;
+    z-index: 1;
+}
+.hero-left {
+    position: relative; z-index: 2;
+    padding: 90px 56px 90px max(24px, calc((100vw - 1140px) / 2));
+}
+.hero-eyebrow {
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+    margin-bottom: 22px;
+}
+.hero-eyebrow span { color: var(--blue); }
+.hero h1 {
+    font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+    font-weight: 800; line-height: 1.08;
+    letter-spacing: -.05em; color: #fff;
+    margin-bottom: 20px;
+}
+.hero h1 .accent { color: var(--blue); display: block; }
+.hero h1 .h1-kicker {
+    display: block;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    line-height: 1.4;
+}
+.hero-desc {
+    font-size: 1rem; color: rgba(255,255,255,.62);
+    line-height: 1.75; max-width: 480px; margin-bottom: 36px;
+}
+.hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn-hero-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: .85rem 1.8rem;
+    background: var(--blue); color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: .88rem;
+    border-radius: 8px; letter-spacing: .03em;
+    text-transform: uppercase;
+    transition: all .2s;
+}
+.btn-hero-primary:hover { background: var(--blue-h); transform: translateY(-2px); }
+.btn-hero-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: .85rem 1.8rem;
+    background: rgba(255,255,255,.06);
+    color: rgba(255,255,255,.85);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600; font-size: .88rem;
+    border-radius: 8px; border: 1.5px solid rgba(255,255,255,.18);
+    letter-spacing: .03em; text-transform: uppercase;
+    transition: all .2s;
+}
+.btn-hero-ghost:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.4); }
 
-    /* ── CONTAINER ── */
-    .c { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+/* Hero right — solo contenitore per le floating cards
+   (l'immagine di sfondo è applicata a .hero a tutta larghezza) */
+.hero-right {
+    position: relative; height: 600px;
+    z-index: 2;
+}
+.hero-float-wrap {
+    position: absolute; inset: 0; pointer-events: none;
+}
+.hf {
+    position: absolute;
+    background: rgba(255,255,255,.92);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0,0,0,.2);
+    min-width: 150px;
+}
+.hf-icon {
+    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+}
+.hf-text strong { display: block; font-size: .82rem; font-weight: 700; color: #0d1b2e; line-height: 1.2; }
+.hf-text span { font-size: .68rem; color: #4e5d72; }
+.hf-1 { top: 18%;  right: 52%; background: rgba(255,255,255,.95); }
+.hf-2 { top: 38%;  right: 4%;  }
+.hf-3 { bottom: 30%; right: 52%; }
+.hf-4 { bottom: 15%; right: 6%;  }
 
-    /* ── HERO ── */
-    .hero {
-        position: relative;
-        min-height: 500px;
-        overflow: hidden;
-        background:
-            linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.92) 36%, rgba(255,255,255,.15) 64%),
-            url('https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=85') center right / cover;
-    }
-    .hero::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80') center / cover;
-        opacity: .16;
-        mix-blend-mode: multiply;
-        pointer-events: none;
-    }
-    .hero-content {
-        position: relative;
-        z-index: 2;
-        padding: 70px 0 105px;
-        max-width: 540px;
-    }
-    .hero h1 {
-        margin: 0;
-        font-size: 58px;
-        line-height: 1.04;
-        letter-spacing: -2px;
-        color: #020b18;
-        font-weight: 900;
-    }
-    .hero h1 span { display: block; color: #0065e8; }
-    .hero p { font-size: 17px; line-height: 1.65; color: #17213a; margin: 22px 0 28px; }
-    .hero-actions { display: flex; gap: 18px; flex-wrap: wrap; }
+/* ── CERT STRIP ───────────────────────────────────── */
+.cert-strip {
+    background: #fff;
+    border-top: 1px solid #e8eef8;
+    border-bottom: 1px solid #e8eef8;
+    padding: 28px 0;
+}
+.cert-strip-label {
+    text-align: center; font-size: .65rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: #9aadcb; margin-bottom: 20px;
+}
+.cert-logos {
+    display: flex; gap: 24px;
+    justify-content: center; align-items: center; flex-wrap: wrap;
+}
+.cert-logo-item {
+    display: flex; align-items: center; justify-content: center;
+    opacity: .72; transition: opacity .2s, transform .2s;
+    padding: 4px 8px;
+}
+.cert-logo-item:hover { opacity: 1; transform: translateY(-2px); }
+.cert-logo-item img {
+    height: 40px; width: auto; max-width: 130px;
+    object-fit: contain; display: block;
+}
 
-    .hbtn {
-        display: inline-flex;
-        align-items: center;
-        min-height: 46px;
-        padding: 0 30px;
-        border-radius: 7px;
-        font-size: 13px;
-        font-weight: 900;
-        border: 2px solid var(--blue);
-        transition: .22s ease;
-        cursor: pointer;
-    }
-    .hbtn-primary { background: var(--blue); color: #fff; box-shadow: 0 12px 25px rgba(0,87,217,.25); }
-    .hbtn-outline  { background: #fff; color: var(--blue); }
-    .hbtn:hover    { transform: translateY(-2px); }
+/* ── WHY / FEATURES ──────────────────────────────── */
+.why-section {
+    background: #f5f8fc;
+    padding: 80px 0;
+}
+.why-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 64px;
+    align-items: start;
+}
+.why-left .sec-heading { font-size: clamp(1.6rem, 3vw, 2.1rem); }
+.why-underline {
+    width: 40px; height: 3px;
+    background: var(--blue); border-radius: 2px;
+    margin: 14px 0 20px;
+}
+.why-left p { font-size: .95rem; color: var(--muted); line-height: 1.75; }
+.why-cta { margin-top: 28px; }
 
-    /* ── TRUST CARD ── */
-    .trust-card {
-        margin-top: -58px;
-        position: relative;
-        z-index: 5;
-    }
-    .trust-inner {
-        background: #fff;
-        border-radius: 18px;
-        box-shadow: var(--shadow);
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        padding: 22px 10px;
-    }
-    .trust-item {
-        text-align: center;
-        padding: 14px 22px;
-        border-right: 1px solid var(--border);
-    }
-    .trust-item:last-child { border-right: none; }
-    .trust-icon { width: 42px; height: 42px; margin: 0 auto 12px; color: var(--blue); }
-    .trust-item h3 { margin: 0; font-size: 17px; line-height: 1.15; }
-    .trust-item p  { margin: 12px 0 0; color: #3e4b5e; font-size: 12px; line-height: 1.55; }
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 14px;
+}
+.feature-card {
+    background: #fff;
+    border: 1px solid #e8eef8;
+    border-radius: 14px;
+    padding: 22px 18px;
+    transition: border-color .2s, transform .2s;
+}
+.feature-card:hover {
+    border-color: rgba(26,86,219,.25);
+    transform: translateY(-3px);
+}
+.feature-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--blue-l);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; margin-bottom: 14px;
+}
+.feature-card h4 { font-size: .88rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.feature-card p  { font-size: .78rem; color: var(--muted); line-height: 1.6; margin: 0; }
 
-    /* ── SEZIONE CORSI ── */
-    .sec { padding: 58px 0; }
-    .sec-title { text-align: center; margin-bottom: 28px; }
-    .sec-title h2 { font-size: 30px; margin: 0; letter-spacing: -.8px; }
-    .sec-title::after {
-        content: "";
-        width: 28px; height: 3px;
-        background: var(--blue);
-        display: block;
-        margin: 11px auto 0;
-        border-radius: 10px;
-    }
+/* ── CORSI SECTION (dark) ────────────────────────── */
+.corsi-section {
+    background: linear-gradient(135deg, #071428 0%, #0d1f3c 100%);
+    padding: 80px 0;
+    overflow: hidden;
+}
+.corsi-inner {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 48px;
+    align-items: start;
+}
+.corsi-left { padding-top: 8px; }
+.corsi-left .sec-heading { color: #fff; font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.corsi-left .sec-heading em { color: var(--blue); font-style: normal; }
+.corsi-left .sec-subtext { color: rgba(255,255,255,.52); margin: 14px 0 28px; }
+.btn-corsi-all {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: .7rem 1.4rem;
+    border: 1.5px solid rgba(255,255,255,.25);
+    color: rgba(255,255,255,.8);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600; font-size: .82rem;
+    border-radius: 8px; letter-spacing: .04em;
+    transition: all .2s;
+}
+.btn-corsi-all:hover { border-color: var(--blue); color: var(--blue); }
 
-    .course-grid {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 14px;
-    }
-    .course-card {
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 16px 12px 20px;
-        min-height: 210px;
-        background: #fff;
-        text-align: center;
-        transition: .22s ease;
-    }
-    .course-card:hover { transform: translateY(-5px); box-shadow: 0 18px 35px rgba(0,38,90,.12); }
-    .course-image {
-        position: relative;
-        width: 86px; height: 86px;
-        margin: 0 auto 12px;
-        border-radius: 50%;
-        background-size: cover;
-        background-position: center;
-        box-shadow: 0 5px 14px rgba(0,0,0,.18);
-    }
-    .flag {
-        position: absolute;
-        width: 38px; height: 38px;
-        right: -12px; top: 2px;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 6px 12px rgba(0,0,0,.18);
-        display: grid;
-        place-items: center;
-        font-size: 22px;
-        background: #fff;
-    }
-    .course-card h3 { margin: 0; font-size: 15px; }
-    .course-card p  { font-size: 11px; line-height: 1.6; color: #2d3a4d; min-height: 44px; }
-    .course-card a  { color: var(--blue); font-size: 12px; font-weight: 900; }
+/* Scroller */
+.corsi-scroll {
+    display: flex; gap: 14px;
+    overflow-x: auto; padding-bottom: 8px;
+    scrollbar-width: thin; scrollbar-color: rgba(26,86,219,.3) transparent;
+}
+.corsi-scroll::-webkit-scrollbar { height: 4px; }
+.corsi-scroll::-webkit-scrollbar-track { background: transparent; }
+.corsi-scroll::-webkit-scrollbar-thumb { background: rgba(26,86,219,.4); border-radius: 4px; }
 
-    /* ── METODO ── */
-    .method-band {
-        display: grid;
-        grid-template-columns: 1.05fr .95fr;
-        min-height: 290px;
-        background: linear-gradient(110deg, #001733 0%, #003d94 55%, transparent 55%);
-        color: #fff;
-        overflow: hidden;
-    }
-    .method-text { padding: 55px 0 45px; }
-    .method-text-inner {
-        width: min(540px, calc(100% - 40px));
-        margin-left: max(20px, calc((100vw - 1120px) / 2));
-    }
-    .small-label { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
-    .method-band h2 { font-size: 31px; line-height: 1.12; margin: 0 0 16px; letter-spacing: -.7px; }
-    .method-band p  { color: #e5eefb; font-size: 13px; line-height: 1.65; }
-    .method-points {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-        margin-top: 28px;
-    }
-    .method-point { display: flex; gap: 12px; align-items: flex-start; }
-    .mini-icon {
-        width: 44px; height: 44px;
-        flex: 0 0 44px;
-        border-radius: 12px;
-        background: #fff;
-        color: var(--blue);
-        display: grid;
-        place-items: center;
-        font-size: 22px;
-    }
-    .method-point strong { display: block; font-size: 12px; }
-    .method-point span  { display: block; font-size: 11px; color: #d6e4f7; line-height: 1.4; margin-top: 3px; }
-    .method-photo {
-        background: url('https://images.unsplash.com/photo-1588702547923-7093a6c3ba33?auto=format&fit=crop&w=1200&q=85') center / cover;
-    }
+.corso-card {
+    flex: 0 0 185px;
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.08);
+    background: #111c30;
+    cursor: pointer;
+    transition: border-color .2s, transform .2s;
+    display: flex; flex-direction: column;
+}
+.corso-card:hover { border-color: rgba(26,86,219,.5); transform: translateY(-4px); }
 
-    /* ── PER CHI ── */
-    .audience-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 0;
-        margin-top: 28px;
-    }
-    .audience-item {
-        display: flex;
-        gap: 18px;
-        align-items: center;
-        padding: 12px 26px;
-        border-right: 1px solid var(--border);
-    }
-    .audience-item:last-child { border-right: none; }
-    .audience-icon { width: 58px; height: 58px; flex: 0 0 58px; color: var(--blue); }
-    .audience-item h3 { margin: 0 0 6px; font-size: 17px; }
-    .audience-item p  { margin: 0; font-size: 12px; line-height: 1.45; color: #2d3a4d; }
+.corso-img {
+    height: 220px;
+    background-size: cover; background-position: center;
+    position: relative;
+}
+.corso-img::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(to top,
+        rgba(7,20,40,.95) 0%,
+        rgba(7,20,40,.4) 50%,
+        transparent 100%);
+}
+.corso-flag {
+    position: absolute; top: 12px; left: 12px; z-index: 2;
+    font-size: 1.6rem;
+}
+.corso-body { padding: 14px 14px 16px; flex: 1; }
+.corso-lang { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 2px; }
+.corso-level { font-size: .68rem; color: rgba(255,255,255,.45); margin-bottom: 8px; }
+.corso-cert { font-size: .68rem; color: var(--blue); font-weight: 600; line-height: 1.4; }
+.corso-arrow {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.15);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 10px; font-size: .75rem; color: rgba(255,255,255,.5);
+    transition: all .2s;
+}
+.corso-card:hover .corso-arrow { background: var(--blue); border-color: var(--blue); color: #fff; }
 
-    /* ── RECENSIONI ── */
-    .reviews-bg { background: #f3f8ff; }
-    .review-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 22px;
-    }
-    .review {
-        background: #fff;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 22px;
-        box-shadow: 0 8px 25px rgba(0,37,91,.06);
-        display: flex;
-        flex-direction: column;
-    }
-    .review-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .review-avatar {
-        width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-        background: var(--blue); color: #fff;
-        display: grid; place-items: center;
-        font-size: 15px; font-weight: 700;
-    }
-    .review-meta strong { display: block; font-size: 13px; }
-    .review-meta span   { font-size: 11px; color: #526173; }
-    .g-stars { color: #fbbc04; font-size: 14px; letter-spacing: 1px; margin-bottom: 8px; }
-    .review blockquote { margin: 0; font-size: 13px; line-height: 1.65; color: #1e2a3d; flex: 1; }
-    .google-badge {
-        margin-top: 14px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 11px;
-        color: #526173;
-    }
-    .google-badge svg { width: 14px; height: 14px; }
+/* ── METODO ──────────────────────────────────────── */
+.metodo-section {
+    background: #fff;
+    padding: 80px 0;
+}
+.metodo-inner {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 64px;
+    align-items: start;
+}
+.metodo-left .sec-heading { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.metodo-left .sec-subtext { margin-top: 12px; }
+.metodo-steps {
+    display: grid;
+    grid-template-columns: repeat(5,1fr);
+    gap: 0;
+    padding-top: 16px;
+    position: relative;
+}
+/* Linea tratteggiata tra i cerchi */
+.metodo-steps::before {
+    content: '';
+    position: absolute;
+    top: 36px; left: 10%; right: 10%;
+    height: 2px;
+    background: repeating-linear-gradient(
+        90deg,
+        #dde4ee 0, #dde4ee 8px,
+        transparent 8px, transparent 16px
+    );
+}
+.metodo-step {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; position: relative; z-index: 1;
+}
+.metodo-circle {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: var(--blue);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin-bottom: 16px; flex-shrink: 0;
+    box-shadow: 0 8px 24px rgba(26,86,219,.25);
+}
+.metodo-circle-num {
+    font-size: .6rem; font-weight: 700; color: rgba(255,255,255,.7);
+    letter-spacing: .08em; line-height: 1;
+}
+.metodo-circle-icon { font-size: 1.3rem; line-height: 1; }
+.metodo-step h4 { font-size: .82rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.metodo-step p  { font-size: .72rem; color: var(--muted); line-height: 1.55; }
 
-    /* ── CERT STRIP ── */
-    .cert-strip {
-        background: var(--light);
-        border-top: 1px solid var(--border);
-        border-bottom: 1px solid var(--border);
-        padding: 1.5rem;
-        text-align: center;
-    }
-    .cert-strip p { font-size: .82rem; color: var(--muted); margin-bottom: .75rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
-    .cert-badges  { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-    .cert-badge {
-        background: #fff;
-        border: 1.5px solid var(--border);
-        border-radius: 8px;
-        padding: .4rem 1rem;
-        font-size: .8rem;
-        font-weight: 600;
-        color: var(--text);
-    }
+/* ── STATS ───────────────────────────────────────── */
+.stats-section {
+    background: linear-gradient(135deg, #071428 0%, #0d2045 50%, #071428 100%);
+    padding: 72px 0;
+    position: relative; overflow: hidden;
+}
+/* Effetto stelle/sparkle */
+.stats-section::before {
+    content: '✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦ ✦';
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-size: 1.5rem; color: rgba(26,86,219,.12);
+    white-space: nowrap; pointer-events: none;
+    letter-spacing: 4rem;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 0;
+    position: relative; z-index: 1;
+}
+.stat-box {
+    text-align: center; padding: 0 24px;
+    border-right: 1px solid rgba(255,255,255,.08);
+}
+.stat-box:last-child { border-right: none; }
+.stat-box-icon {
+    font-size: 2rem; margin-bottom: 12px; display: block;
+    filter: drop-shadow(0 0 12px rgba(26,86,219,.4));
+}
+.stat-box-num {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.8rem; font-weight: 800;
+    color: #fff; letter-spacing: -.05em; line-height: 1;
+    margin-bottom: 8px;
+}
+.stat-box-num sup { font-size: 1.2rem; vertical-align: super; }
+.stat-box-label {
+    font-size: .75rem; color: rgba(255,255,255,.45);
+    font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase;
+}
 
-    /* ── FINAL CTA ── */
-    .final-cta {
-        background:
-            linear-gradient(90deg, rgba(0,25,66,.96), rgba(0,70,170,.92)),
-            url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1500&q=80') center / cover;
-        color: #fff;
-        padding: 28px 0;
-    }
-    .final-inner {
-        display: grid;
-        grid-template-columns: 260px 1fr 220px;
-        gap: 34px;
-        align-items: center;
-    }
-    .final-logo img { height: 82px; }
-    .final-cta small { font-weight: 800; }
-    .final-cta h2 { margin: 8px 0; font-size: 31px; }
-    .final-cta .sub { margin: 0; color: #dce8f9; }
-    .btn-yellow {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 46px;
-        padding: 0 30px;
-        border-radius: 7px;
-        font-size: 13px;
-        font-weight: 900;
-        background: var(--yellow);
-        color: #001126;
-        border: 2px solid var(--yellow);
-        box-shadow: 0 14px 30px rgba(255,216,0,.24);
-        transition: .22s;
-    }
-    .btn-yellow:hover { transform: translateY(-2px); }
+/* ── CTA FINAL ───────────────────────────────────── */
+.cta-final {
+    position: relative; overflow: hidden;
+    padding: 100px 0; text-align: center; color: #fff;
+}
+.cta-final-bg {
+    position: absolute; inset: 0;
+    background: url('https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&w=1600&q=70')
+        center / cover no-repeat;
+}
+.cta-final-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom,
+        rgba(7,20,40,.82) 0%,
+        rgba(7,20,40,.90) 100%);
+}
+.cta-final-inner { position: relative; z-index: 2; }
+.cta-final h2 {
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800; letter-spacing: -.04em;
+    margin-bottom: 14px; line-height: 1.15;
+}
+.cta-final p {
+    font-size: 1rem; color: rgba(255,255,255,.65);
+    max-width: 440px; margin: 0 auto 36px; line-height: 1.7;
+}
 
-    /* ── FOOTER OVERRIDE ── */
-    footer {
-        background: #001126 !important;
-        color: #fff !important;
-        border-top: 1px solid rgba(255,255,255,.12);
-        padding: 18px 0 !important;
-        font-size: 13px !important;
-        margin-top: 0 !important;
-    }
-    .footer-inner {
-        display: grid;
-        grid-template-columns: 1.3fr .7fr 1fr;
-        gap: 20px;
-        align-items: center;
-    }
-    .footer-item { display: flex; gap: 10px; align-items: center; color: #dbe9ff; }
-    .social { display: flex; gap: 14px; justify-content: flex-end; }
-    .social span {
-        width: 26px; height: 26px;
-        border-radius: 50%;
-        border: 1px solid rgba(255,255,255,.45);
-        display: grid;
-        place-items: center;
-        font-size: 11px;
-    }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 1050px) {
-        .trust-inner { grid-template-columns: repeat(2, 1fr); }
-        .trust-item  { border-bottom: 1px solid var(--border); }
-        .course-grid { grid-template-columns: repeat(3, 1fr); }
-        .method-band { grid-template-columns: 1fr; background: linear-gradient(135deg, #001733, #0045a7); }
-        .method-photo { min-height: 260px; }
-        .method-text-inner { margin: 0 auto; }
-        .audience-grid { grid-template-columns: repeat(2, 1fr); }
-        .review-grid { grid-template-columns: 1fr; }
-        .final-inner { grid-template-columns: 1fr; text-align: center; }
-        .footer-inner { grid-template-columns: 1fr; text-align: center; }
-        .footer-item, .social { justify-content: center; }
-    }
-    @media (max-width: 640px) {
-        .hero h1    { font-size: 42px; }
-        .hero-content { padding: 55px 0 90px; }
-        .trust-inner { grid-template-columns: 1fr; }
-        .trust-item  { border-right: none; }
-        .course-grid { grid-template-columns: repeat(2, 1fr); }
-        .method-points { grid-template-columns: 1fr; }
-        .audience-grid { grid-template-columns: 1fr; }
-        .audience-item { border-right: none; border-bottom: 1px solid var(--border); }
-    }
+/* ── RESPONSIVE ──────────────────────────────────── */
+@media (max-width: 1050px) {
+    .hero                { grid-template-columns: 1fr; min-height: auto; }
+    .hero-right          { display: none; }
+    .hero-left           { padding: 72px 24px; }
+    .why-grid            { grid-template-columns: 1fr; gap: 36px; }
+    .corsi-inner         { grid-template-columns: 1fr; }
+    .corsi-left          { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; }
+    .metodo-inner        { grid-template-columns: 1fr; }
+    .metodo-steps        { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .metodo-steps::before { display: none; }
+    .stats-grid          { grid-template-columns: 1fr 1fr; gap: 40px 0; }
+    .stat-box:nth-child(2) { border-right: none; }
+    .stat-box:nth-child(3) { border-top: 1px solid rgba(255,255,255,.08); }
+}
+@media (max-width: 640px) {
+    .hero-left           { padding: 56px 20px; }
+    .hero h1             { font-size: 2.2rem; }
+    .features-grid       { grid-template-columns: 1fr 1fr; }
+    .corsi-left          { grid-template-columns: 1fr; }
+    .metodo-steps        { grid-template-columns: 1fr; }
+    .stats-grid          { grid-template-columns: 1fr 1fr; }
+}
 </style>
 @endpush
 
 @section('content')
 
 {{-- ══ HERO ══ --}}
-<section class="hero">
-    <div class="c">
-        <div class="hero-content">
-            <h1>
-                Parla il mondo.
-                <span>Cambia il tuo futuro.</span>
-            </h1>
-            <p>Corsi di lingue personalizzati per ogni età ed esigenza.<br>Docenti qualificati, metodo efficace e risultati concreti.</p>
-            <div class="hero-actions">
-                <a href="{{ route('iscrizione') }}" class="hbtn hbtn-primary">PRENOTA IL TEST GRATUITO</a>
-                <a href="#corsi" class="hbtn hbtn-outline">SCOPRI I CORSI</a>
+<section class="hero" aria-label="Banner principale">
+    <div class="hero-left">
+        <div class="hero-eyebrow">
+            <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
+            DOCENTI MADRELINGUA &nbsp;·&nbsp;
+            CERTIFICAZIONI INTERNAZIONALI
+        </div>
+        <h1>
+            <span class="h1-kicker">Scuola di Lingue a Roma San Paolo dal 2002</span>
+            Parla il mondo.
+            <span class="accent">Cambia il tuo futuro.</span>
+        </h1>
+        <p class="hero-desc">Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong> e <strong>italiano per stranieri</strong> con docenti madrelingua. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito.</p>
+        <div class="hero-actions">
+            <a href="{{ route('iscrizione') }}" class="btn-hero-primary">PRENOTA IL TEST GRATUITO →</a>
+            <a href="#corsi" class="btn-hero-ghost">SCOPRI I CORSI →</a>
+        </div>
+    </div>
+
+    <div class="hero-right" aria-hidden="true">
+        <div class="hero-float-wrap">
+            <div class="hf hf-1">
+                <div class="hf-icon" style="background:#EEF3FF;">⭐</div>
+                <div class="hf-text">
+                    <strong>20+ Anni</strong>
+                    <span>di esperienza</span>
+                </div>
+            </div>
+            <div class="hf hf-2">
+                <div class="hf-icon" style="background:#5C2D8E;border-radius:6px;color:#fff;font-size:.65rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.1;text-align:center;padding:4px;">TRINITY<br>COLLEGE</div>
+                <div class="hf-text">
+                    <strong>Official Exam Center</strong>
+                    <span>GESE & ISE · n° 8241</span>
+                </div>
+            </div>
+            <div class="hf hf-3">
+                <div class="hf-icon" style="background:#EEF9F4;">💻</div>
+                <div class="hf-text">
+                    <strong>Online e in presenza</strong>
+                    <span>Scegli tu come studiare</span>
+                </div>
+            </div>
+            <div class="hf hf-4">
+                <div class="hf-icon" style="background:#FEF9EC;">🌍</div>
+                <div class="hf-text">
+                    <strong>Docenti madrelingua</strong>
+                    <span>Certificati & qualificati</span>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-{{-- ══ TRUST CARD ══ --}}
-<div class="trust-card">
+{{-- ══ CERT STRIP ══ --}}
+<div class="cert-strip" aria-label="Enti certificatori ufficiali">
+    <p class="cert-strip-label">Sedi esami ufficiali — Certificazioni internazionali riconosciute</p>
     <div class="c">
-        <div class="trust-inner">
-            <div class="trust-item">
-                <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                <h3>20+ Anni<br>di esperienza</h3>
-                <p>Da oltre 20 anni formiamo studenti e professionisti.</p>
+        <div class="cert-logos">
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London" loading="lazy">
             </div>
-            <div class="trust-item">
-                <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/></svg>
-                <h3>Docenti<br>qualificati</h3>
-                <p>Madrelingua e bilingue selezionati e certificati.</p>
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-cambridge.svg') }}" alt="Cambridge Assessment English" loading="lazy">
             </div>
-            <div class="trust-item">
-                <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                <h3>Metodo<br>personalizzato</h3>
-                <p>Percorsi su misura in base ai tuoi obiettivi.</p>
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-ielts.svg') }}" alt="IELTS" loading="lazy">
             </div>
-            <div class="trust-item">
-                <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h16v12H5.17L4 17.17V4Z"/><path d="m9 9 2 2 4-4"/></svg>
-                <h3>Certificazioni<br>riconosciute</h3>
-                <p>Preparazione esami e certificazioni internazionali.</p>
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-delf.svg') }}" alt="DELF DALF – France Éducation International" loading="lazy">
             </div>
-            <div class="trust-item">
-                <svg class="trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                <h3>Sede a Roma<br>San Paolo</h3>
-                <p>A pochi passi dalla metro e dall'Università Roma Tre.</p>
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-dele.svg') }}" alt="DELE – Instituto Cervantes" loading="lazy">
+            </div>
+            <div class="cert-logo-item">
+                <img src="{{ asset('images/cert-plida.svg') }}" alt="PLIDA – Dante Alighieri" loading="lazy">
             </div>
         </div>
     </div>
 </div>
+
+{{-- ══ WHY / PERCHÉ SCEGLIERE A&A ══ --}}
+<section class="why-section" aria-labelledby="why-title">
+    <div class="c">
+        <div class="why-grid">
+            <div class="why-left">
+                <div class="section-label">Perché scegliere A&A</div>
+                <h2 class="sec-heading" id="why-title">Un metodo.<br>Un'esperienza.<br>Risultati concreti.</h2>
+                <div class="why-underline"></div>
+                <p><strong>A&amp;A Language Center</strong> è una <strong>scuola di lingue a Roma</strong>, nel quartiere San Paolo, con oltre 20 anni di esperienza nell'insegnamento delle lingue straniere. Metodi innovativi, docenti madrelingua qualificati e un approccio completamente personalizzato sul tuo livello CEFR e sui tuoi obiettivi — sia che tu cerchi corsi di inglese, italiano per stranieri o lingue per il lavoro.</p>
+                <div class="why-cta">
+                    <a href="{{ route('iscrizione') }}" class="btn-primary">Prenota il test gratuito →</a>
+                </div>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h4>Insegnanti internazionali</h4>
+                    <p>Madrelingua qualificati provenienti da tutto il mondo con esperienza didattica certificata.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h4>Percorsi personalizzati</h4>
+                    <p>Corsi costruiti sui tuoi obiettivi e sul tuo livello CEFR, valutato con test gratuito.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏆</div>
+                    <h4>Certificazioni riconosciute</h4>
+                    <p>Preparazione ufficiale per Trinity, IELTS, Cambridge e tutte le principali certificazioni.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💻</div>
+                    <h4>Online e in presenza</h4>
+                    <p>Scegli la modalità che preferisci. Sempre con qualità top e docenti dedicati.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h4>Mini gruppi</h4>
+                    <p>Classi a numero ridotto per la tua attenzione vera e un apprendimento efficace.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h4>Career focused</h4>
+                    <p>Lingue per il lavoro, l'università e la tua crescita professionale nel mercato globale.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
 {{-- ══ CORSI ══ --}}
-<section class="sec" id="corsi">
+<section class="corsi-section" id="corsi" aria-labelledby="corsi-title">
     <div class="c">
-        <div class="sec-title"><h2>I nostri corsi</h2></div>
-        <div class="course-grid">
-            {{-- Solo le lingue presenti nel backend (LanguageOptions::all()) --}}
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇬🇧</span>
-                </div>
-                <h3>Inglese</h3>
-                <p>Corsi per tutti i livelli, conversazione, business, preparazione esami Cambridge e IELTS.</p>
-            </article>
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇪🇸</span>
-                </div>
-                <h3>Spagnolo</h3>
-                <p>Percorsi comunicativi e culturali per studio, lavoro e viaggi con docenti madrelingua.</p>
-            </article>
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇦🇪</span>
-                </div>
-                <h3>Arabo</h3>
-                <p>Arabo moderno standard con approccio comunicativo e culturale per ogni livello.</p>
-            </article>
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇫🇷</span>
-                </div>
-                <h3>Francese</h3>
-                <p>Corsi dinamici per migliorare ascolto, parlato e scrittura. Preparazione DELF/DALF.</p>
-            </article>
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇩🇪</span>
-                </div>
-                <h3>Tedesco</h3>
-                <p>Metodo graduale ed efficace per parlare con sicurezza. Certificazioni Goethe Institut.</p>
-            </article>
-            <article class="course-card">
-                <div class="course-image" style="background-image:url('https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=500&q=80')">
-                    <span class="flag">🇮🇹</span>
-                </div>
-                <h3>Italiano per stranieri</h3>
-                <p>Corsi PLIDA e di integrazione per stranieri residenti in Italia. Certificazioni riconosciute.</p>
-            </article>
+        <div class="corsi-inner">
+            <div class="corsi-left">
+                <div class="section-label white">I nostri corsi</div>
+                <h2 class="sec-heading" id="corsi-title">Scegli la lingua.<br>Apri le porte<br>al <em>mondo</em>.</h2>
+                <p class="sec-subtext">Corsi per ogni livello e ogni età. Programmi allineati al framework CEFR con certificazioni riconosciute a livello internazionale.</p>
+                <a href="{{ route('checkout.catalogo') }}" class="btn-corsi-all">TUTTI I CORSI →</a>
+            </div>
+
+            @php
+            $langMeta = [
+                'Inglese'                => ['flag'=>'🇬🇧','cert'=>'Cambridge · IELTS · Trinity','img'=>'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=400&q=80'],
+                'Spagnolo'               => ['flag'=>'🇪🇸','cert'=>'DELE · Instituto Cervantes','img'=>'https://images.unsplash.com/photo-1583422409516-2895a77efded?auto=format&fit=crop&w=400&q=80'],
+                'Francese'               => ['flag'=>'🇫🇷','cert'=>'DELF / DALF','img'=>'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80'],
+                'Tedesco'                => ['flag'=>'🇩🇪','cert'=>'Goethe Institut','img'=>'https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=400&q=80'],
+                'Arabo'                  => ['flag'=>'🇸🇦','cert'=>'Certificazioni','img'=>'https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&w=400&q=80'],
+                'Russo'                  => ['flag'=>'🇷🇺','cert'=>'Certificazioni','img'=>'https://images.unsplash.com/photo-1513326738677-b964603b136d?auto=format&fit=crop&w=400&q=80'],
+                'Italiano per stranieri' => ['flag'=>'🇮🇹','cert'=>'PLIDA · CILS','img'=>'https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=400&q=80'],
+                'Portoghese'             => ['flag'=>'🇵🇹','cert'=>'CELP','img'=>'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=400&q=80'],
+                'Cinese'                 => ['flag'=>'🇨🇳','cert'=>'HSK','img'=>'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80'],
+            ];
+            @endphp
+
+            <div class="corsi-scroll" role="list">
+                @forelse($coursesByLanguage as $lang => $group)
+                    @php $m = $langMeta[$lang] ?? ['flag'=>'🌐','cert'=>'','img'=>'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80']; @endphp
+                    <a href="{{ route('checkout.catalogo') }}" class="corso-card" role="listitem">
+                        <div class="corso-img" style="background-image:url('{{ $m['img'] }}')">
+                            <span class="corso-flag">{{ $m['flag'] }}</span>
+                        </div>
+                        <div class="corso-body">
+                            <div class="corso-lang">{{ strtoupper($lang) }}</div>
+                            <div class="corso-level">Tutti i livelli</div>
+                            @if($m['cert'])
+                                <div class="corso-cert">Certificazioni<br>{{ $m['cert'] }}</div>
+                            @endif
+                            <div class="corso-arrow">→</div>
+                        </div>
+                    </a>
+                @empty
+                    @foreach(\App\Support\LanguageOptions::all() as $lang => $label)
+                        @php $m = $langMeta[$lang] ?? ['flag'=>'🌐','cert'=>'','img'=>'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80']; @endphp
+                        <a href="{{ route('checkout.catalogo') }}" class="corso-card" role="listitem">
+                            <div class="corso-img" style="background-image:url('{{ $m['img'] }}')">
+                                <span class="corso-flag">{{ $m['flag'] }}</span>
+                            </div>
+                            <div class="corso-body">
+                                <div class="corso-lang">{{ strtoupper($label) }}</div>
+                                <div class="corso-level">Tutti i livelli</div>
+                                @if($m['cert'])
+                                    <div class="corso-cert">Certificazioni<br>{{ $m['cert'] }}</div>
+                                @endif
+                                <div class="corso-arrow">→</div>
+                            </div>
+                        </a>
+                    @endforeach
+                @endforelse
+            </div>
         </div>
     </div>
 </section>
-
-{{-- ══ CERTIFICAZIONI ══ --}}
-<div class="cert-strip" id="certificazioni">
-    <p>Certificazioni internazionali</p>
-    <div class="cert-badges">
-        <div class="cert-badge">🏛 Trinity College London</div>
-        <div class="cert-badge">📜 Cambridge</div>
-        <div class="cert-badge">🎓 IELTS</div>
-        <div class="cert-badge">📋 DELF / DALF</div>
-        <div class="cert-badge">🇩🇪 Goethe Institut</div>
-        <div class="cert-badge">🇮🇹 PLIDA</div>
-    </div>
-</div>
 
 {{-- ══ METODO ══ --}}
-<section style="padding:0;" id="chi-siamo">
-    <div class="method-band">
-        <div class="method-text">
-            <div class="method-text-inner">
-                <div class="small-label">Il nostro metodo</div>
-                <h2>Prima capiamo il tuo livello.<br>Poi costruiamo il percorso.</h2>
-                <p>Ogni studente è unico. Per questo iniziamo sempre con un test di ingresso e costruiamo un percorso su misura.</p>
-                <div class="method-points">
-                    <div class="method-point">
-                        <div class="mini-icon">✎</div>
-                        <div>
-                            <strong>Test di ingresso</strong>
-                            <span>Valutiamo il tuo livello scritto e orale.</span>
-                        </div>
-                    </div>
-                    <div class="method-point">
-                        <div class="mini-icon">⌘</div>
-                        <div>
-                            <strong>Percorso su misura</strong>
-                            <span>Costruiamo insieme il tuo obiettivo.</span>
-                        </div>
-                    </div>
-                    <div class="method-point">
-                        <div class="mini-icon">↗</div>
-                        <div>
-                            <strong>Risultati concreti</strong>
-                            <span>Monitoriamo i progressi e miglioriamo insieme.</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="method-photo"></div>
-    </div>
-</section>
-
-{{-- ══ PER CHI ══ --}}
-<section class="sec" id="per-chi" style="padding:34px 0 42px;">
+<section class="metodo-section" id="metodo" aria-labelledby="metodo-title">
     <div class="c">
-        <div class="sec-title"><h2>Per chi sono i nostri corsi</h2></div>
-        <div class="audience-grid">
-            <div class="audience-item">
-                <svg class="audience-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="7" r="4"/><path d="M5 22v-3a7 7 0 0 1 14 0v3"/><path d="M8 14l-2 4"/><path d="M16 14l2 4"/></svg>
-                <div>
-                    <h3>Bambini</h3>
-                    <p>Imparare giocando, sviluppando curiosità e sicurezza nella lingua.</p>
+        <div class="metodo-inner">
+            <div class="metodo-left">
+                <div class="section-label">Il nostro metodo</div>
+                <h2 class="sec-heading" id="metodo-title">Un percorso su misura,<br>passo dopo passo.</h2>
+                <p class="sec-subtext">Ogni studente è unico. Iniziamo dal tuo livello reale e costruiamo insieme il percorso più efficace verso i tuoi obiettivi.</p>
+                <div style="margin-top:24px;">
+                    <a href="{{ route('iscrizione') }}" class="btn-primary">Inizia ora →</a>
                 </div>
             </div>
-            <div class="audience-item">
-                <svg class="audience-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 22V8a6 6 0 0 1 12 0v14"/><path d="M8 22v-8h8v8"/><path d="M9 10h6"/></svg>
-                <div>
-                    <h3>Ragazzi</h3>
-                    <p>Supporto scolastico, certificazioni e metodo di studio efficace.</p>
+            <div class="metodo-steps">
+                <div class="metodo-step">
+                    <div class="metodo-circle">
+                        <span class="metodo-circle-num">01</span>
+                        <span class="metodo-circle-icon">📋</span>
+                    </div>
+                    <h4>Test iniziale</h4>
+                    <p>Valutiamo il tuo livello e i tuoi obiettivi.</p>
                 </div>
-            </div>
-            <div class="audience-item">
-                <svg class="audience-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="5"/><path d="M4 22a8 8 0 0 1 16 0"/></svg>
-                <div>
-                    <h3>Adulti</h3>
-                    <p>Lavoro, viaggi, crescita personale e nuove opportunità.</p>
+                <div class="metodo-step">
+                    <div class="metodo-circle">
+                        <span class="metodo-circle-num">02</span>
+                        <span class="metodo-circle-icon">👤</span>
+                    </div>
+                    <h4>Piano personalizzato</h4>
+                    <p>Costruiamo il percorso perfetto per te.</p>
                 </div>
-            </div>
-            <div class="audience-item">
-                <svg class="audience-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 13h18"/></svg>
-                <div>
-                    <h3>Aziende</h3>
-                    <p>Formazione linguistica per team e professionisti, in sede o online.</p>
+                <div class="metodo-step">
+                    <div class="metodo-circle">
+                        <span class="metodo-circle-num">03</span>
+                        <span class="metodo-circle-icon">💬</span>
+                    </div>
+                    <h4>Speaking immersion</h4>
+                    <p>Parla, ascolta, vivi la lingua ogni giorno.</p>
+                </div>
+                <div class="metodo-step">
+                    <div class="metodo-circle">
+                        <span class="metodo-circle-num">04</span>
+                        <span class="metodo-circle-icon">🏅</span>
+                    </div>
+                    <h4>Preparazione certificazioni</h4>
+                    <p>Ti prepariamo e ti accompagniamo all'esame.</p>
+                </div>
+                <div class="metodo-step">
+                    <div class="metodo-circle">
+                        <span class="metodo-circle-num">05</span>
+                        <span class="metodo-circle-icon">🚩</span>
+                    </div>
+                    <h4>Obiettivi raggiunti</h4>
+                    <p>Nuove competenze, nuove opportunità, nuovo futuro.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-{{-- ══ RECENSIONI ══ --}}
-<section class="sec reviews-bg">
+{{-- ══ STATS ══ --}}
+<section class="stats-section" aria-label="Numeri chiave">
     <div class="c">
-        <div class="sec-title"><h2>Cosa dicono di noi</h2></div>
-        <p style="text-align:center;font-size:13px;color:var(--muted);margin-top:-18px;margin-bottom:28px;">Recensioni verificate su Google Maps</p>
-        <div class="review-grid">
-
-            <article class="review">
-                <div class="review-header">
-                    <div class="review-avatar">S</div>
-                    <div class="review-meta">
-                        <strong>Sabrina Volpini</strong>
-                        <span>5 mesi fa</span>
-                    </div>
-                </div>
-                <div class="g-stars">★★★★★</div>
-                <blockquote>"Ottima esperienza con il A&A Language Center di via Leonardo Da Vinci per l'apprendimento della lingua inglese. È un luogo dove si incontrano professionalità, competenza e passione per l'insegnamento."</blockquote>
-                <div class="google-badge">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    Recensione Google
-                </div>
-            </article>
-
-            <article class="review">
-                <div class="review-header">
-                    <div class="review-avatar" style="background:#1a7340;">S</div>
-                    <div class="review-meta">
-                        <strong>Stefania Maffi</strong>
-                        <span>un anno fa</span>
-                    </div>
-                </div>
-                <div class="g-stars">★★★★★</div>
-                <blockquote>"A&A Language Center si è rivelato un'ottima occasione per parlare e migliorare il mio inglese poco fluent! La teacher è sempre stata disponibile e pronta a fornire materiale, spunti di approfondimento e modi di dire easy and effective!"</blockquote>
-                <div class="google-badge">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    Recensione Google
-                </div>
-            </article>
-
-            <article class="review">
-                <div class="review-header">
-                    <div class="review-avatar" style="background:#7c3aed;">A</div>
-                    <div class="review-meta">
-                        <strong>Andrea Menozzi</strong>
-                        <span>3 anni fa</span>
-                    </div>
-                </div>
-                <div class="g-stars">★★★★★</div>
-                <blockquote>"La scuola A&A si distingue per l'ottima preparazione degli insegnanti e la possibilità di organizzare in modo personalizzato e flessibile le lezioni. Inoltre il personale è sempre gentile e disponibile. Assolutamente consigliata."</blockquote>
-                <div class="google-badge">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    Recensione Google
-                </div>
-            </article>
-
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-box-icon">🏆</span>
+                <div class="stat-box-num">20<sup>+</sup></div>
+                <div class="stat-box-label">Anni di esperienza</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-box-icon">🎓</span>
+                <div class="stat-box-num">250<sup>+</sup></div>
+                <div class="stat-box-label">Studenti formati</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-box-icon">👍</span>
+                <div class="stat-box-num">98<sup>%</sup></div>
+                <div class="stat-box-label">Studenti soddisfatti</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-box-icon">🌐</span>
+                <div class="stat-box-num">6</div>
+                <div class="stat-box-label">Certificazioni internazionali</div>
+            </div>
         </div>
     </div>
 </section>
 
-{{-- ══ FINAL CTA ══ --}}
-<section class="final-cta" id="contatti">
-    <div class="c final-inner">
-        <div class="final-logo">
-            @if(file_exists(public_path('images/logo-scuola.png')))
-                <img src="{{ asset('images/logo-scuola.png') }}" alt="A&A Language Center">
-            @else
-                <span style="font-size:1.8rem;font-weight:900;color:#fff;">A&A</span>
-            @endif
-        </div>
-        <div>
-            <small>Il momento giusto è adesso.</small>
-            <h2>Prenota il tuo test gratuito!</h2>
-            <p class="sub">Scopri il percorso più adatto a te.</p>
-        </div>
-        <a href="{{ route('iscrizione') }}" class="btn-yellow">PRENOTA ORA →</a>
+{{-- ══ FAQ ══ --}}
+<x-seo-faq
+    title="Domande frequenti su A&A Language Center"
+    subtitle="Le risposte alle domande più comuni su corsi, prezzi, certificazioni e modalità."
+    :items="[
+        ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti madrelingua qualificati. Vedi il <a href=\"' . route('checkout.catalogo') . '\">catalogo completo</a>.</p>'],
+        ['q' => 'Dove si trova la scuola?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. A pochi passi dalle fermate metro San Paolo e Marconi (linea B), ben collegati con EUR, Garbatella, Ostiense e Testaccio.</p>'],
+        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente madrelingua. Al termine ricevi una valutazione CEFR dettagliata. <a href=\"' . route('iscrizione') . '\">Prenotalo qui</a>.</p>'],
+        ['q' => 'Posso seguire i corsi online?', 'a' => '<p>Sì. Tutti i nostri corsi sono disponibili anche in modalità online (videoconferenza live) con la stessa qualità delle lezioni in presenza. Offriamo inoltre il servizio esclusivo <strong>Inglese al Telefono</strong>: 30 minuti al giorno per migliorare lo speaking.</p>'],
+        ['q' => 'Siete sede d\'esame Trinity College London?', 'a' => '<p>Sì. A&amp;A Language Center è <strong>Sede d\'Esame Ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l\'anno direttamente nella nostra sede.</p>'],
+        ['q' => 'Posso pagare con la Carta del Docente?', 'a' => '<p>Sì. Siamo ente accreditato MIUR. I docenti di ruolo possono usare la Carta del Docente per pagare integralmente i corsi di lingue, sia per la propria formazione che per la preparazione di certificazioni linguistiche.</p>'],
+        ['q' => 'Avete corsi per aziende?', 'a' => '<p>Sì. Dal 2002 facciamo formazione linguistica B2B per aziende, enti pubblici, hotel e studi professionali. Tra i clienti: MEF, Confcommercio, H10 Hotels. Vedi <a href=\"' . route('landing.aziendali') . '\">Corsi Aziendali</a>.</p>'],
+    ]"
+/>
+
+{{-- ══ CTA FINALE ══ --}}
+<section class="cta-final" aria-labelledby="cta-title">
+    <div class="cta-final-bg"></div>
+    <div class="cta-final-overlay"></div>
+    <div class="c cta-final-inner">
+        <h2 id="cta-title">Entri per imparare una lingua.<br>Esci con nuove opportunità.</h2>
+        <p>Il tuo futuro parla più lingue. Inizia oggi il tuo percorso con A&A Language Center.</p>
+        <a href="{{ route('iscrizione') }}" class="btn-hero-primary">PRENOTA IL TUO TEST GRATUITO →</a>
     </div>
 </section>
-
-{{-- ══ FOOTER DATI ══ --}}
-<div style="background:#001126;color:#fff;border-top:1px solid rgba(255,255,255,.12);padding:18px 0;font-size:13px;">
-    <div class="c footer-inner">
-        <div class="footer-item">📍 Viale Leonardo da Vinci, 193 – 00145 Roma</div>
-        <div class="footer-item">📞 <a href="tel:+390657437364" style="color:#dbe9ff;">06 5743734</a></div>
-        <div class="footer-item">✉️ <a href="mailto:info@aealanguagecenter.it" style="color:#dbe9ff;">info@aealanguagecenter.it</a></div>
-    </div>
-</div>
 
 @endsection

@@ -1,2 +1,97 @@
+# ════════════════════════════════════════════════════════════════════
+# A&A Language Center — robots.txt
+# Indicazioni per crawler dei motori di ricerca
+# ════════════════════════════════════════════════════════════════════
+
 User-agent: *
-Disallow:
+
+# ── Pagine indicizzabili (esplicite) ──────────────────────────────────
+Allow: /
+Allow: /la-scuola
+Allow: /per-le-aziende
+Allow: /servizi
+Allow: /corsi
+Allow: /contattaci
+Allow: /iscriviti
+Allow: /lavora-con-noi
+Allow: /privacy
+Allow: /corsi-inglese-roma
+Allow: /corsi-italiano-stranieri-roma
+Allow: /corsi-aziendali-roma
+
+# ── Aree riservate (NON indicizzare) ──────────────────────────────────
+Disallow: /superadmin
+Disallow: /superadmin/*
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /docente
+Disallow: /docente/*
+Disallow: /studente
+Disallow: /studente/*
+Disallow: /segreteria
+Disallow: /segreteria/*
+
+# ── Checkout & pagamenti (transazionali) ──────────────────────────────
+Disallow: /checkout/
+Disallow: /checkout/bonifico/
+Disallow: /checkout/stripe/
+Disallow: /checkout/paypal/
+Disallow: /checkout/grazie/
+Disallow: /checkout/errore/
+
+# ── Webhook (endpoint di sistema) ─────────────────────────────────────
+Disallow: /webhook/
+
+# ── Disiscrizione GDPR (pagine personali con token) ───────────────────
+Disallow: /unsubscribe/
+
+# ── Pagine di conferma / utility (non utili in SERP) ──────────────────
+Disallow: /grazie
+Disallow: /contracts/
+Disallow: /reports/
+Disallow: /google/oauth/
+
+# ── Login/auth (Laravel/Filament) ─────────────────────────────────────
+Disallow: /login
+Disallow: /logout
+Disallow: /password/
+Disallow: /email/verify
+Disallow: /api/
+
+# ── Asset di sistema ──────────────────────────────────────────────────
+Disallow: /storage/livewire-tmp/
+Disallow: /storage/cache/
+Disallow: /vendor/
+Disallow: /build/manifest.json
+
+# ── Crawl-delay (lasciamo libero, ma niente aggressioni) ──────────────
+Crawl-delay: 1
+
+# ── Sitemap ───────────────────────────────────────────────────────────
+Sitemap: https://aealanguagecenter.it/sitemap.xml
+
+# ── Bot specifici problematici (limita assistenti AI senza permesso) ──
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+# Permetti comunque a Googlebot, Bingbot, Slurp di indicizzare normalmente
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
