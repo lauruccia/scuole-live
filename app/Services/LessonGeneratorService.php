@@ -196,10 +196,14 @@ class LessonGeneratorService
                         ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                         ->exists();
 
+                    // Bug 10: numerazione SEPARATA per lezioni personalizzate e FULL.
+                    // max() filtrato su is_full_lesson = false/null per non mischiare
+                    // le sequenze (es. FULL 1-5, personalizzate 1-10).
                     $nextLessonNumber = (int) (
                         Lesson::query()
                             ->where('contract_id', $contract->id)
                             ->where('student_id', $studentId)
+                            ->where(function ($q) { $q->where('is_full_lesson', false)->orWhereNull('is_full_lesson'); })
                             ->max('lesson_number') ?? 0
                     ) + 1;
 
@@ -252,8 +256,15 @@ class LessonGeneratorService
                             break;
                         }
 
-                        $duration = (int) ($slot->duration_minutes ?? 60);
+                        $duration = (int) ($slot->duration_minutes ?? 0);
                         if ($duration <= 0) {
+                            // Bug 15: duration_minutes mancante o <= 0 normalizzato silenziosamente a 60 min.
+                            // Log per segnalare lo slot anomalo senza interrompere la generazione.
+                            Log::warning('LessonGeneratorService: duration_minutes non valido, normalizzato a 60 min', [
+                                'contract_id'      => $contract->id,
+                                'slot_id'          => $slot->id,
+                                'duration_minutes' => $slot->duration_minutes,
+                            ]);
                             $duration = 60;
                         }
 
@@ -276,6 +287,19 @@ class LessonGeneratorService
                             }
 
                             if (! $canStillGenerate) {
+                                // Bug 14: le ore residue sono inferiori alla durata
+                                // minima di tutti gli slot disponibili — verranno perse.
+                                // Log per rendere visibile la perdita silente.
+                                if ($remainingHours > 0) {
+                                    $remainingMinutes = (int) round($remainingHours * 60);
+                                    Log::info('LessonGeneratorService: ore residue < durata slot, non generate', [
+                                        'contract_id'       => $contract->id,
+                                        'student_id'        => $studentId,
+                                        'remaining_hours'   => $remainingHours,
+                                        'remaining_minutes' => $remainingMinutes,
+                                        'note'              => "Nessuno slot con durata <= {$remainingMinutes} min disponibile. Le ore residue non vengono generate.",
+                                    ]);
+                                }
                                 break;
                             }
 
@@ -473,7 +497,12 @@ class LessonGeneratorService
                     }
                 }
 
-                if ($maxEnd) {
+                // Bug 11: aggiorna ends_at solo se non è già impostato manualmente.
+                // Il generator calcola la fine dell'ultima lezione generata, ma
+                // non deve sovrascrivere una scadenza contrattuale inserita dalla segreteria.
+                // Se ends_at è null (mai compilato), il valore calcolato è l'unica
+                // informazione disponibile e va memorizzato.
+                if ($maxEnd && ! $contract->ends_at) {
                     $contract->update(['ends_at' => $maxEnd]);
                 }
             });

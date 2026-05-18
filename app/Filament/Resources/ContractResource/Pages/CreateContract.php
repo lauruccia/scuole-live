@@ -15,6 +15,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -385,10 +386,29 @@ class CreateContract extends CreateRecord
         }
 
         if (! $student && $first !== '' && $last !== '') {
-            $student = Student::query()
+            $nameQuery = Student::query()
                 ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
-                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)])
-                ->first();
+                ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)]);
+
+            // Bug 12: se è disponibile la data di nascita, restringi il match
+            // per evitare di agganciare l'omonimo sbagliato.
+            $birthDate = trim((string) ($data['birth_date'] ?? ''));
+            if ($birthDate !== '') {
+                $nameQuery->where('birth_date', $birthDate);
+            } else {
+                // Nessuna data di nascita: log warning se la query restituisce più di un match.
+                $matchCount = (clone $nameQuery)->count();
+                if ($matchCount > 1) {
+                    Log::warning('CreateContract: match ambiguo per nome/cognome senza data di nascita', [
+                        'first_name'  => $first,
+                        'last_name'   => $last,
+                        'match_count' => $matchCount,
+                        'note'        => 'Verificare manualmente che lo studente agganciato sia corretto. Aggiungere data di nascita per disambiguare.',
+                    ]);
+                }
+            }
+
+            $student = $nameQuery->first();
         }
 
         if (! $student) {

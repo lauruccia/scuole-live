@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\ContractStudent;
 use App\Models\Lesson;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Gestisce i segnaposto FULL nei contratti MIX (Lezioni personalizzate + FULL).
@@ -169,6 +170,22 @@ class FullLessonService
             if (! empty($idsToRemove)) {
                 Lesson::query()->whereIn('id', $idsToRemove)->forceDelete();
             }
+
+            // Bug 9: se l'eccesso non è stato azzerato completamente (perché parte
+            // dei segnaposto in eccesso ha già una data pianificata e non viene toccata),
+            // logga un warning esplicito affinché la segreteria possa intervenire manualmente.
+            $removedCount = count($idsToRemove);
+            if ($removedCount < $excess) {
+                $stillExcess = $excess - $removedCount;
+                Log::warning('FullLessonService: cap FULL parziale — lezioni pianificate in eccesso non rimosse', [
+                    'contract_id'     => $contract->id,
+                    'hours_full_cap'  => $contractHoursFull,
+                    'active_total'    => $activePlaceholders,
+                    'removed'         => $removedCount,
+                    'still_excess'    => $stillExcess,
+                    'note'            => 'Le lezioni pianificate (starts_at non null) non vengono mai rimosse automaticamente. Verificare e annullare manualmente quelle in eccesso.',
+                ]);
+            }
         });
     }
 
@@ -182,7 +199,21 @@ class FullLessonService
             return;
         }
 
-        $assignedHoursFull = (int) round((float) ($cs->assigned_hours_full ?? 0));
+        $rawHoursFull      = (float) ($cs->assigned_hours_full ?? 0);
+        $assignedHoursFull = (int) round($rawHoursFull);
+
+        // Bug 16: assigned_hours_full decimale (es. 1.5) viene arrotondato a intero per il
+        // conteggio dei segnaposto (1 segnaposto = 1 ora FULL). Logga se c'è perdita di decimali
+        // significativi (> 0.05h ≈ 3 min) per far emergere eventuali configurazioni errate.
+        if ($rawHoursFull > 0 && abs($rawHoursFull - $assignedHoursFull) > 0.05) {
+            Log::warning('FullLessonService: assigned_hours_full decimale arrotondato a intero', [
+                'contract_student_id' => $cs->id,
+                'contract_id'         => $cs->contract_id,
+                'raw_value'           => $rawHoursFull,
+                'rounded_to'          => $assignedHoursFull,
+                'note'                => 'Le ore FULL devono essere intere (1 ora = 1 segnaposto). Correggere il valore nel contratto.',
+            ]);
+        }
 
         if ($assignedHoursFull <= 0) {
             return;
@@ -230,10 +261,13 @@ class FullLessonService
             ? $contract->getDefaultLanguage()
             : ($contract->language_id ?: null);
 
+        // Bug 10: numerazione SEPARATA lezioni FULL — max() filtrato su is_full_lesson = true
+        // per non mischiare la sequenza con le lezioni personalizzate dello stesso beneficiario.
         $nextNumber = (int) (
             Lesson::query()
                 ->where('contract_id', $contract->id)
                 ->where('contract_student_id', $cs->id)
+                ->where('is_full_lesson', true)
                 ->max('lesson_number') ?? 0
         ) + 1;
 
@@ -273,6 +307,17 @@ class FullLessonService
         float $newHoursFullAssigned
     ): void {
         $newHours = (int) round($newHoursFullAssigned);
+
+        // Bug 16: log se il valore passato ha decimali significativi (> 0.05)
+        if (abs($newHoursFullAssigned - $newHours) > 0.05) {
+            Log::warning('FullLessonService: newHoursFullAssigned decimale arrotondato a intero', [
+                'contract_student_id' => $cs->id,
+                'contract_id'         => $cs->contract_id,
+                'raw_value'           => $newHoursFullAssigned,
+                'rounded_to'          => $newHours,
+                'note'                => 'Le ore FULL devono essere intere (1 ora = 1 segnaposto). Correggere il valore nel contratto.',
+            ]);
+        }
 
         // Conta lezioni completate e annullate (non modificabili)
         $completed = Lesson::query()
@@ -334,10 +379,12 @@ class FullLessonService
                 ? $contract->getDefaultLanguage()
                 : ($contract->language_id ?: null);
 
+            // Bug 10: numerazione SEPARATA lezioni FULL
             $nextNumber = (int) (
                 Lesson::query()
                     ->where('contract_id', $contract->id)
                     ->where('contract_student_id', $cs->id)
+                    ->where('is_full_lesson', true)
                     ->max('lesson_number') ?? 0
             ) + 1;
 

@@ -17,6 +17,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class EditContract extends EditRecord
@@ -474,10 +475,29 @@ class EditContract extends EditRecord
             }
 
             if (! $student && $first !== '' && $last !== '') {
-                $student = Student::query()
+                $nameQuery = Student::query()
                     ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [Str::lower($first)])
-                    ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)])
-                    ->first();
+                    ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [Str::lower($last)]);
+
+                // Bug 12: restringi il match con la data di nascita se disponibile,
+                // per evitare di agganciare l'omonimo sbagliato.
+                $birthDate = trim((string) ($beneficiary->beneficiary_birth_date ?? ''));
+                if ($birthDate !== '') {
+                    $nameQuery->where('birth_date', $birthDate);
+                } else {
+                    $matchCount = (clone $nameQuery)->count();
+                    if ($matchCount > 1) {
+                        Log::warning('EditContract: match ambiguo per nome/cognome senza data di nascita', [
+                            'contract_id' => $this->record?->id,
+                            'first_name'  => $first,
+                            'last_name'   => $last,
+                            'match_count' => $matchCount,
+                            'note'        => 'Verificare manualmente che lo studente agganciato sia corretto. Aggiungere data di nascita per disambiguare.',
+                        ]);
+                    }
+                }
+
+                $student = $nameQuery->first();
             }
 
             if (! $student) {
