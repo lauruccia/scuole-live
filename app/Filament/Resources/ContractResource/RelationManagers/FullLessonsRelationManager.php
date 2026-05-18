@@ -6,6 +6,7 @@ use App\Models\ContractStudent;
 use App\Models\Lesson;
 use App\Models\User;
 use App\Services\FullLessonService;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -263,10 +264,69 @@ class FullLessonsRelationManager extends RelationManager
                     })
                     ->using(function (Lesson $record, array $data): Lesson {
                         // Imposta ends_at automaticamente se non fornito
-                        if ($data['starts_at'] && ! $data['ends_at']) {
+                        if ($data['starts_at'] && ! ($data['ends_at'] ?? null)) {
                             $data['ends_at'] = \Carbon\Carbon::parse($data['starts_at'])
                                 ->addMinutes($record->duration_minutes ?? 60)
                                 ->toDateTimeString();
+                        }
+
+                        // Bug E: le lezioni FULL non hanno controllo sovrapposizioni per design
+                        // (pianificate on-demand dalla segreteria con più studenti contemporaneamente).
+                        // Tuttavia logghiamo e notifichiamo l'operatore se viene rilevata una
+                        // sovrapposizione studente/docente, per permettere una verifica consapevole.
+                        if (! empty($data['starts_at'])) {
+                            $startsAt = \Carbon\Carbon::parse($data['starts_at']);
+                            $endsAt   = \Carbon\Carbon::parse($data['ends_at']);
+
+                            $studentOverlap = Lesson::query()
+                                ->where('student_id', $record->student_id)
+                                ->where('id', '!=', $record->id)
+                                ->whereNull('cancelled_at')
+                                ->whereNull('deleted_at')
+                                ->where('starts_at', '<', $endsAt)
+                                ->where('ends_at', '>', $startsAt)
+                                ->exists();
+
+                            if ($studentOverlap) {
+                                Log::warning('FullLessonsRelationManager: sovrapposizione studente nella pianificazione FULL', [
+                                    'lesson_id'  => $record->id,
+                                    'student_id' => $record->student_id,
+                                    'starts_at'  => $data['starts_at'],
+                                    'ends_at'    => $data['ends_at'],
+                                ]);
+                                Notification::make()
+                                    ->title('⚠️ Sovrapposizione studente')
+                                    ->body('Lo studente ha già una lezione in questo orario. La pianificazione è stata salvata ma verificare il calendario.')
+                                    ->warning()
+                                    ->persistent()
+                                    ->send();
+                            }
+
+                            if (! empty($data['teacher_id'])) {
+                                $teacherOverlap = Lesson::query()
+                                    ->where('teacher_id', (int) $data['teacher_id'])
+                                    ->where('id', '!=', $record->id)
+                                    ->whereNull('cancelled_at')
+                                    ->whereNull('deleted_at')
+                                    ->where('starts_at', '<', $endsAt)
+                                    ->where('ends_at', '>', $startsAt)
+                                    ->exists();
+
+                                if ($teacherOverlap) {
+                                    Log::warning('FullLessonsRelationManager: sovrapposizione docente nella pianificazione FULL', [
+                                        'lesson_id'  => $record->id,
+                                        'teacher_id' => $data['teacher_id'],
+                                        'starts_at'  => $data['starts_at'],
+                                        'ends_at'    => $data['ends_at'],
+                                    ]);
+                                    Notification::make()
+                                        ->title('⚠️ Sovrapposizione docente')
+                                        ->body('Il docente ha già una lezione in questo orario. La pianificazione è stata salvata ma verificare il calendario.')
+                                        ->warning()
+                                        ->persistent()
+                                        ->send();
+                                }
+                            }
                         }
 
                         $record->update($data);

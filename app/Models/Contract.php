@@ -136,6 +136,7 @@ class Contract extends Model
         'total',
         'residual',
         'hours_remaining',
+        'hours_personal_remaining',
     ];
 
     // ─── Activity Log ─────────────────────────────────────────────────────────
@@ -265,6 +266,38 @@ class Contract extends Model
     public function getHoursRemainingAttribute(): float
     {
         return max(0, (float) $this->hours_purchased - (float) $this->hours_consumed);
+    }
+
+    /**
+     * Bug H: ore personalizzate rimanenti per i contratti MIX.
+     *
+     * Per i contratti "Lezioni personalizzate + FULL", hours_consumed include
+     * sia le ore personalizzate consumate sia le ore FULL completate (che diventano
+     * counts_as_consumed=true al completamento). Per ottenere le sole ore
+     * personalizzate rimanenti, sottraiamo le ore FULL già consumate.
+     *
+     * Per i contratti senza ore FULL l'accessor restituisce semplicemente
+     * hours_personal - hours_consumed (equivalente a hours_remaining).
+     */
+    public function getHoursPersonalRemainingAttribute(): float
+    {
+        $hoursPersonal = $this->hours_personal; // accessor: hours_purchased - hours_full
+
+        if ((float) ($this->hours_full ?? 0) > 0) {
+            // Calcola le ore FULL già conteggiate come consumate
+            $consumedFull = (float) Lesson::query()
+                ->where('contract_id', $this->id)
+                ->where('is_full_lesson', true)
+                ->where('counts_as_consumed', true)
+                ->whereNull('deleted_at')
+                ->sum(DB::raw('duration_minutes / 60.0'));
+
+            $consumedPersonal = max(0.0, (float) $this->hours_consumed - $consumedFull);
+        } else {
+            $consumedPersonal = (float) $this->hours_consumed;
+        }
+
+        return max(0.0, $hoursPersonal - $consumedPersonal);
     }
 
     public function getBillingDisplayNameAttribute(): string
@@ -419,9 +452,13 @@ class Contract extends Model
         // da callback DB::afterCommit() (in LessonObserver), quindi siamo
         // già fuori da qualsiasi transazione aperta. Un wrapper aggiuntivo
         // non aggiunge atomicità ma introduce overhead e potenziali lock.
+        // Bug A: DB::table() bypassa il global scope SoftDeletes di Eloquent.
+        // Senza whereNull('deleted_at') le lezioni soft-deleted vengono ancora
+        // sommate in hours_consumed, gonfiando il contatore.
         $lessons = DB::table('lessons')
             ->where('contract_id', $contractId)
             ->where('counts_as_consumed', 1)
+            ->whereNull('deleted_at')
             ->get(['starts_at', 'ends_at', 'duration_minutes']);
 
         $sum = 0.0;
@@ -464,12 +501,30 @@ class Contract extends Model
         });
 
         // ── Cascade Restore ───────────────────────────────────────────────────
-        // Se un contratto viene ripristinato, ripristina anche le lezioni
-        // che erano state soft-deleted assieme a lui nello stesso istante.
-        static::restored(function (self $contract) {
-            $contract->lessons()->onlyTrashed()->update([
-                'deleted_at' => null,
-            ]);
+        // Bug B: ripristinare SOLO le lezioni cancellate insieme al contratto
+        // (stesso instant del soft-delete). onlyTrashed() senza filtro timestamp
+        // ripristinava anche lezioni cancellate manualmente in precedenza (bug).
+        //
+        // NOTA TECNICA: usiamo `restoring` (non `restored`) perché in `restored`
+        // il campo deleted_at è già null — non abbiamo più il timestamp originale.
+        // In `restoring` il modello ha ancora deleted_at valorizzato.
+        //
+        // Finestra ±5s: le lezioni ricevono deleted_at nello stesso request cycle
+        // del contratto (differenza reale < 1s); 5s è un margine sicuro.
+        static::restoring(function (self $contract) {
+            $deletedAt = $contract->deleted_at;
+
+            if (! $deletedAt) {
+                return;
+            }
+
+            $from = $deletedAt->copy()->subSeconds(5);
+            $to   = $deletedAt->copy()->addSeconds(5);
+
+            $contract->lessons()
+                ->onlyTrashed()
+                ->whereBetween('deleted_at', [$from, $to])
+                ->update(['deleted_at' => null]);
         });
 
         static::saving(function (self $contract) {
@@ -511,10 +566,15 @@ class Contract extends Model
         });
 
         static::saved(function (self $contract) {
-            // ✅ IMPORTANTISSIMO: prendo i changes PRIMA del reload
-            $changes = array_keys($contract->getChanges());
+            // ✅ IMPORTANTISSIMO: prendo i changes PRIMA del reload.
+            // $previousStatus va catturato QUI, prima di DB::afterCommit(),
+            // perché Eloquent chiama syncOriginal() dopo aver scatenato l'evento
+            // saved ma PRIMA che il callback afterCommit venga eseguito — quindi
+            // dentro afterCommit getOriginal() restituisce già il nuovo valore.
+            $changes        = array_keys($contract->getChanges());
+            $previousStatus = $contract->getOriginal('status');
 
-            DB::afterCommit(function () use ($contract, $changes) {
+            DB::afterCommit(function () use ($contract, $changes, $previousStatus) {
                 $contractId = (int) $contract->getKey();
 
                 $lock = Cache::lock("contract_post_save_pipeline:{$contractId}", 60);
@@ -546,6 +606,30 @@ class Contract extends Model
                             ]);
 
                         return;
+                    }
+
+                    // Bug F: se il contratto torna da "completed" a un altro status
+                    // (es. l'operatore ha impostato "completed" per errore), riattiviamo
+                    // gli slot che erano stati disattivati dal blocco precedente.
+                    // $previousStatus è catturato nell'outer saved() PRIMA di afterCommit
+                    // per evitare il problema syncOriginal() (vedi commento sopra).
+                    if (in_array('status', $changes, true)
+                        && $fresh->status !== 'completed'
+                        && $previousStatus === 'completed'
+                    ) {
+                        DB::table('contract_lesson_slots')
+                            ->where('contract_id', $contractId)
+                            ->where('is_active', false)
+                            ->update([
+                                'is_active'  => true,
+                                'ends_at'    => null,
+                                'updated_at' => now(),
+                            ]);
+
+                        Log::info('Contract: slot riattivati dopo rollback da status completed', [
+                            'contract_id' => $contractId,
+                            'new_status'  => $fresh->status,
+                        ]);
                     }
 
                     // 1) PRIVATO + intestatario coincide con studente

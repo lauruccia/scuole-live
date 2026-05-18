@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class ContractStudent extends Model
@@ -99,7 +100,17 @@ class ContractStudent extends Model
                 if ($value <= 0) {
                     $cs->assigned_hours = null;
                 } elseif ($value < 0.5) {
-                    $cs->assigned_hours = 0.5; // arrotonda al minimo consentito
+                    // Bug D: valore < 0.5h (minimo consentito) viene portato a 0.5h.
+                    // Log::warning per rendere visibile la modifica silenziosa —
+                    // può indicare un errore di inserimento (es. import con valore errato).
+                    Log::warning('ContractStudent: assigned_hours < 0.5h normalizzato al minimo', [
+                        'contract_student_id' => $cs->id,
+                        'contract_id'         => $cs->contract_id,
+                        'original_value'      => $value,
+                        'normalized_to'       => 0.5,
+                        'note'                => 'Il valore minimo consentito è 0.5h (30 min). Verificare se il dato inserito è corretto.',
+                    ]);
+                    $cs->assigned_hours = 0.5;
                 } else {
                     $cs->assigned_hours = $value;
                 }
@@ -206,11 +217,31 @@ class ContractStudent extends Model
             }
 
             if (! $student && $firstNorm !== '' && $lastNorm !== '') {
-                $student = Student::query()
+                // Bug C: match per nome/cognome potenzialmente ambiguo.
+                // Se la data di nascita è disponibile, usarla come discriminante aggiuntivo
+                // per evitare di agganciare l'omonimo sbagliato (es. due "Marco Rossi").
+                $nameQuery = Student::query()
                     ->whereRaw('LOWER(COALESCE(first_name,"")) = ?', [$firstNorm])
-                    ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [$lastNorm])
-                    ->orderByDesc('id')
-                    ->first();
+                    ->whereRaw('LOWER(COALESCE(last_name,"")) = ?', [$lastNorm]);
+
+                if ($birthDate) {
+                    // Data di nascita disponibile: restringe il match
+                    $nameQuery->whereDate('birth_date', $birthDate);
+                } else {
+                    // Nessuna data di nascita: logga se esistono più omonimi
+                    $matchCount = (clone $nameQuery)->count();
+                    if ($matchCount > 1) {
+                        Log::warning('ContractStudent: match ambiguo per nome/cognome senza data di nascita', [
+                            'contract_id' => $cs->contract_id,
+                            'first_name'  => $firstNorm,
+                            'last_name'   => $lastNorm,
+                            'match_count' => $matchCount,
+                            'note'        => 'Verificare manualmente che lo studente agganciato sia corretto. Aggiungere data di nascita per disambiguare.',
+                        ]);
+                    }
+                }
+
+                $student = $nameQuery->orderByDesc('id')->first();
             }
 
             if (! $student) {

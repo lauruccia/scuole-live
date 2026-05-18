@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ContractResource\RelationManagers;
 
+use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Student;
 use App\Models\User;
@@ -9,10 +10,12 @@ use Filament\Forms;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class LessonSlotsRelationManager extends RelationManager
 {
@@ -76,6 +79,43 @@ class LessonSlotsRelationManager extends RelationManager
         }
 
         return $duration;
+    }
+
+    /**
+     * Bug G: verifica che non esista già uno slot identico per lo stesso
+     * contratto/studente/giorno/orario. Se trovato, mostra una notifica
+     * di errore e blocca il salvataggio con una ValidationException.
+     *
+     * @param  array      $data     Dati del form normalizzati
+     * @param  int|null   $excludeId  ID dello slot da escludere (edit)
+     * @throws ValidationException
+     */
+    protected function guardDuplicateSlot(array $data, ?int $excludeId = null): void
+    {
+        $contract = $this->getOwnerRecord();
+
+        $query = ContractLessonSlot::query()
+            ->where('contract_id', $contract->id)
+            ->where('student_id', (int) ($data['student_id'] ?? 0))
+            ->where('weekly_day', (int) ($data['weekly_day'] ?? 0))
+            ->where('weekly_time', (string) ($data['weekly_time'] ?? ''));
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        if ($query->exists()) {
+            Notification::make()
+                ->title('Slot duplicato')
+                ->body('Esiste già uno slot per questo studente con lo stesso giorno e orario. Modifica l\'orario o elimina lo slot esistente.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            throw ValidationException::withMessages([
+                'weekly_time' => 'Esiste già uno slot per questo studente con lo stesso giorno e orario.',
+            ]);
+        }
     }
 
     protected function formatDurationLabel(int $minutes): string
@@ -331,13 +371,19 @@ class LessonSlotsRelationManager extends RelationManager
 
                         $data['duration_minutes'] = $this->normalizeDurationMinutes($data['duration_minutes'] ?? null);
 
+                        // Bug G: blocca slot duplicati (stesso contratto/studente/giorno/ora)
+                        $this->guardDuplicateSlot($data);
+
                         return $data;
                     }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->mutateFormDataUsing(function (array $data): array {
+                    ->mutateFormDataUsing(function (array $data, Model $record): array {
                         $data['duration_minutes'] = $this->normalizeDurationMinutes($data['duration_minutes'] ?? null);
+
+                        // Bug G: blocca slot duplicati escludendo lo slot corrente
+                        $this->guardDuplicateSlot($data, (int) $record->id);
 
                         return $data;
                     }),
