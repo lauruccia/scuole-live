@@ -1,134 +1,100 @@
-{{--
-    Componente: <x-seo-faq />
-    ─────────────────────────────────────────────────────────────────────────────
-    Sezione FAQ riusabile con structured data FAQPage (rich snippet in SERP).
-
-    Props attese:
-      title    string  — titolo della sezione (default "Domande frequenti")
-      subtitle string? — sottotitolo opzionale
-      items    array   — lista di { q: string, a: string } (a può contenere HTML)
-
-    Esempio:
-      <x-seo-faq
-          title="Domande frequenti sui corsi di inglese a Roma"
-          :items="[
-              ['q' => '...', 'a' => '<p>...</p>'],
-              ...
-          ]"
-      />
-
-    Lo schema FAQPage viene emesso solo se sono presenti voci.
---}}
 @props([
     'title'    => 'Domande frequenti',
-    'subtitle' => null,
+    'subtitle' => '',
     'items'    => [],
 ])
 
-@push('styles')
-<style>
-.seo-faq { padding: 80px 0; }
-.seo-faq-list {
-    max-width: 820px; margin: 0 auto;
-    display: flex; flex-direction: column; gap: 12px;
+{{-- JSON-LD FAQPage Schema --}}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        @foreach($items as $i => $item)
+        {
+            "@type": "Question",
+            "name": {{ json_encode(strip_tags($item['q'])) }},
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": {{ json_encode(strip_tags($item['a'])) }}
+            }
+        }{{ !$loop->last ? ',' : '' }}
+        @endforeach
+    ]
 }
-.seo-faq-item {
-    background: var(--white, #fff);
-    border: 1.5px solid var(--border, #DDE4EE);
-    border-radius: var(--radius-lg, 18px);
-    transition: border-color .25s, box-shadow .25s;
-    overflow: hidden;
-}
-.seo-faq-item[open] {
-    border-color: var(--blue, #1A56DB);
-    box-shadow: 0 10px 32px rgba(26,86,219,.08);
-}
-.seo-faq-item summary {
-    list-style: none;
-    cursor: pointer;
-    padding: 20px 24px;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--navy, #0D1B2E);
-    position: relative;
-    padding-right: 56px;
-}
-.seo-faq-item summary::-webkit-details-marker { display: none; }
-.seo-faq-item summary::after {
-    content: '+';
-    position: absolute;
-    right: 22px; top: 50%;
-    transform: translateY(-50%);
-    width: 28px; height: 28px;
-    background: var(--blue-l, #EEF3FF);
-    color: var(--blue, #1A56DB);
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.3rem; font-weight: 400;
-    line-height: 1;
-    transition: transform .25s, background .25s;
-}
-.seo-faq-item[open] summary::after {
-    content: '−';
-    background: var(--blue, #1A56DB);
-    color: #fff;
-}
-.seo-faq-answer {
-    padding: 0 24px 22px;
-    color: var(--muted, #4E5D72);
-    font-size: .925rem;
-    line-height: 1.75;
-}
-.seo-faq-answer p:not(:last-child) { margin-bottom: 12px; }
-.seo-faq-answer a {
-    color: var(--blue, #1A56DB);
-    text-decoration: underline;
-    font-weight: 600;
-}
-</style>
-@endpush
+</script>
 
-<section class="seo-faq" aria-labelledby="seo-faq-title-{{ md5($title) }}">
+<section class="faq-section" aria-labelledby="faq-title">
     <div class="c">
-        <div class="sec-header center">
-            <div class="section-label" style="justify-content:center;">FAQ</div>
-            <h2 class="sec-heading" id="seo-faq-title-{{ md5($title) }}">{{ $title }}</h2>
-            @if($subtitle)
-                <p class="sec-subtext" style="text-align:center;margin:0 auto;">{{ $subtitle }}</p>
-            @endif
-        </div>
+        <h2 id="faq-title" class="section-title">{{ $title }}</h2>
+        @if($subtitle)
+            <p class="section-subtitle">{{ $subtitle }}</p>
+        @endif
 
-        <div class="seo-faq-list">
+        <div class="faq-list" itemscope itemtype="https://schema.org/FAQPage">
             @foreach($items as $i => $item)
-                <details class="seo-faq-item">
-                    <summary>{{ $item['q'] }}</summary>
-                    <div class="seo-faq-answer">{!! $item['a'] !!}</div>
-                </details>
+            <div class="faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+                <button
+                    class="faq-question"
+                    aria-expanded="false"
+                    aria-controls="faq-answer-{{ $i }}"
+                    itemprop="name"
+                    onclick="toggleFaq(this)"
+                >
+                    {{ $item['q'] }}
+                    <span class="faq-icon" aria-hidden="true">+</span>
+                </button>
+                <div
+                    id="faq-answer-{{ $i }}"
+                    class="faq-answer"
+                    itemscope
+                    itemprop="acceptedAnswer"
+                    itemtype="https://schema.org/Answer"
+                    hidden
+                >
+                    <div itemprop="text">{!! $item['a'] !!}</div>
+                </div>
+            </div>
             @endforeach
         </div>
     </div>
 </section>
 
-@if(count($items))
-@push('scripts')
-<script type="application/ld+json">
-{
-    "@@context": "https://schema.org",
-    "@@type": "FAQPage",
-    "mainEntity": [
-        @foreach($items as $i => $item)
-        {
-            "@@type": "Question",
-            "name": @json($item['q']),
-            "acceptedAnswer": {
-                "@@type": "Answer",
-                "text": @json(strip_tags($item['a']))
-            }
-        }@if(! $loop->last),@endif
-        @endforeach
-    ]
+<style>
+.faq-section { padding: 64px 0; background: #f8fafc; }
+.faq-section .section-title { text-align: center; font-size: clamp(1.5rem, 3vw, 2rem); color: #071428; margin-bottom: 8px; }
+.faq-section .section-subtitle { text-align: center; color: #556; margin-bottom: 40px; font-size: 1.05rem; }
+.faq-list { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.faq-item { background: #fff; border: 1px solid #dde3ee; border-radius: 10px; overflow: hidden; }
+.faq-question {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 22px; background: none; border: none; cursor: pointer;
+    font-size: 1rem; font-weight: 600; color: #071428; text-align: left; gap: 12px;
+    transition: background .2s;
+}
+.faq-question:hover { background: #f0f4ff; }
+.faq-question[aria-expanded="true"] { color: #1A56DB; }
+.faq-question[aria-expanded="true"] .faq-icon { transform: rotate(45deg); color: #1A56DB; }
+.faq-icon { font-size: 1.4rem; font-weight: 300; flex-shrink: 0; transition: transform .2s; }
+.faq-answer { padding: 0 22px 18px; color: #334; font-size: .97rem; line-height: 1.7; }
+.faq-answer p { margin: 0 0 8px; }
+.faq-answer a { color: #1A56DB; }
+</style>
+
+<script>
+function toggleFaq(btn) {
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    // chiudi tutti
+    document.querySelectorAll('.faq-question').forEach(b => {
+        b.setAttribute('aria-expanded', 'false');
+        const ans = document.getElementById(b.getAttribute('aria-controls'));
+        if (ans) ans.hidden = true;
+    });
+    // apri quello cliccato se era chiuso
+    if (!expanded) {
+        btn.setAttribute('aria-expanded', 'true');
+        const ans = document.getElementById(btn.getAttribute('aria-controls'));
+        if (ans) ans.hidden = false;
+    }
 }
 </script>
-@endpush
-@endif

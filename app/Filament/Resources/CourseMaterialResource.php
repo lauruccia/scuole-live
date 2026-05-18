@@ -278,6 +278,10 @@ class CourseMaterialResource extends Resource
                     ->iconButton()
                     ->after(fn (CourseMaterial $r) => Storage::disk('public')->delete($r->file_path)),
             ]);
+    }
+
+    public static function getPages(): array
+    {
         return [
             'index'  => Pages\ListCourseMaterials::route('/'),
             'create' => Pages\CreateCourseMaterial::route('/create'),
