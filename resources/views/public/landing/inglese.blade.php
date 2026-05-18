@@ -245,10 +245,8 @@
 </section>
 
 {{-- FAQ --}}
-<x-seo-faq
-    title="Domande frequenti sui corsi di inglese a Roma"
-    subtitle="Le risposte ai dubbi più comuni di chi sta valutando di iscriversi a un corso di inglese a Roma."
-    :items="[
+@php
+    $faqItems = [
         ['q' => 'Quanto costa un corso di inglese a Roma in A&A Language Center?', 'a' => '<p>I prezzi variano in base alla modalità (individuale, mini gruppo, online), al numero di ore e al livello target. Una lezione individuale parte da circa €30/ora, un mini gruppo da €15/ora. Puoi consultare il <a href="' . route('checkout.catalogo') . '">catalogo corsi</a> per i pacchetti completi con prezzo trasparente.</p>'],
         ['q' => 'Quanto dura un corso di inglese per ottenere una certificazione?', 'a' => '<p>Dipende dal tuo livello di partenza e dal target. Mediamente per passare da un livello CEFR al successivo servono 80–120 ore di studio. Per un Cambridge B2 First partendo da B1 si calcolano 4–6 mesi di corso a frequenza bisettimanale. Il test di livello gratuito è il punto di partenza per costruire il tuo piano.</p>'],
         ['q' => 'Posso usare la Carta del Docente per un corso di inglese?', 'a' => '<p>Sì. A&amp;A Language Center è ente accreditato MIUR. I docenti di ruolo possono usare la Carta del Docente per pagare integralmente i corsi di inglese, sia per la propria formazione personale sia per la preparazione di certificazioni linguistiche valide ai fini concorsuali.</p>'],
@@ -257,7 +255,12 @@
         ['q' => 'Offrite corsi di inglese intensivi?', 'a' => '<p>Sì. Oltre ai corsi standard a frequenza bisettimanale, organizziamo corsi intensivi (anche tutti i giorni) e ultra-intensivi per chi ha esigenze rapide: preparazione last-minute IELTS, colloqui di lavoro, trasferimenti all\'estero.</p>'],
         ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Il nostro Entrance Test si compone di una parte scritta (grammatica, lettura, comprensione) e una parte orale (5–10 minuti con un docente madrelingua). Al termine ricevi una valutazione CEFR dettagliata e una proposta di corso. Puoi <a href="' . route('iscrizione') . '">prenotarlo qui</a>.</p>'],
         ['q' => 'Fate corsi di inglese per bambini e ragazzi?', 'a' => '<p>Sì. Abbiamo corsi dedicati a bambini (5–10 anni) e ragazzi (11–17 anni), con metodologia ludica per i più piccoli e preparazione esami Trinity/Cambridge YLE per i ragazzi. I corsi sono in piccoli gruppi omogenei per età e livello.</p>'],
-    ]"
+    ];
+@endphp
+<x-seo-faq
+    title="Domande frequenti sui corsi di inglese a Roma"
+    subtitle="Le risposte ai dubbi più comuni di chi sta valutando di iscriversi a un corso di inglese a Roma."
+    :items="$faqItems"
 />
 
 {{-- CTA --}}

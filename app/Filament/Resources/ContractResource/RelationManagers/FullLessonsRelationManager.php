@@ -81,18 +81,11 @@ class FullLessonsRelationManager extends RelationManager
                             ->placeholder('— non ancora assegnato —'),
                     ]),
 
-                    Forms\Components\Grid::make(2)->schema([
-                        Forms\Components\DateTimePicker::make('starts_at')
-                            ->label('Data e ora inizio')
-                            ->nullable()
-                            ->seconds(false)
-                            ->helperText('Lascia vuoto se la lezione non è ancora stata fissata.'),
-
-                        Forms\Components\DateTimePicker::make('ends_at')
-                            ->label('Data e ora fine')
-                            ->nullable()
-                            ->seconds(false),
-                    ]),
+                    Forms\Components\DateTimePicker::make('starts_at')
+                        ->label('Data e ora inizio')
+                        ->nullable()
+                        ->seconds(false)
+                        ->helperText('Lascia vuoto se la lezione non è ancora stata fissata. La fine viene calcolata automaticamente (+60 min).'),
 
                     Forms\Components\TextInput::make('meet_url')
                         ->label('Link Meet')

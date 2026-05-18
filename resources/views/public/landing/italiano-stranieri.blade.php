@@ -167,9 +167,8 @@
 </section>
 
 {{-- FAQ --}}
-<x-seo-faq
-    title="FAQ — Italian Courses & Italiano per Stranieri"
-    :items="[
+@php
+    $faqItems = [
         ['q' => 'Quanto costa un corso di italiano per stranieri a Roma?', 'a' => '<p>I prezzi partono da €15/ora in mini gruppo e da €30/ora individuale. Offriamo pacchetti settimanali intensivi (15–20 ore/settimana) e corsi mensili a frequenza bisettimanale. <a href="' . route('checkout.catalogo') . '">Vedi i corsi disponibili</a>.</p>'],
         ['q' => 'How much does an Italian course in Rome cost?', 'a' => '<p>Prices start at €15/hour for small group classes and €30/hour for one-to-one lessons. We offer intensive weekly packages (15–20 hours/week) and monthly courses (2 lessons per week). <a href="' . route('checkout.catalogo') . '">See available courses</a>.</p>'],
         ['q' => 'Do you prepare for CILS B1 (Italian citizenship)?', 'a' => '<p>Yes. We have a specific course for CILS B1 Cittadinanza, the level required to apply for Italian citizenship. It is an intensive 30–60 hour preparation covering all four exam parts (listening, reading, writing, speaking) with mock exams.</p>'],
@@ -177,7 +176,11 @@
         ['q' => 'Can I take Italian classes online?', 'a' => '<p>Yes. We offer Italian classes online with the same quality as in-person lessons. Live video classes with native Italian teachers — perfect for students still abroad before moving to Italy.</p>'],
         ['q' => 'Where is the school? Is it easy to reach?', 'a' => '<p>We are at <strong>Viale Leonardo da Vinci 193, 00145 Rome</strong> — San Paolo district. Two minutes from the San Paolo metro station (Line B). About 15 minutes from Roma Termini and 10 minutes from EUR.</p>'],
         ['q' => 'Are your Italian teachers native speakers?', 'a' => '<p>Yes. All our Italian teachers are native Italian speakers, qualified to teach Italian as a second language (DITALS / CEDILS / DILS-PG certifications), with years of experience teaching adult foreign learners.</p>'],
-    ]"
+    ];
+@endphp
+<x-seo-faq
+    title="FAQ — Italian Courses & Italiano per Stranieri"
+    :items="$faqItems"
 />
 
 {{-- CTA --}}

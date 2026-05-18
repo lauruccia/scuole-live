@@ -194,10 +194,8 @@
 </section>
 
 {{-- FAQ --}}
-<x-seo-faq
-    title="Domande frequenti — Corsi aziendali"
-    subtitle="Le risposte alle domande più comuni di HR manager, training manager e responsabili formazione."
-    :items="[
+@php
+    $faqItems = [
         ['q' => 'Quanto costa un corso di inglese aziendale a Roma?', 'a' => '<p>I costi dipendono dal numero di partecipanti, dalle ore totali, dalla modalità (in sede o online) e dal livello del corso. Per un preventivo personalizzato <a href="' . route('contattaci') . '">contattaci</a> — rispondiamo entro 24 ore con un\'analisi dei fabbisogni e una proposta dettagliata.</p>'],
         ['q' => 'Quanto dura tipicamente un corso aziendale?', 'a' => '<p>I cicli tipici sono 40, 60 o 90 ore, distribuite su 3–9 mesi a seconda dell\'intensità. Lavoriamo bene anche su programmi annuali e biennali con monitoraggio continuo del livello CEFR.</p>'],
         ['q' => 'Venite a fare lezione direttamente nella nostra sede?', 'a' => '<p>Sì. I nostri docenti si spostano nella sede aziendale a Roma e provincia. Per sedi fuori Roma valutiamo modalità mista (in presenza + online) per ottimizzare i costi.</p>'],
@@ -205,7 +203,12 @@
         ['q' => 'Possiamo fare un test di livello per tutti i dipendenti?', 'a' => '<p>Sì. Effettuiamo un Entrance Test scritto + colloquio orale individuale per ciascun dipendente, completamente gratuito. Forniamo poi un report aggregato con la distribuzione CEFR del team e suggerimenti di clusterizzazione.</p>'],
         ['q' => 'Posso usare la Carta del Docente o fondi formativi?', 'a' => '<p>Per docenti scolastici sì, la Carta del Docente è utilizzabile direttamente. Per aziende lavoriamo con i principali fondi interprofessionali (Fondimpresa, Fondoprofessioni). Ti aiutiamo nella preparazione della documentazione necessaria.</p>'],
         ['q' => 'Quali aziende avete già formato?', 'a' => '<p>Tra i nostri clienti: <strong>MEF</strong> (Ministero dell\'Economia e delle Finanze), <strong>Confcommercio</strong>, <strong>H10 Hotels</strong>, oltre a numerosi studi professionali, PMI, scuole pubbliche e private, università ed enti pubblici nazionali e locali.</p>'],
-    ]"
+    ];
+@endphp
+<x-seo-faq
+    title="Domande frequenti — Corsi aziendali"
+    subtitle="Le risposte alle domande più comuni di HR manager, training manager e responsabili formazione."
+    :items="$faqItems"
 />
 
 {{-- CTA --}}

@@ -738,10 +738,8 @@
 </section>
 
 {{-- ══ FAQ ══ --}}
-<x-seo-faq
-    title="Domande frequenti su A&A Language Center"
-    subtitle="Le risposte alle domande più comuni su corsi, prezzi, certificazioni e modalità."
-    :items="[
+@php
+    $faqItems = [
         ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti madrelingua qualificati. Vedi il <a href="' . route('checkout.catalogo') . '">catalogo completo</a>.</p>'],
         ['q' => 'Dove si trova la scuola?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. A pochi passi dalle fermate metro San Paolo e Marconi (linea B), ben collegati con EUR, Garbatella, Ostiense e Testaccio.</p>'],
         ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente madrelingua. Al termine ricevi una valutazione CEFR dettagliata. <a href="' . route('iscrizione') . '">Prenotalo qui</a>.</p>'],
@@ -749,7 +747,12 @@
         ['q' => 'Siete sede d\'esame Trinity College London?', 'a' => '<p>Sì. A&amp;A Language Center è <strong>Sede d\'Esame Ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l\'anno direttamente nella nostra sede.</p>'],
         ['q' => 'Posso pagare con la Carta del Docente?', 'a' => '<p>Sì. Siamo ente accreditato MIUR. I docenti di ruolo possono usare la Carta del Docente per pagare integralmente i corsi di lingue, sia per la propria formazione che per la preparazione di certificazioni linguistiche.</p>'],
         ['q' => 'Avete corsi per aziende?', 'a' => '<p>Sì. Dal 2002 facciamo formazione linguistica B2B per aziende, enti pubblici, hotel e studi professionali. Tra i clienti: MEF, Confcommercio, H10 Hotels. Vedi <a href="' . route('landing.aziendali') . '">Corsi Aziendali</a>.</p>'],
-    ]"
+    ];
+@endphp
+<x-seo-faq
+    title="Domande frequenti su A&A Language Center"
+    subtitle="Le risposte alle domande più comuni su corsi, prezzi, certificazioni e modalità."
+    :items="$faqItems"
 />
 
 {{-- ══ CTA FINALE ══ --}}
