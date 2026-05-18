@@ -80,6 +80,19 @@ class FullLessonService
      * Genera i segnaposto FULL per tutti i beneficiari del contratto.
      * Salta i beneficiari che hanno già segnaposto "da definire" esistenti,
      * evitando duplicati.
+     *
+     * Difesa multi-livello:
+     *  1) Pulizia orfani: i segnaposto FULL "da definire" il cui
+     *     `contract_student_id` non appartiene più ad alcun beneficiario
+     *     attuale del contratto (es. il vecchio ContractStudent è stato
+     *     ricreato con id diverso dopo una modifica del flag
+     *     "intestatario = studente") vengono eliminati. Senza questa
+     *     pulizia il count per-beneficiario li ignora e il generatore
+     *     crea altri 5 segnaposto, raddoppiando il monte ore FULL.
+     *  2) Cap a livello contratto: il totale dei segnaposto FULL attivi
+     *     (non completati / non annullati) non può mai superare
+     *     `contracts.hours_full`. Se per qualunque motivo c'è eccedenza,
+     *     i "da definire" più recenti vengono rimossi.
      */
     public function generatePlaceholders(Contract $contract): void
     {
@@ -90,8 +103,71 @@ class FullLessonService
         $contract->loadMissing('beneficiaries');
 
         DB::transaction(function () use ($contract) {
+            // (1) Pulizia segnaposto FULL orfani
+            $beneficiaryIds = $contract->beneficiaries->pluck('id')->filter()->values()->all();
+
+            $orphanQuery = Lesson::query()
+                ->where('contract_id', $contract->id)
+                ->where('is_full_lesson', true)
+                ->whereNull('starts_at')
+                ->whereNull('completed_at')
+                ->whereNull('cancelled_at');
+
+            if (empty($beneficiaryIds)) {
+                // Nessun beneficiario corrente: tutti i "da definire" sono orfani.
+                $orphanQuery->forceDelete();
+            } else {
+                $orphanQuery
+                    ->where(function ($q) use ($beneficiaryIds) {
+                        $q->whereNull('contract_student_id')
+                          ->orWhereNotIn('contract_student_id', $beneficiaryIds);
+                    })
+                    ->forceDelete();
+            }
+
+            // Generazione standard per beneficiario
             foreach ($contract->beneficiaries as $cs) {
                 $this->generatePlaceholdersForBeneficiary($contract, $cs);
+            }
+
+            // (2) Cap a livello contratto su hours_full
+            $contractHoursFull = (int) round((float) ($contract->hours_full ?? 0));
+
+            if ($contractHoursFull <= 0) {
+                return;
+            }
+
+            $activePlaceholders = Lesson::query()
+                ->where('contract_id', $contract->id)
+                ->where('is_full_lesson', true)
+                ->whereNull('completed_at')
+                ->whereNull('cancelled_at')
+                ->count();
+
+            if ($activePlaceholders <= $contractHoursFull) {
+                return;
+            }
+
+            $excess = $activePlaceholders - $contractHoursFull;
+
+            // Rimuoviamo solo i "da definire" più recenti (mai pianificati,
+            // mai completati, mai annullati). Le lezioni già con data restano
+            // intoccate: la segreteria le ha già pianificate consapevolmente.
+            // Prima preleviamo gli id e poi facciamo il DELETE: alcuni driver
+            // non supportano LIMIT direttamente sulla DELETE via Eloquent.
+            $idsToRemove = Lesson::query()
+                ->where('contract_id', $contract->id)
+                ->where('is_full_lesson', true)
+                ->whereNull('starts_at')
+                ->whereNull('completed_at')
+                ->whereNull('cancelled_at')
+                ->orderByDesc('id')
+                ->limit($excess)
+                ->pluck('id')
+                ->all();
+
+            if (! empty($idsToRemove)) {
+                Lesson::query()->whereIn('id', $idsToRemove)->forceDelete();
             }
         });
     }

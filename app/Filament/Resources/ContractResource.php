@@ -1233,7 +1233,7 @@ Select::make('student_id')
             'beneficiary_birth_date' => $get('billing_birth_date'),
         ]);
 
-        $set('beneficiaries', [[
+        $newData = [
             'student_id'               => $matchedStudent?->id,
             'beneficiary_first_name'   => (string) $get('billing_first_name'),
             'beneficiary_last_name'    => (string) $get('billing_last_name'),
@@ -1245,7 +1245,26 @@ Select::make('student_id')
             'assigned_hours'           => $hoursPersonal > 0 ? $hoursPersonal : null,
             'auto_birth_province'      => $matchedStudent?->birth_province,
             'auto_match_label'         => $matchedStudent ? 'Trovato in anagrafica: ' . $matchedStudent->full_name : null,
-        ]]);
+        ];
+
+        // IMPORTANTE: preserviamo la chiave del Repeater del primo item esistente.
+        // In modalità `relationship()` Filament identifica i record DB tramite la
+        // chiave dello state. Un `$set('beneficiaries', [[...]])` (chiave 0 nuova)
+        // farebbe cancellare il vecchio ContractStudent e crearne uno nuovo con id
+        // diverso, lasciando orfane le lezioni FULL già generate per il vecchio id
+        // (→ raddoppio delle ore FULL al salvataggio successivo).
+        $current = $get('beneficiaries');
+        $current = is_array($current) ? $current : [];
+
+        if (! empty($current)) {
+            $firstKey = array_key_first($current);
+            $merged   = array_merge(is_array($current[$firstKey] ?? null) ? $current[$firstKey] : [], $newData);
+            $set('beneficiaries', [$firstKey => $merged]);
+
+            return;
+        }
+
+        $set('beneficiaries', [$newData]);
     }
 
     protected static function recalcTotals(Get $get, Set $set): void
