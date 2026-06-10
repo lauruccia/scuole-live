@@ -5,7 +5,9 @@ namespace App\Filament\Resources\LessonResource\Pages;
 use App\Filament\Resources\LessonResource;
 use App\Models\Contract;
 use App\Models\Lesson;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -126,4 +128,24 @@ class EditLesson extends EditRecord
         \App\Models\Contract::recalcConsumedHours($this->contractId);
     }
 }*/
+
+    protected function handleRecordUpdate(\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model
+    {
+        try {
+            return parent::handleRecordUpdate($record, $data);
+        } catch (UniqueConstraintViolationException $e) {
+            $slot = isset($data['starts_at'])
+                ? Carbon::parse($data['starts_at'])->format('d/m/Y H:i')
+                : '—';
+
+            Notification::make()
+                ->title('Slot già occupato')
+                ->body("Esiste già una lezione per questo studente il {$slot}. Scegli un orario diverso.")
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+    }
 }

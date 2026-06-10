@@ -71,7 +71,7 @@ class LessonsRelationManager extends RelationManager
                     ->colors([
                         'success' => 'Attivo',
                         'gray'    => 'Terminato',
-                        'warning' => fn ($s) => in_array($s, ['Sospeso', 'In pausa']),
+                        'warning' => fn ($state) => in_array($state, ['Sospeso', 'In pausa']),
                     ]),
 
                 Tables\Columns\TextColumn::make('teacher_label')

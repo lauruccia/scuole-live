@@ -264,6 +264,31 @@ HTML,
 HTML,
             ],
 
+            // ─── PROMEMORIA FINE CORSO ────────────────────────────────────────
+            [
+                'slug'     => 'course_end_reminder',
+                'name'     => 'Promemoria fine corso',
+                'category' => 'Contratti',
+                'subject'  => 'Il tuo corso "{{nome_corso}}" si concluderà il {{data_fine_corso}}',
+                'trigger_event' => null,
+                'is_active' => true,
+                'available_variables' => [
+                    ['key' => 'nome_intestatario', 'description' => 'Nome intestatario contratto'],
+                    ['key' => 'nome_corso',        'description' => 'Nome del corso'],
+                    ['key' => 'data_fine_corso',   'description' => 'Data fine corso (gg/mm/aaaa)'],
+                    ['key' => 'nome_scuola',       'description' => 'Nome della scuola'],
+                ],
+                'body_html' => <<<'HTML'
+<p>Ciao <strong>{{nome_intestatario}}</strong>,</p>
+
+<p>ti ricordiamo che il tuo corso <strong>{{nome_corso}}</strong> si concluderà il <strong>{{data_fine_corso}}</strong>.</p>
+
+<p>Se desideri rinnovare l'iscrizione o hai domande, contattaci pure: saremo felici di aiutarti.</p>
+
+<p>A presto,<br>Lo staff di <strong>{{nome_scuola}}</strong></p>
+HTML,
+            ],
+
             // ─── COMUNICAZIONE GENERICA ───────────────────────────────────────
             [
                 'slug'     => 'student_communication',
