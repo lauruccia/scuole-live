@@ -193,8 +193,8 @@
 
                 <div class="orari-box">
                     <div class="orari-box-title">Orari di apertura</div>
-                    <div class="orari-row"><span class="day">Lunedì – Venerdì</span><span class="time">9:00 – 20:00</span></div>
-                    <div class="orari-row"><span class="day">Sabato</span><span class="time">10:00 – 14:00</span></div>
+                    <div class="orari-row"><span class="day">Lunedì – Venerdì</span><span class="time">10:00 – 19:00</span></div>
+                    <div class="orari-row"><span class="day">Sabato</span><span class="time">9:00 – 13:00</span></div>
                     <div class="orari-row"><span class="day">Domenica</span><span class="closed">Chiuso</span></div>
                 </div>
 

@@ -27,6 +27,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
+use App\Models\ClosureDay;
 use Filament\Facades\Filament;
 use Filament\Tables\Actions\ActionGroup;
 
@@ -233,6 +234,52 @@ Select::make('language_id')
                             if (! $get('ends_at')) {
                                 $set('ends_at', Carbon::parse($start)->copy()->addMinutes(60));
                             }
+                        }),
+
+                    // ⚠️ Warning reattivo: avvisa (senza bloccare) se starts_at cade in un giorno di chiusura.
+                    // Il campo è read-only, non fa parte del dato salvato (dehydrated = false).
+                    Placeholder::make('closure_warning')
+                        ->label('')
+                        ->dehydrated(false)
+                        ->content(function (Get $get): string {
+                            $start = $get('starts_at');
+                            if (! $start) return '';
+
+                            $dateStr = Carbon::parse($start)->toDateString();
+
+                            $closure = ClosureDay::query()
+                                ->whereDate('start_date', '<=', $dateStr)
+                                ->where(function ($q) use ($dateStr) {
+                                    $q->whereNull('end_date')
+                                      ->orWhereDate('end_date', '>=', $dateStr);
+                                })
+                                ->first();
+
+                            if (! $closure) return '';
+
+                            $label = $closure->reason
+                                ? " ({$closure->reason})"
+                                : '';
+                            $from = $closure->start_date->format('d/m/Y');
+                            $to   = $closure->end_date
+                                ? ' – ' . $closure->end_date->format('d/m/Y')
+                                : '';
+
+                            return "⚠️ Attenzione: questo giorno cade in un periodo di chiusura{$label} ({$from}{$to}). Puoi salvare comunque se lo desideri.";
+                        })
+                        ->hidden(function (Get $get): bool {
+                            $start = $get('starts_at');
+                            if (! $start) return true;
+
+                            $dateStr = Carbon::parse($start)->toDateString();
+
+                            return ! ClosureDay::query()
+                                ->whereDate('start_date', '<=', $dateStr)
+                                ->where(function ($q) use ($dateStr) {
+                                    $q->whereNull('end_date')
+                                      ->orWhereDate('end_date', '>=', $dateStr);
+                                })
+                                ->exists();
                         }),
 
                     DateTimePicker::make('ends_at')

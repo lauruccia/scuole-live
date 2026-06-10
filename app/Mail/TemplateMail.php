@@ -23,6 +23,8 @@ class TemplateMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    private readonly array $mailAttachments;
+
     /**
      * @param  string  $htmlContent   HTML completo già renderizzato con layout
      * @param  string  $mailSubject   Oggetto dell'email
@@ -31,8 +33,17 @@ class TemplateMail extends Mailable implements ShouldQueue
     public function __construct(
         private readonly string $htmlContent,
         private readonly string $mailSubject,
-        private readonly array  $mailAttachments = [],
-    ) {}
+        array $mailAttachments = [],
+    ) {
+        // Base64-encode binary data so the mailable serializes safely when queued
+        $this->mailAttachments = array_map(function ($att) {
+            if (isset($att['data']) && ! ($att['_b64'] ?? false)) {
+                $att['data'] = base64_encode($att['data']);
+                $att['_b64'] = true;
+            }
+            return $att;
+        }, $mailAttachments);
+    }
 
     public function envelope(): Envelope
     {
@@ -54,7 +65,7 @@ class TemplateMail extends Mailable implements ShouldQueue
     {
         return collect($this->mailAttachments)
             ->map(fn ($att) => \Illuminate\Mail\Mailables\Attachment::fromData(
-                fn () => $att['data'],
+                fn () => ($att['_b64'] ?? false) ? base64_decode($att['data']) : $att['data'],
                 $att['name'] ?? 'allegato'
             )->withMime($att['mime'] ?? 'application/octet-stream'))
             ->all();

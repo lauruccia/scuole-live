@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ClosureDayResource\Pages;
 
 use App\Filament\Resources\ClosureDayResource;
 use App\Models\ClosureDay;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 
@@ -42,5 +43,21 @@ class CreateClosureDay extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var ClosureDay $record */
+        $record = $this->record;
+        $count = ClosureDayResource::countAffectedLessons($record);
+
+        if ($count > 0) {
+            Notification::make()
+                ->title('Periodo di chiusura salvato')
+                ->body("⚠️ {$count} lezioni future cadono in questo periodo. Usa il pulsante «Rigenera lezioni» nella lista per spostarle automaticamente.")
+                ->warning()
+                ->persistent()
+                ->send();
+        }
     }
 }

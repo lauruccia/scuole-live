@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\TemplateMail;
 use App\Models\EmailTemplate;
+use App\Models\NotificationEmailLog;
 use App\Models\SchoolSetting;
 use App\Support\UnsubscribeToken;
 use Illuminate\Support\Facades\Log;
@@ -204,6 +205,13 @@ HTML;
             } else {
                 $mailer->send($mailable);
             }
+
+            Log::info("EmailTemplateService: inviato [{$template->slug}] a {$toEmail}");
+            NotificationEmailLog::create([
+                'type'       => $template->slug,
+                'email'      => $toEmail,
+                'sent_at'    => now(),
+            ]);
 
             return true;
         } catch (\Throwable $e) {
