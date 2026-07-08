@@ -288,6 +288,47 @@ return [
         ],
     ],
 
+    /* ═══════════════════════ CORSI (CATALOGO) ═══════════════════════ */
+    'corsi' => [
+        'label' => 'Corsi (catalogo)',
+        'sections' => [
+            'seo' => [
+                'label' => 'SEO (motori di ricerca)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Corsi di Lingue a Roma — Catalogo | A&A Language Center"],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Catalogo dei corsi di lingue di A&A Language Center a Roma San Paolo: inglese, spagnolo, arabo, francese, tedesco, russo, portoghese, italiano per stranieri. Iscriviti online con pagamento sicuro."],
+                    'meta_keywords' => ['label' => 'Meta keywords', 'type' => 'textarea', 'default' => "corsi di lingue Roma catalogo, acquista corso lingue online Roma, corsi inglese Roma, corsi spagnolo Roma, corsi francese Roma, corsi tedesco Roma, corsi arabo Roma, corsi italiano stranieri Roma, iscrizione online corsi lingue"],
+                ],
+            ],
+            'hero' => [
+                'label' => 'Testata',
+                'fields' => [
+                    'hero_label' => ['label' => 'Etichetta', 'type' => 'text', 'default' => "Corsi disponibili"],
+                    'hero_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Scegli il tuo corso.<br><span>Inizia a parlare.</span>"],
+                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'textarea', 'default' => "Tutti i corsi sono personalizzati sul tuo livello. Docenti qualificati, orari flessibili, risultati garantiti."],
+                    'intro_text' => ['label' => 'Testo introduttivo (sotto la testata)', 'type' => 'html', 'default' => "A&amp;A offre corsi di <strong>Inglese, Francese, Spagnolo, Tedesco, Russo, Portoghese, Arabo</strong> e <strong>Italiano per stranieri</strong>. Tutti i corsi sono sempre preceduti da un <strong>Entrance Test</strong> e da un colloquio conoscitivo gratuito con una delle nostre insegnanti, per stabilire l'esatto livello di partenza e garantire un preciso punto di arrivo. Ampia varietà di corsi annuali, intensivi, estivi e crash-course di poche ore, in presenza e online."],
+                ],
+            ],
+            'tipologie' => [
+                'label' => 'Tipologie di corso (sotto il catalogo)',
+                'fields' => [
+                    'tip_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Per ogni esigenza"],
+                    'tip_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "I corsi A&A per <em>ogni tua esigenza</em>"],
+                    'tip_subtext' => ['label' => 'Sottotitolo', 'type' => 'textarea', 'default' => "Ogni percorso segue il metodo A&A: massima attenzione alle competenze comunicative, programmi in linea con il CEFR dal livello A1 al C2."],
+                    'tip1_title' => ['label' => 'Card 1 — titolo', 'type' => 'text', 'default' => "Corsi individuali One-to-One"],
+                    'tip1_text' => ['label' => 'Card 1 — testo', 'type' => 'textarea', 'default' => "Un piano formativo costruito su misura, aperto già ai bambini dai 6 anni. Scegli tu giorno e ora della lezione (minimo 55 minuti) con estrema libertà, adattando frequenza e durata ai tuoi impegni."],
+                    'tip2_title' => ['label' => 'Card 2 — titolo', 'type' => 'text', 'default' => "Mini gruppi General Adult"],
+                    'tip2_text' => ['label' => 'Card 2 — testo', 'type' => 'textarea', 'default' => "Gruppi di massimo 4–6 studenti, formati dopo test di entrata e colloquio per garantire la sintonia di età, professione e obiettivi. Focus su conversazione e comprensione, senza tralasciare scrittura e grammatica."],
+                    'tip3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Corsi per Bambini e Ragazzi"],
+                    'tip3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Percorsi annuali e quadrimestrali in piccoli gruppi di 3–4, pensati per bambini 6–10 anni e ragazzi 11–17: rafforzano lo studio scolastico e preparano alle certificazioni internazionali, a partire dal livello A1."],
+                    'tip4_title' => ['label' => 'Card 4 — titolo', 'type' => 'text', 'default' => "Corsi specialistici"],
+                    'tip4_text' => ['label' => 'Card 4 — testo', 'type' => 'textarea', 'default' => "Recupero scolastico, conversazione, preparazione certificazioni B1–C1 per universitari, pronuncia e dizione per artisti e attori, Business, Legal e Medical English, corsi formativi per docenti."],
+                    'tip_orari' => ['label' => 'Nota orari (in fondo)', 'type' => 'html', 'default' => "🕐 <strong>Lezioni no-stop:</strong> Lunedì–Venerdì 10:00–19:00 e Sabato 9:00–13:00. Ogni studente sceglie giorno e ora della lezione con la massima flessibilità."],
+                ],
+            ],
+        ],
+    ],
+
     /* ═══════════════════════ SERVIZI ═══════════════════════ */
     'servizi' => [
         'label' => 'Servizi',

@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Corsi di Lingue a Roma — Catalogo | A&A Language Center')
-@section('description', 'Catalogo dei corsi di lingue di A&A Language Center a Roma San Paolo: inglese, spagnolo, arabo, francese, tedesco, italiano per stranieri. Iscriviti online con pagamento sicuro.')
-@section('keywords', 'corsi di lingue Roma catalogo, acquista corso lingue online Roma, corsi inglese Roma, corsi spagnolo Roma, corsi francese Roma, corsi tedesco Roma, corsi arabo Roma, corsi italiano stranieri Roma, iscrizione online corsi lingue')
+@section('title', \App\Models\PageContent::text('corsi', 'meta_title'))
+@section('description', \App\Models\PageContent::text('corsi', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('corsi', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -19,17 +19,64 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/catalogo.css') }}">
+<style>
+/* Testo introduttivo sotto la testata */
+.cat-intro {
+    background: #fff;
+    border-bottom: 1px solid #e8eef8;
+    padding: 26px 0;
+}
+.cat-intro p {
+    max-width: 860px; margin: 0;
+    font-size: .95rem; color: var(--muted, #5a6b84); line-height: 1.75;
+}
+
+/* Tipologie di corso */
+.tipologie-section { background: #f5f8fc; padding: 72px 0; }
+.tipologie-header { max-width: 640px; margin-bottom: 36px; }
+.tipologie-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
+}
+.tipologia-card {
+    background: #fff; border: 1px solid #e8eef8; border-radius: 14px;
+    padding: 26px 24px;
+    transition: border-color .2s, transform .2s;
+}
+.tipologia-card:hover { border-color: rgba(26,86,219,.3); transform: translateY(-3px); }
+.tipologia-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: var(--blue-l, #e8effc);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.35rem; margin-bottom: 14px;
+}
+.tipologia-card h3 { font-size: 1rem; font-weight: 800; color: var(--text, #1c2a3d); margin-bottom: 8px; }
+.tipologia-card p  { font-size: .85rem; color: var(--muted, #5a6b84); line-height: 1.7; margin: 0; }
+.tipologie-orari {
+    margin-top: 28px; text-align: center;
+    background: #fff; border: 1.5px dashed var(--blue, #1A56DB); border-radius: 12px;
+    padding: 16px 24px;
+    font-size: .92rem; color: var(--text, #1c2a3d); line-height: 1.65;
+}
+@media (max-width: 760px) { .tipologie-grid { grid-template-columns: 1fr; } }
+</style>
 @endpush
 
 @section('content')
 
 <section class="cat-hero">
     <div class="c cat-hero-inner">
-        <div class="cat-hero-label">Corsi disponibili</div>
-        <h1>Scegli il tuo corso.<br><span>Inizia a parlare.</span></h1>
-        <p>Tutti i corsi sono personalizzati sul tuo livello. Docenti qualificati, orari flessibili, risultati garantiti.</p>
+        <div class="cat-hero-label">{{ \App\Models\PageContent::text('corsi', 'hero_label') }}</div>
+        <h1>{!! \App\Models\PageContent::html('corsi', 'hero_title') !!}</h1>
+        <p>{{ \App\Models\PageContent::text('corsi', 'hero_subtitle') }}</p>
     </div>
 </section>
+
+{{-- Testo introduttivo (dal vecchio sito, editabile dal pannello) --}}
+<div class="cat-intro">
+    <div class="c">
+        <p>{!! \App\Models\PageContent::html('corsi', 'intro_text') !!}</p>
+    </div>
+</div>
 
 <div class="filter-bar">
     <div class="c">
@@ -172,6 +219,40 @@
 
         @endif
 
+    </div>
+</section>
+
+{{-- Tipologie di corso (dal vecchio sito, editabili dal pannello) --}}
+<section class="tipologie-section" aria-labelledby="tipologie-title">
+    <div class="c">
+        <div class="tipologie-header">
+            <div class="section-label">{{ \App\Models\PageContent::text('corsi', 'tip_label') }}</div>
+            <h2 class="sec-heading" id="tipologie-title">{!! \App\Models\PageContent::html('corsi', 'tip_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('corsi', 'tip_subtext') }}</p>
+        </div>
+        <div class="tipologie-grid">
+            <div class="tipologia-card">
+                <div class="tipologia-icon">👤</div>
+                <h3>{{ \App\Models\PageContent::text('corsi', 'tip1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('corsi', 'tip1_text') }}</p>
+            </div>
+            <div class="tipologia-card">
+                <div class="tipologia-icon">👥</div>
+                <h3>{{ \App\Models\PageContent::text('corsi', 'tip2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('corsi', 'tip2_text') }}</p>
+            </div>
+            <div class="tipologia-card">
+                <div class="tipologia-icon">🎒</div>
+                <h3>{{ \App\Models\PageContent::text('corsi', 'tip3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('corsi', 'tip3_text') }}</p>
+            </div>
+            <div class="tipologia-card">
+                <div class="tipologia-icon">🎓</div>
+                <h3>{{ \App\Models\PageContent::text('corsi', 'tip4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('corsi', 'tip4_text') }}</p>
+            </div>
+        </div>
+        <p class="tipologie-orari">{!! \App\Models\PageContent::html('corsi', 'tip_orari') !!}</p>
     </div>
 </section>
 
