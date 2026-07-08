@@ -42,16 +42,18 @@
        - Foto PIENAMENTE VISIBILE a destra (60–100%, overlay quasi nullo)
        - Fondo navy come fallback in caso l'immagine non risponda
     */
+    /* Tono chiaro: overlay bianco denso a sinistra per il testo,
+       foto visibile a destra, così il logo della scuola risalta. */
     background:
         linear-gradient(95deg,
-            rgba(7,20,40,.97) 0%,
-            rgba(7,20,40,.94) 30%,
-            rgba(7,20,40,.78) 45%,
-            rgba(7,20,40,.30) 60%,
-            rgba(7,20,40,.05) 100%),
+            rgba(255,255,255,.97) 0%,
+            rgba(255,255,255,.94) 30%,
+            rgba(255,255,255,.82) 45%,
+            rgba(255,255,255,.38) 60%,
+            rgba(255,255,255,.08) 100%),
         url('https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85')
             center right / cover no-repeat,
-        linear-gradient(135deg, #071428 0%, #0d1f3c 50%, #112350 100%);
+        linear-gradient(135deg, #FFFFFF 0%, #F5F8FC 50%, #EEF3FF 100%);
     min-height: 620px;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -84,10 +86,10 @@
     transform: translateY(-50%);
     height: min(440px, 75%);
     width: auto;
-    opacity: .55;
-    filter: drop-shadow(0 8px 30px rgba(0,0,0,.55));
-    -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
-    mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+    opacity: .92;
+    filter: drop-shadow(0 10px 34px rgba(13,27,46,.30));
+    -webkit-mask-image: radial-gradient(closest-side, #000 68%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 68%, transparent 100%);
     pointer-events: none;
     z-index: 1;
 }
@@ -99,14 +101,14 @@
 .hero-eyebrow {
     font-size: .68rem; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
-    color: rgba(255,255,255,.45);
+    color: var(--muted);
     margin-bottom: 22px;
 }
 .hero-eyebrow span { color: var(--blue); }
 .hero h1 {
     font-size: clamp(2.4rem, 4.5vw, 3.6rem);
     font-weight: 800; line-height: 1.08;
-    letter-spacing: -.05em; color: #fff;
+    letter-spacing: -.05em; color: var(--navy);
     margin-bottom: 20px;
 }
 .hero h1 .accent { color: var(--blue); display: block; }
@@ -116,12 +118,12 @@
     font-weight: 700;
     letter-spacing: .14em;
     text-transform: uppercase;
-    color: var(--gold);
+    color: var(--gold-d);
     margin-bottom: 14px;
     line-height: 1.4;
 }
 .hero-desc {
-    font-size: 1rem; color: rgba(255,255,255,.62);
+    font-size: 1rem; color: var(--muted);
     line-height: 1.75; max-width: 480px; margin-bottom: 36px;
 }
 .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
@@ -139,15 +141,15 @@
 .btn-hero-ghost {
     display: inline-flex; align-items: center; gap: 8px;
     padding: .85rem 1.8rem;
-    background: rgba(255,255,255,.06);
-    color: rgba(255,255,255,.85);
+    background: #fff;
+    color: var(--text);
     font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 600; font-size: .88rem;
-    border-radius: 8px; border: 1.5px solid rgba(255,255,255,.18);
+    border-radius: 8px; border: 1.5px solid var(--border);
     letter-spacing: .03em; text-transform: uppercase;
     transition: all .2s;
 }
-.btn-hero-ghost:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.4); }
+.btn-hero-ghost:hover { background: var(--blue-l); border-color: var(--blue); color: var(--blue); }
 
 /* Hero right — solo contenitore per le floating cards
    (l'immagine di sfondo è applicata a .hero a tutta larghezza) */
