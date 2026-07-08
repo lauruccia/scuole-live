@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Le Certificazioni Trinity College London — Sede Esami n° 8241 | A&A Language Center Roma')
-@section('description', 'A&A Language Center è sede d\'esami FULL Trinity College London n° 8241 a Roma. Certificazioni GESE e ISE riconosciute dal MIUR, valide per crediti formativi, crediti universitari e concorsi pubblici.')
-@section('keywords', 'certificazioni Trinity Roma, sede esami Trinity College London Roma, esami GESE Roma, esami ISE Roma, certificazione inglese crediti formativi, certificazione inglese università, Trinity College London 8241')
+@section('title', \App\Models\PageContent::text('le-certificazioni', 'meta_title'))
+@section('description', \App\Models\PageContent::text('le-certificazioni', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('le-certificazioni', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -95,9 +95,9 @@
 {{-- HERO --}}
 <section class="cert-hero">
     <div class="c">
-        <span class="eyebrow">Open Your Mind To The World</span>
-        <h1>Le Certificazioni</h1>
-        <p>A&amp;A Language Center è <strong>sede d'esami FULL Trinity College London n° 8241</strong>: gli esami si tengono direttamente nella nostra sede in diversi periodi dell'anno.</p>
+        <span class="eyebrow">{{ \App\Models\PageContent::text('le-certificazioni', 'hero_eyebrow') }}</span>
+        <h1>{{ \App\Models\PageContent::text('le-certificazioni', 'hero_title') }}</h1>
+        <p>{!! \App\Models\PageContent::html('le-certificazioni', 'hero_text') !!}</p>
         <div class="cert-hero-logo">
             <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London — Sede Esami n° 8241">
         </div>
@@ -107,24 +107,20 @@
 {{-- SEDE ESAMI --}}
 <section class="cert-sec">
     <div class="c cert-narrow">
-        <h2>Sede d'esami ufficiale <em>Trinity College London n° 8241</em></h2>
-        <p>Gli studenti possono sostenere gli esami direttamente in sede e ottenere certificati validi per i <strong>Crediti Formativi negli esami di maturità</strong>, per i <strong>crediti universitari</strong> e per i <strong>concorsi pubblici</strong>.</p>
-        <p>Gli esami Trinity sono particolarmente importanti anche per gli studenti universitari: sono riconosciuti per l'ammissione a un gran numero di facoltà e possono essere utilizzati come crediti universitari per l'idoneità linguistica.</p>
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'sede_title') !!}</h2>
+        {!! \App\Models\PageContent::html('le-certificazioni', 'sede_text') !!}
         <div class="cert-highlight">
-            🎓 <strong>Più di 1.600 facoltà e corsi di laurea riconoscono le certificazioni Trinity.</strong><br>
-            <a href="https://www.trinitycollege.it/riconoscimenti/" target="_blank" rel="noopener">Consulta l'elenco completo dei riconoscimenti →</a>
+            {!! \App\Models\PageContent::html('le-certificazioni', 'sede_highlight') !!}
         </div>
-        <p>Le certificazioni Trinity College London sono riconosciute da <strong>università, aziende e istituzioni governative</strong> in Italia e nel mondo.</p>
+        <p>{!! \App\Models\PageContent::html('le-certificazioni', 'sede_text2') !!}</p>
     </div>
 </section>
 
 {{-- RICONOSCIMENTO MIUR --}}
 <section class="cert-sec alt">
     <div class="c cert-narrow">
-        <h2>Ente certificatore riconosciuto dal <em>Ministero dell'Istruzione</em></h2>
-        <p>Trinity College London è incluso nell'elenco degli Enti certificatori pubblicato dal Ministero Italiano della Pubblica Istruzione che soddisfano i requisiti per il riconoscimento della validità delle certificazioni delle competenze linguistico-comunicative in lingua straniera (Decreto 07.03.2012, Prot. 3889, aggiornato con Decreto del Direttore n. 118 del 28.02.2017).</p>
-        <p><a href="https://www.miur.gov.it/enti-certificatori-lingue-straniere" target="_blank" rel="noopener">www.miur.gov.it/enti-certificatori-lingue-straniere →</a></p>
-        <p>Trinity College London — Italian Co-ordinator è inoltre un <strong>Ente accreditato dal Ministero per la formazione degli insegnanti</strong> secondo la normativa vigente. Le certificazioni Trinity possono essere valutate come crediti formativi per l'Esame di Stato.</p>
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'miur_title') !!}</h2>
+        {!! \App\Models\PageContent::html('le-certificazioni', 'miur_text') !!}
     </div>
 </section>
 
@@ -132,20 +128,20 @@
 <section class="cert-sec">
     <div class="c">
         <div class="cert-narrow">
-            <h2>Gli esami: <em>ISE</em> e <em>GESE</em></h2>
-            <p>Le certificazioni Trinity principalmente riconosciute dalle università italiane sono le <strong>ISE — Integrated Skills in English</strong>. Molti corsi di laurea riconoscono anche le certificazioni <strong>GESE — Graded Examinations in Spoken English</strong>.</p>
+            <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'esami_title') !!}</h2>
+            <p>{!! \App\Models\PageContent::html('le-certificazioni', 'esami_intro') !!}</p>
         </div>
         <div class="cert-cards">
             <div class="cert-card">
-                <span class="badge">Speciale Università</span>
-                <h3>ISE — Integrated Skills in English</h3>
-                <p>Valutazione dell'uso integrato delle 4 abilità: <strong>Reading &amp; Writing</strong> e <strong>Speaking &amp; Listening</strong>. È la certificazione più riconosciuta dalle università italiane per l'idoneità linguistica e i crediti universitari.</p>
+                <span class="badge">{{ \App\Models\PageContent::text('le-certificazioni', 'ise_badge') }}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'ise_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'ise_text') !!}</p>
                 <a href="https://www.trinitycollege.it/inglese/integrated-skills-in-english" target="_blank" rel="noopener">Scopri la certificazione ISE →</a>
             </div>
             <div class="cert-card">
-                <span class="badge">Speaking &amp; Listening</span>
-                <h3>GESE — Graded Examinations in Spoken English</h3>
-                <p>Esami orali graduati su 12 livelli, dalla prima scolarizzazione al livello C2. Riconosciuti da molti corsi di laurea e ideali per crediti formativi alla maturità e per i concorsi pubblici.</p>
+                <span class="badge">{!! \App\Models\PageContent::html('le-certificazioni', 'gese_badge') !!}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'gese_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'gese_text') !!}</p>
                 <a href="https://www.trinitycollege.it/riconoscimenti/" target="_blank" rel="noopener">Vedi i riconoscimenti GESE →</a>
             </div>
         </div>
@@ -155,11 +151,10 @@
 {{-- CAMBRIDGE PREPARATION CENTRE + ALTRE CERTIFICAZIONI --}}
 <section class="cert-sec alt">
     <div class="c cert-narrow">
-        <h2>Cambridge <em>Preparation Centre</em> e le altre certificazioni</h2>
-        <p>A&amp;A Language Center è <strong>Preparation Centre di Cambridge English</strong>: prepariamo i nostri studenti agli esami Cambridge (KET, PET, First, Advanced, Proficiency) con percorsi mirati tenuti da docenti qualificati.</p>
-        <p>Prepariamo inoltre a tutte le principali certificazioni internazionali — <strong>IELTS, TOEFL, DELE (Instituto Cervantes), DELF/DALF (France Éducation International), Goethe-Zertifikat, PLIDA, CILS/CELI, TRKI–TORFL, CAPLE</strong> — i cui esami si sostengono presso i rispettivi enti certificatori ufficiali.</p>
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'cambridge_title') !!}</h2>
+        {!! \App\Models\PageContent::html('le-certificazioni', 'cambridge_text') !!}
         <div class="cert-highlight">
-            ℹ️ <strong>In sintesi:</strong> siamo sede d'esami ufficiale <strong>solo per Trinity College London</strong> (n° 8241): gli esami Trinity si sostengono direttamente da noi. Per tutte le altre certificazioni siamo centro di preparazione.
+            {!! \App\Models\PageContent::html('le-certificazioni', 'cambridge_highlight') !!}
         </div>
     </div>
 </section>
@@ -168,23 +163,23 @@
 <section class="cert-sec">
     <div class="c">
         <div class="cert-narrow" style="text-align:center;">
-            <h2>A cosa servono le certificazioni Trinity</h2>
+            <h2>{{ \App\Models\PageContent::text('le-certificazioni', 'uses_title') }}</h2>
         </div>
         <div class="cert-uses">
             <div class="cert-use">
                 <span class="icon">🏫</span>
-                <strong>Esame di maturità</strong>
-                <span>Crediti formativi per l'Esame di Stato secondo la normativa vigente</span>
+                <strong>{{ \App\Models\PageContent::text('le-certificazioni', 'use1_title') }}</strong>
+                <span>{{ \App\Models\PageContent::text('le-certificazioni', 'use1_text') }}</span>
             </div>
             <div class="cert-use">
                 <span class="icon">🎓</span>
-                <strong>Università</strong>
-                <span>Ammissione e crediti per l'idoneità linguistica in più di 1.600 facoltà e corsi di laurea</span>
+                <strong>{{ \App\Models\PageContent::text('le-certificazioni', 'use2_title') }}</strong>
+                <span>{{ \App\Models\PageContent::text('le-certificazioni', 'use2_text') }}</span>
             </div>
             <div class="cert-use">
                 <span class="icon">💼</span>
-                <strong>Concorsi pubblici</strong>
-                <span>Certificazioni valide per concorsi pubblici e riconosciute da aziende e istituzioni</span>
+                <strong>{{ \App\Models\PageContent::text('le-certificazioni', 'use3_title') }}</strong>
+                <span>{{ \App\Models\PageContent::text('le-certificazioni', 'use3_text') }}</span>
             </div>
         </div>
     </div>
@@ -193,9 +188,9 @@
 {{-- CTA --}}
 <section class="cert-cta">
     <div class="c">
-        <h2>Iscriviti a uno dei nostri corsi di preparazione<br>agli esami ISE B1 · B2 · C1 — Trinity College London</h2>
-        <p>Diventa parte di A&amp;A per migliorare la tua carriera. Segreteria: <a href="tel:+39065743734" style="color:var(--gold);font-weight:700;">06 574 3734</a></p>
-        <a href="{{ route('contattaci') }}" class="btn-hero-primary">CONTATTACI →</a>
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'cta_title') !!}</h2>
+        <p>{!! \App\Models\PageContent::html('le-certificazioni', 'cta_text') !!}</p>
+        <a href="{{ route('contattaci') }}" class="btn-hero-primary">{{ \App\Models\PageContent::text('le-certificazioni', 'cta_button') }}</a>
     </div>
 </section>
 

@@ -1,7 +1,7 @@
 @extends('public.layout')
 
-@section('title', 'Corsi di Inglese Aziendali a Roma — Business English | A&A')
-@section('description', 'Corsi di inglese aziendali a Roma per dipendenti, manager e team. Business English, formazione linguistica B2B in sede o online. Clienti: MEF, Confcommercio, H10 Hotels.')
+@section('title', \App\Models\PageContent::text('landing-aziendali', 'meta_title'))
+@section('description', \App\Models\PageContent::text('landing-aziendali', 'meta_description'))
 @section('keywords', 'corsi di inglese aziendali Roma, corsi di lingue aziendali Roma, formazione linguistica aziendale Roma, business English Roma, corsi inglese per dipendenti Roma, corsi inglese aziende in sede Roma, formazione linguistica B2B Roma, corso inglese aziendale Roma, formazione personale finanziata lingue Roma')
 @section('og-image-alt', 'Corsi di inglese aziendali a Roma — A&A Language Center')
 
@@ -85,8 +85,8 @@
             <span class="sep">›</span>
             <span>Corsi Aziendali a Roma</span>
         </div>
-        <h1>Corsi di <em>Inglese Aziendali</em> a Roma</h1>
-        <p class="subtitle">Formazione linguistica B2B in sede o online. Business English, lingue per il lavoro. Clienti: MEF, Confcommercio, H10 Hotels.</p>
+        <h1>{!! \App\Models\PageContent::html('landing-aziendali', 'hero_title') !!}</h1>
+        <p class="subtitle">{{ \App\Models\PageContent::text('landing-aziendali', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -196,28 +196,20 @@
 {{-- FAQ --}}
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
-    $faqItems = [
-        ['q' => 'Quanto costa un corso di inglese aziendale a Roma?', 'a' => '<p>I costi dipendono dal numero di partecipanti, dalle ore totali, dalla modalità (in sede o online) e dal livello del corso. Per un preventivo personalizzato <a href="' . route('contattaci') . '">contattaci</a> — rispondiamo entro 24 ore con un\'analisi dei fabbisogni e una proposta dettagliata.</p>'],
-        ['q' => 'Quanto dura tipicamente un corso aziendale?', 'a' => '<p>I cicli tipici sono 40, 60 o 90 ore, distribuite su 3–9 mesi a seconda dell\'intensità. Lavoriamo bene anche su programmi annuali e biennali con monitoraggio continuo del livello CEFR.</p>'],
-        ['q' => 'Venite a fare lezione direttamente nella nostra sede?', 'a' => '<p>Sì. I nostri docenti si spostano nella sede aziendale a Roma e provincia. Per sedi fuori Roma valutiamo modalità mista (in presenza + online) per ottimizzare i costi.</p>'],
-        ['q' => 'Rilasciate certificazioni utili per la formazione finanziata?', 'a' => '<p>Sì. Rilasciamo attestati nominativi validi per concorsi pubblici, aggiornamento professionale, formazione del personale finanziata (Fondimpresa, Fondoprofessioni, Fondirigenti) e crediti formativi.</p>'],
-        ['q' => 'Possiamo fare un test di livello per tutti i dipendenti?', 'a' => '<p>Sì. Effettuiamo un Entrance Test scritto + colloquio orale individuale per ciascun dipendente, completamente gratuito. Forniamo poi un report aggregato con la distribuzione CEFR del team e suggerimenti di clusterizzazione.</p>'],
-        ['q' => 'Possiamo usare fondi formativi per finanziare il corso?', 'a' => '<p>Sì. Lavoriamo con i principali fondi interprofessionali (Fondimpresa, Fondoprofessioni, Fondirigenti). Ti aiutiamo nella preparazione della documentazione necessaria per la formazione finanziata.</p>'],
-        ['q' => 'Quali aziende avete già formato?', 'a' => '<p>Tra i nostri clienti: <strong>MEF</strong> (Ministero dell\'Economia e delle Finanze), <strong>Confcommercio</strong>, <strong>H10 Hotels</strong>, oltre a numerosi studi professionali, PMI, scuole pubbliche e private, università ed enti pubblici nazionali e locali.</p>'],
-    ];
+    $faqItems = \App\Models\PageContent::items('landing-aziendali', 'faq_items');
 @endphp
 <x-seo-faq
-    title="Domande frequenti — Corsi aziendali"
-    subtitle="Le risposte alle domande più comuni di HR manager, training manager e responsabili formazione."
+    :title="\App\Models\PageContent::text('landing-aziendali', 'faq_title')"
+    :subtitle="\App\Models\PageContent::text('landing-aziendali', 'faq_subtitle')"
     :items="$faqItems"
 />
 
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Prossimo step</div>
-        <h2>Chiedi un preventivo aziendale</h2>
-        <p>Compila il modulo o chiamaci al 06 5743734. Analizziamo i fabbisogni del tuo team e prepariamo una proposta su misura entro 48 ore.</p>
+        <div class="label">{{ \App\Models\PageContent::text('landing-aziendali', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('landing-aziendali', 'cta_title') }}</h2>
+        <p>{{ \App\Models\PageContent::text('landing-aziendali', 'cta_text') }}</p>
         <div class="cta-actions">
             <a href="{{ route('contattaci') }}" class="btn-gold">Richiedi preventivo →</a>
             <a href="tel:+39065743734" class="btn-outline-white">📞 06 5743734</a>

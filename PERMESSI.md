@@ -1,6 +1,6 @@
 # ScuoleLive — Audit ruoli e permessi
 
-> Aggiornato 07/05/2026 (revisione matrice menu Superadmin/Amministrazione/Segreteria)
+> Aggiornato 08/07/2026 (aggiunti NewsPostResource e ContenutiSito — gruppo "Sito web")
 
 ---
 
@@ -39,6 +39,8 @@ I ruoli sono case-sensitive su Spatie Permission.
 | PaymentsReport | ✅ | ✅ | ✅ | ❌ | ❌ |
 | StudentHoursReport | ✅ | ✅ | ✅ | ❌ | ❌ |
 | ImpostazioniScuola | ✅ | ✅ | ✅ | ❌ | ❌ |
+| News ed eventi (NewsPostResource) | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Contenuti sito (ContenutiSito) | ✅ | ✅ | ✅ | ❌ | ❌ |
 | StudentUnsubscribeResource | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **UserResource (Users)** | ✅ tutti | ✅ no Superadmin* | ✅ no Superadmin* | ❌ | ❌ |
 | Stampa contratto / PDF | ✅ | ✅ | ✅ | ❌ | propri |

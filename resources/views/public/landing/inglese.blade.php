@@ -1,7 +1,7 @@
 @extends('public.layout')
 
-@section('title', 'Corsi di Inglese a Roma — Trinity, Cambridge, IELTS | A&A')
-@section('description', 'Corsi di inglese a Roma San Paolo con docenti qualificati madrelingua e/o bilingue. Preparazione esami Trinity, Cambridge, IELTS, TOEFL. Lezioni individuali, mini gruppi, online. Test di livello gratuito.')
+@section('title', \App\Models\PageContent::text('landing-inglese', 'meta_title'))
+@section('description', \App\Models\PageContent::text('landing-inglese', 'meta_description'))
 @section('keywords', 'corsi di inglese Roma, scuola di inglese Roma, corsi inglese Roma San Paolo, preparazione Trinity Roma, esame Trinity Roma, preparazione IELTS Roma, preparazione Cambridge Roma, corsi inglese certificati Roma, corsi inglese adulti Roma, corsi inglese bambini Roma, corso inglese individuale Roma, corso inglese intensivo Roma, corso inglese serale Roma, centro esami Trinity Roma')
 @section('og-image-alt', 'Corsi di inglese a Roma — A&A Language Center')
 
@@ -120,8 +120,8 @@
             <span class="sep">›</span>
             <span>Corsi di Inglese a Roma</span>
         </div>
-        <h1>Corsi di <em>Inglese</em> a Roma</h1>
-        <p class="subtitle">Trinity, Cambridge, IELTS, TOEFL. Lezioni con docenti qualificati madrelingua e/o bilingue. Tutti i livelli CEFR — dall'A1 al C2. Sede ufficiale esami Trinity College London n° 8241.</p>
+        <h1>{!! \App\Models\PageContent::html('landing-inglese', 'hero_title') !!}</h1>
+        <p class="subtitle">{{ \App\Models\PageContent::text('landing-inglese', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -247,29 +247,20 @@
 {{-- FAQ --}}
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
-    $faqItems = [
-        ['q' => 'Quanto costa un corso di inglese a Roma in A&A Language Center?', 'a' => '<p>I prezzi variano in base alla modalità (individuale, mini gruppo, online), al numero di ore e al livello target. Una lezione individuale parte da circa €30/ora, un mini gruppo da €15/ora. Puoi consultare il <a href="' . route('checkout.catalogo') . '">catalogo corsi</a> per i pacchetti completi con prezzo trasparente.</p>'],
-        ['q' => 'Quanto dura un corso di inglese per ottenere una certificazione?', 'a' => '<p>Dipende dal tuo livello di partenza e dal target. Mediamente per passare da un livello CEFR al successivo servono 80–120 ore di studio. Per un Cambridge B2 First partendo da B1 si calcolano 4–6 mesi di corso a frequenza bisettimanale. Il test di livello gratuito è il punto di partenza per costruire il tuo piano.</p>'],
-        ['q' => 'Avete corsi di inglese per docenti di ruolo?', 'a' => '<p>Sì. A&amp;A Language Center è ente accreditato MIUR come ente di formazione. Offriamo corsi di inglese per docenti, sia per la formazione personale sia per la preparazione di certificazioni linguistiche valide ai fini concorsuali.</p>'],
-        ['q' => 'Sostenete gli esami Trinity direttamente nella vostra sede?', 'a' => '<p>Sì. Siamo <strong>Sede d\'Esame ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE (Graded Examinations in Spoken English) e ISE (Integrated Skills in English) durante tutto l\'anno. Gli esami si sostengono direttamente nella nostra sede di Viale Leonardo da Vinci 193 a Roma.</p>'],
-        ['q' => 'Dove si trova la scuola e con quali mezzi pubblici si raggiunge?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. Siamo a pochi passi dalle fermate metro <strong>San Paolo</strong> (linea B) e <strong>Marconi</strong>, ben collegati anche con i quartieri EUR, Garbatella e Ostiense.</p>'],
-        ['q' => 'Offrite corsi di inglese intensivi?', 'a' => '<p>Sì. Oltre ai corsi standard a frequenza bisettimanale, organizziamo corsi intensivi (anche tutti i giorni) e ultra-intensivi per chi ha esigenze rapide: preparazione last-minute IELTS, colloqui di lavoro, trasferimenti all\'estero.</p>'],
-        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Il nostro Entrance Test si compone di una parte scritta (grammatica, lettura, comprensione) e una parte orale (5–10 minuti con un docente qualificato madrelingua o bilingue). Al termine ricevi una valutazione CEFR dettagliata e una proposta di corso. Puoi <a href="' . route('iscrizione') . '">prenotarlo qui</a>.</p>'],
-        ['q' => 'Fate corsi di inglese per bambini e ragazzi?', 'a' => '<p>Sì. Abbiamo corsi dedicati a bambini (5–10 anni) e ragazzi (11–17 anni), con metodologia ludica per i più piccoli e preparazione esami Trinity/Cambridge YLE per i ragazzi. I corsi sono in piccoli gruppi omogenei per età e livello.</p>'],
-    ];
+    $faqItems = \App\Models\PageContent::items('landing-inglese', 'faq_items');
 @endphp
 <x-seo-faq
-    title="Domande frequenti sui corsi di inglese a Roma"
-    subtitle="Le risposte ai dubbi più comuni di chi sta valutando di iscriversi a un corso di inglese a Roma."
+    :title="\App\Models\PageContent::text('landing-inglese', 'faq_title')"
+    :subtitle="\App\Models\PageContent::text('landing-inglese', 'faq_subtitle')"
     :items="$faqItems"
 />
 
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Prossimo step</div>
-        <h2>Inizia il tuo corso di inglese a Roma</h2>
-        <p>Prenota un test di livello gratuito. In 30 minuti scopri il tuo livello CEFR e il percorso più adatto a te.</p>
+        <div class="label">{{ \App\Models\PageContent::text('landing-inglese', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('landing-inglese', 'cta_title') }}</h2>
+        <p>{{ \App\Models\PageContent::text('landing-inglese', 'cta_text') }}</p>
         <div class="cta-actions">
             <a href="{{ route('iscrizione') }}" class="btn-gold">Prenota il test gratuito →</a>
             <a href="{{ route('checkout.catalogo') }}" class="btn-outline-white">Vedi tutti i corsi</a>

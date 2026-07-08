@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Servizi — Corsi di Lingue Online e in Presenza a Roma')
-@section('description', 'Corsi di lingue online e in presenza a Roma, inglese al telefono, test di livello gratuito, preparazione certificazioni Trinity, Cambridge, IELTS. Corsi di formazione per docenti.')
-@section('keywords', 'corsi di lingue online Roma, corsi di lingue in presenza Roma, inglese al telefono Roma, test livello inglese gratuito Roma, corsi formazione docenti lingue Roma, corso inglese individuale Roma, corso inglese mini gruppo Roma, preparazione certificazioni lingue Roma')
+@section('title', \App\Models\PageContent::text('servizi', 'meta_title'))
+@section('description', \App\Models\PageContent::text('servizi', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('servizi', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -110,8 +110,8 @@
             <span class="sep">›</span>
             <span>Servizi</span>
         </div>
-        <h1>I Nostri <em>Servizi</em> — Corsi di Lingue a Roma</h1>
-        <p class="subtitle">Corsi online e in presenza, inglese al telefono, test di livello gratuito, preparazione certificazioni internazionali e formazione docenti.</p>
+        <h1>{!! \App\Models\PageContent::html('servizi', 'hero_title') !!}</h1>
+        <p class="subtitle">{{ \App\Models\PageContent::text('servizi', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -119,46 +119,46 @@
 <section class="sec">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label">Cosa offriamo</div>
-            <h2 class="sec-heading">Sei soluzioni per <em>ogni esigenza</em></h2>
-            <p class="sec-subtext">Servizi pensati per adattarsi ai tuoi ritmi, ai tuoi obiettivi e al tuo stile di vita.</p>
+            <div class="section-label">{{ \App\Models\PageContent::text('servizi', 'services_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('servizi', 'services_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('servizi', 'services_subtext') }}</p>
         </div>
         <div class="services-grid">
             <div class="service-card">
                 <div class="service-icon">💻</div>
-                <h3>Corsi Online</h3>
-                <p>Lezioni individuali comode e flessibili tramite Skype, FaceTime o Microsoft Teams con i nostri docenti qualificati. Stessa qualità delle lezioni in presenza, senza spostarti da casa o dall'ufficio.</p>
-                <span class="service-tag">Skype · FaceTime · Teams</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service1_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service1_tag') }}</span>
             </div>
             <div class="service-card">
                 <div class="service-icon">🏫</div>
-                <h3>Corsi in Presenza</h3>
-                <p>Lezioni nella nostra sede di Roma San Paolo, in un ambiente confortevole e stimolante. Ideale per chi desidera un'immersione linguistica completa e il confronto diretto con i compagni.</p>
-                <span class="service-tag">Roma San Paolo</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service2_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service2_tag') }}</span>
             </div>
             <div class="service-card">
                 <div class="service-icon">📞</div>
-                <h3>Inglese al Telefono</h3>
-                <p>Lezioni di conversazione telefonica per chi ha pochissimo tempo. Pratico, veloce e sorprendentemente efficace: bastano 30 minuti al giorno per migliorare sensibilmente.</p>
-                <span class="service-tag">Flessibile · Ovunque</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service3_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service3_tag') }}</span>
             </div>
             <div class="service-card">
                 <div class="service-icon">📝</div>
-                <h3>Test di Livello Gratuito</h3>
-                <p>Prima di iniziare qualsiasi corso, offriamo un Entrance Test scritto e orale completamente gratuito per determinare il tuo livello di partenza secondo il framework CEFR (A1–C2).</p>
-                <span class="service-tag">Gratuito · Senza impegno</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service4_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service4_tag') }}</span>
             </div>
             <div class="service-card">
                 <div class="service-icon">🏆</div>
-                <h3>Preparazione Certificazioni</h3>
-                <p>Corsi intensivi mirati alla preparazione degli esami per le principali certificazioni internazionali: Trinity, Cambridge, IELTS, TOEFL, DELF/DALF, Goethe Institut, PLIDA, DELE e altre.</p>
-                <span class="service-tag">Trinity · Cambridge · IELTS · DELF</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service5_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service5_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service5_tag') }}</span>
             </div>
             <div class="service-card">
                 <div class="service-icon">🎓</div>
-                <h3>Corsi per Docenti</h3>
-                <p>A&amp;A Language Center è accreditata MIUR come ente di formazione. Offriamo corsi di lingue dedicati ai docenti, per la formazione personale e la preparazione di certificazioni linguistiche valide ai fini concorsuali.</p>
-                <span class="service-tag">Formazione docenti · MIUR</span>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service6_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service6_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service6_tag') }}</span>
             </div>
         </div>
     </div>
@@ -168,29 +168,29 @@
 <section class="sec sec-bg">
     <div class="c">
         <div class="sec-header center">
-            <div class="section-label" style="justify-content:center;">Target</div>
-            <h2 class="sec-heading">Per tutte le età e <em>tutti i livelli</em></h2>
+            <div class="section-label" style="justify-content:center;">{{ \App\Models\PageContent::text('servizi', 'target_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('servizi', 'target_title') !!}</h2>
         </div>
         <div class="target-grid">
             <div class="target-card">
                 <div class="target-icon">🧒</div>
-                <h3>Bambini e Ragazzi</h3>
-                <p>Approccio ludico e coinvolgente per costruire le basi della lingua sin dall'infanzia.</p>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'target1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'target1_text') }}</p>
             </div>
             <div class="target-card">
                 <div class="target-icon">🎓</div>
-                <h3>Studenti</h3>
-                <p>Preparazione per esami scolastici, universitari e certificazioni internazionali.</p>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'target2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'target2_text') }}</p>
             </div>
             <div class="target-card">
                 <div class="target-icon">💼</div>
-                <h3>Professionisti</h3>
-                <p>Business English, presentazioni, negoziazioni e comunicazione formale in lingua straniera.</p>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'target3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'target3_text') }}</p>
             </div>
             <div class="target-card">
                 <div class="target-icon">🌍</div>
-                <h3>Stranieri in Italia</h3>
-                <p>Corsi di Italiano per stranieri con percorsi di integrazione e certificazioni PLIDA.</p>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'target4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'target4_text') }}</p>
             </div>
         </div>
     </div>
@@ -201,20 +201,20 @@
     <div class="c">
         <div class="orari-grid">
             <div>
-                <div class="section-label white">Modalità e orari</div>
-                <h2 class="orari-title">Flessibilità totale</h2>
-                <p class="orari-subtitle">Siamo aperti quasi tutti i giorni per garantirti la massima flessibilità. Ogni lezione ha una durata minima di 55 minuti per un apprendimento efficace e completo.</p>
+                <div class="section-label white">{{ \App\Models\PageContent::text('servizi', 'orari_label') }}</div>
+                <h2 class="orari-title">{{ \App\Models\PageContent::text('servizi', 'orari_title') }}</h2>
+                <p class="orari-subtitle">{{ \App\Models\PageContent::text('servizi', 'orari_subtitle') }}</p>
                 <table class="orari-table">
                     <tr><td>Lunedì – Venerdì</td><td>10:00 – 19:00</td></tr>
                     <tr><td>Sabato</td><td>9:00 – 13:00</td></tr>
                     <tr><td>Domenica</td><td>Chiuso</td></tr>
                 </table>
                 <div class="orari-note">
-                    💡 <strong>Orario No-Stop</strong> dal lunedì al venerdì: nessuna pausa pranzo. Prenota la tua lezione nell'orario più comodo, anche in pausa dal lavoro.
+                    {!! \App\Models\PageContent::html('servizi', 'orari_note') !!}
                 </div>
             </div>
             <div class="orari-visual">
-                <img src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=85"
+                <img src="{{ \App\Models\PageContent::image('servizi', 'orari_image') }}"
                      alt="Ambiente di apprendimento A&A Language Center" loading="lazy">
             </div>
         </div>
@@ -224,12 +224,12 @@
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Inizia oggi</div>
-        <h2>Prenota il tuo test di livello gratuito</h2>
-        <p>Scopri quale servizio è più adatto alle tue esigenze. Zero impegno, massima chiarezza.</p>
+        <div class="label">{{ \App\Models\PageContent::text('servizi', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('servizi', 'cta_title') }}</h2>
+        <p>{{ \App\Models\PageContent::text('servizi', 'cta_text') }}</p>
         <div class="cta-actions">
-            <a href="{{ route('iscrizione') }}" class="btn-gold">✦ Prenota ora — è gratis</a>
-            <a href="{{ route('contattaci') }}" class="btn-outline-white">Contattaci →</a>
+            <a href="{{ route('iscrizione') }}" class="btn-gold">{{ \App\Models\PageContent::text('servizi', 'cta_btn1') }}</a>
+            <a href="{{ route('contattaci') }}" class="btn-outline-white">{{ \App\Models\PageContent::text('servizi', 'cta_btn2') }}</a>
         </div>
     </div>
 </section>

@@ -154,7 +154,13 @@ class TeacherResource extends Resource
 
                     Forms\Components\DatePicker::make('birth_date')
                         ->label('Data di nascita')
-                        ->nullable(),
+                        ->nullable()
+                        ->maxDate(today())
+                        ->minDate('1900-01-01')
+                        ->validationMessages([
+                            'before_or_equal' => 'La data di nascita non può essere nel futuro.',
+                            'after_or_equal'  => 'La data di nascita non è valida (troppo lontana nel passato).',
+                        ]),
 
                     Forms\Components\TextInput::make('birth_place')
                         ->label('Luogo di nascita')

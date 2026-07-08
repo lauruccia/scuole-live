@@ -53,7 +53,13 @@ class StudentResource extends Resource
                     Forms\Components\TextInput::make('phone')
                         ->label('Telefono')->tel()->maxLength(50)->nullable(),
                     Forms\Components\DatePicker::make('birth_date')
-                        ->label('Data di nascita')->nullable(),
+                        ->label('Data di nascita')->nullable()
+                        ->maxDate(today())
+                        ->minDate('1900-01-01')
+                        ->validationMessages([
+                            'before_or_equal' => 'La data di nascita non può essere nel futuro.',
+                            'after_or_equal'  => 'La data di nascita non è valida (troppo lontana nel passato).',
+                        ]),
                     Forms\Components\Toggle::make('is_minor')
                         ->label('Studente minorenne')->default(false)->inline(false)->live()
                         ->afterStateUpdated(fn (Set $set, $state) => $set('parent_section_open', (bool) $state)),

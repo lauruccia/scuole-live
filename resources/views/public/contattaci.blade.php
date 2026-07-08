@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Contatti A&A Language Center — Scuola di Lingue Roma San Paolo')
-@section('description', 'Contatti A&A Language Center, scuola di lingue a Roma San Paolo: Viale Leonardo da Vinci 193, 00145 Roma. Tel 06 5743734, info@aealanguagecenter.it. Lun–Ven 9–20, Sab 10–14.')
-@section('keywords', 'A&A Language Center contatti, scuola di lingue Roma San Paolo indirizzo, scuola di lingue Viale Leonardo da Vinci, scuola di lingue vicino metro San Paolo, telefono scuola di lingue Roma')
+@section('title', \App\Models\PageContent::text('contattaci', 'meta_title'))
+@section('description', \App\Models\PageContent::text('contattaci', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('contattaci', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -134,8 +134,8 @@
             <span class="sep">›</span>
             <span>Contattaci</span>
         </div>
-        <h1><em>Contattaci</em> — A&amp;A Language Center Roma</h1>
-        <p class="subtitle">Scuola di lingue a Roma San Paolo. Viale Leonardo da Vinci 193, 00145 Roma. Tel 06 5743734.</p>
+        <h1>{!! \App\Models\PageContent::html('contattaci', 'hero_title') !!}</h1>
+        <p class="subtitle">{{ \App\Models\PageContent::text('contattaci', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -146,9 +146,9 @@
 
             {{-- COLONNA SX --}}
             <div>
-                <div class="section-label">Dove siamo</div>
-                <h2 class="sec-heading">Vieni a <em>trovarci</em></h2>
-                <p class="sec-subtext">Nel cuore del quartiere <strong>San Paolo</strong> a Roma, a pochi passi da Università Roma Tre e dalle fermate metro.</p>
+                <div class="section-label">{{ \App\Models\PageContent::text('contattaci', 'dove_label') }}</div>
+                <h2 class="sec-heading">{!! \App\Models\PageContent::html('contattaci', 'dove_title') !!}</h2>
+                <p class="sec-subtext">{!! \App\Models\PageContent::html('contattaci', 'dove_subtext') !!}</p>
 
                 <div class="contact-block">
                     <div class="contact-row">
@@ -209,35 +209,35 @@
 
             {{-- COLONNA DX --}}
             <div class="form-box">
-                <h3>Scrivici o prenota il test</h3>
-                <p>Compila il modulo per richiedere informazioni su corsi, prezzi, orari o per prenotare il tuo test di livello gratuito. Ti risponderemo entro poche ore lavorative.</p>
+                <h3>{{ \App\Models\PageContent::text('contattaci', 'box_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('contattaci', 'box_text') }}</p>
 
                 <div class="form-highlights">
                     <div class="form-highlight">
                         <div class="form-highlight-icon">🎯</div>
                         <div>
-                            <h4>Test di livello gratuito</h4>
-                            <p>Determiniamo il tuo livello CEFR con un test scritto e orale senza alcun costo e senza impegno.</p>
+                            <h4>{{ \App\Models\PageContent::text('contattaci', 'hl1_title') }}</h4>
+                            <p>{{ \App\Models\PageContent::text('contattaci', 'hl1_text') }}</p>
                         </div>
                     </div>
                     <div class="form-highlight">
                         <div class="form-highlight-icon">⚡</div>
                         <div>
-                            <h4>Risposta rapida</h4>
-                            <p>Rispondiamo a tutte le richieste entro 24 ore lavorative.</p>
+                            <h4>{{ \App\Models\PageContent::text('contattaci', 'hl2_title') }}</h4>
+                            <p>{{ \App\Models\PageContent::text('contattaci', 'hl2_text') }}</p>
                         </div>
                     </div>
                     <div class="form-highlight">
                         <div class="form-highlight-icon">💬</div>
                         <div>
-                            <h4>Consulenza personalizzata</h4>
-                            <p>Ti aiutiamo a scegliere il corso e la modalità più adatta ai tuoi obiettivi.</p>
+                            <h4>{{ \App\Models\PageContent::text('contattaci', 'hl3_title') }}</h4>
+                            <p>{{ \App\Models\PageContent::text('contattaci', 'hl3_text') }}</p>
                         </div>
                     </div>
                 </div>
 
                 <a href="{{ route('iscrizione') }}" class="form-cta-btn">
-                    ✦ Compila il modulo di contatto
+                    {{ \App\Models\PageContent::text('contattaci', 'box_cta') }}
                 </a>
                 <p class="form-note">
                     Oppure chiamaci direttamente:<br>

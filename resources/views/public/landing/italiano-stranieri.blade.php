@@ -1,7 +1,7 @@
 @extends('public.layout')
 
-@section('title', 'Italiano per Stranieri a Roma — Italian Courses in Rome | A&A')
-@section('description', 'Corsi di italiano per stranieri a Roma: tutti i livelli, preparazione CILS e PLIDA. Italian courses in Rome for foreigners with mother-tongue Italian teachers. Free placement test.')
+@section('title', \App\Models\PageContent::text('landing-italiano-stranieri', 'meta_title'))
+@section('description', \App\Models\PageContent::text('landing-italiano-stranieri', 'meta_description'))
 @section('keywords', 'italiano per stranieri Roma, scuola di italiano per stranieri Roma, corsi italiano stranieri Roma, italiano L2 Roma, preparazione CILS Roma, preparazione PLIDA Roma, Italian courses Rome, learn Italian in Rome, Italian school Rome, Italian for foreigners Rome, italiano stranieri San Paolo')
 @section('og-image-alt', 'Italian courses in Rome — Italiano per stranieri a Roma')
 
@@ -169,27 +169,19 @@
 {{-- FAQ --}}
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
-    $faqItems = [
-        ['q' => 'Quanto costa un corso di italiano per stranieri a Roma?', 'a' => '<p>I prezzi partono da €15/ora in mini gruppo e da €30/ora individuale. Offriamo pacchetti settimanali intensivi (15–20 ore/settimana) e corsi mensili a frequenza bisettimanale. <a href="' . route('checkout.catalogo') . '">Vedi i corsi disponibili</a>.</p>'],
-        ['q' => 'How much does an Italian course in Rome cost?', 'a' => '<p>Prices start at €15/hour for small group classes and €30/hour for one-to-one lessons. We offer intensive weekly packages (15–20 hours/week) and monthly courses (2 lessons per week). <a href="' . route('checkout.catalogo') . '">See available courses</a>.</p>'],
-        ['q' => 'Do you prepare for CILS B1 (Italian citizenship)?', 'a' => '<p>Yes. We have a specific course for CILS B1 Cittadinanza, the level required to apply for Italian citizenship. It is an intensive 30–60 hour preparation covering all four exam parts (listening, reading, writing, speaking) with mock exams.</p>'],
-        ['q' => 'Preparate al CILS B1 per la cittadinanza italiana?', 'a' => '<p>Sì. Abbiamo un corso specifico per <strong>CILS B1 Cittadinanza</strong>, il livello richiesto per la domanda di cittadinanza italiana. È una preparazione intensiva (30–60 ore) che copre tutte e quattro le parti dell\'esame con simulazioni d\'esame complete.</p>'],
-        ['q' => 'Can I take Italian classes online?', 'a' => '<p>Yes. We offer Italian classes online with the same quality as in-person lessons. Live video classes with native Italian teachers — perfect for students still abroad before moving to Italy.</p>'],
-        ['q' => 'Where is the school? Is it easy to reach?', 'a' => '<p>We are at <strong>Viale Leonardo da Vinci 193, 00145 Rome</strong> — San Paolo district. Two minutes from the San Paolo metro station (Line B). About 15 minutes from Roma Termini and 10 minutes from EUR.</p>'],
-        ['q' => 'Are your Italian teachers native speakers?', 'a' => '<p>Yes. All our Italian teachers are native Italian speakers, qualified to teach Italian as a second language (DITALS / CEDILS / DILS-PG certifications), with years of experience teaching adult foreign learners.</p>'],
-    ];
+    $faqItems = \App\Models\PageContent::items('landing-italiano-stranieri', 'faq_items');
 @endphp
 <x-seo-faq
-    title="FAQ — Italian Courses & Italiano per Stranieri"
+    :title="\App\Models\PageContent::text('landing-italiano-stranieri', 'faq_title')"
     :items="$faqItems"
 />
 
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Next step · Prossimo passo</div>
-        <h2>Start your Italian journey in Rome</h2>
-        <p>Book your free placement test — discover your Italian level and the best course for you.<br>Prenota il test di livello gratuito.</p>
+        <div class="label">{{ \App\Models\PageContent::text('landing-italiano-stranieri', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('landing-italiano-stranieri', 'cta_title') }}</h2>
+        <p>{!! \App\Models\PageContent::html('landing-italiano-stranieri', 'cta_text') !!}</p>
         <div class="cta-actions">
             <a href="{{ route('iscrizione') }}" class="btn-gold">Free Placement Test →</a>
             <a href="{{ route('checkout.catalogo') }}" class="btn-outline-white">See all courses</a>

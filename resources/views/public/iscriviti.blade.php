@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Test di Livello Gratuito — Iscriviti a un Corso di Lingue a Roma')
-@section('description', 'Prenota il tuo test di livello inglese (o altra lingua) gratuito a Roma. Iscriviti a un corso personalizzato A&A Language Center: ti ricontattiamo entro 24 ore.')
-@section('keywords', 'test livello inglese gratuito Roma, test livello lingue Roma, prenota test inglese Roma, iscrizione corso lingue Roma, iscriviti scuola di lingue Roma, entrance test inglese gratuito')
+@section('title', \App\Models\PageContent::text('iscriviti', 'meta_title'))
+@section('description', \App\Models\PageContent::text('iscriviti', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('iscriviti', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -135,15 +135,15 @@ select {
 
 <div class="form-page-hero">
     <div class="form-page-hero-inner">
-        <h1>Prenota il tuo Test di Livello Gratuito</h1>
-        <p>Test scritto e orale gratuito per i corsi di lingue a Roma. Compila il modulo — ti ricontattiamo entro 24 ore per trovare il corso più adatto a te.</p>
+        <h1>{{ \App\Models\PageContent::text('iscriviti', 'hero_title') }}</h1>
+        <p>{{ \App\Models\PageContent::text('iscriviti', 'hero_text') }}</p>
     </div>
 </div>
 
 <section class="form-section">
     <div class="form-wrap">
         <div class="form-header">
-            <h2>Modulo di contatto</h2>
+            <h2>{{ \App\Models\PageContent::text('iscriviti', 'form_title') }}</h2>
             <p>Tutti i campi con <span class="req-note">*</span> sono obbligatori.</p>
         </div>
 

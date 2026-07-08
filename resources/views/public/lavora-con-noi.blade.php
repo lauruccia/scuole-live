@@ -1,7 +1,7 @@
 @extends('public.layout')
 
-@section('title', 'Lavora con Noi — Cerchiamo Docenti Madrelingua a Roma')
-@section('description', 'A&A Language Center cerca insegnanti madrelingua e bilingue qualificati per corsi di inglese, spagnolo, francese, tedesco e altre lingue a Roma San Paolo. Invia la tua candidatura.')
+@section('title', \App\Models\PageContent::text('lavora-con-noi', 'meta_title'))
+@section('description', \App\Models\PageContent::text('lavora-con-noi', 'meta_description'))
 @section('keywords', 'lavoro insegnante lingue Roma, cercasi docente madrelingua Roma, lavorare scuola di lingue Roma, candidatura insegnante lingue Roma, lavoro docente inglese Roma')
 
 @section('breadcrumb-jsonld')
@@ -212,8 +212,8 @@
 <section class="page-hero">
     <div class="c">
         <div class="breadcrumb"><a href="{{ route('home') }}">Home</a> › Lavora con Noi</div>
-        <h1>Lavora con Noi</h1>
-        <p>Unisciti al nostro team di docenti qualificati</p>
+        <h1>{{ \App\Models\PageContent::text('lavora-con-noi', 'hero_title') }}</h1>
+        <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -222,13 +222,11 @@
     <div class="c">
         <div class="intro-grid">
             <div class="intro-text">
-                <div class="sec-title"><h2>Entra nel team A&A</h2></div>
-                <p>Sei un insegnante madrelingua o bilingue? Vuoi mettere a frutto le tue competenze linguistiche in un contesto dinamico e professionale? Se ami il tuo lavoro e credi nel valore dell'educazione, A&amp;A Language Center è il posto che fa per te.</p>
-                <p>Dal 2002 costruiamo un team di docenti appassionati e competenti che condividono una visione comune: rendere l'apprendimento delle lingue un'esperienza accessibile, efficace e piacevole per ogni studente.</p>
-                <p>La nostra scuola si trova nel cuore del quartiere <strong>San Paolo</strong> a Roma, vicino all'Università Roma Tre, in un ambiente cosmopolita e stimolante.</p>
+                <div class="sec-title"><h2>{{ \App\Models\PageContent::text('lavora-con-noi', 'intro_title') }}</h2></div>
+                {!! \App\Models\PageContent::html('lavora-con-noi', 'intro_text') !!}
             </div>
             <div class="intro-photo">
-                <img src="https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?auto=format&fit=crop&w=900&q=85" alt="Docenti A&A Language Center">
+                <img src="{{ \App\Models\PageContent::image('lavora-con-noi', 'intro_image') }}" alt="Docenti A&A Language Center">
             </div>
         </div>
     </div>
@@ -237,49 +235,49 @@
 {{-- ── COSA CERCHIAMO ── --}}
 <section class="sec sec-light">
     <div class="c">
-        <div class="sec-title"><h2>Cosa cerchiamo</h2></div>
-        <p style="font-size:15px;color:#2d3a4d;max-width:700px;line-height:1.75;margin-bottom:0;">Cerchiamo professionisti dell'insegnamento che soddisfino i seguenti requisiti. Non necessariamente tutti: valutiamo ogni candidatura nel suo insieme.</p>
+        <div class="sec-title"><h2>{{ \App\Models\PageContent::text('lavora-con-noi', 'req_title') }}</h2></div>
+        <p style="font-size:15px;color:#2d3a4d;max-width:700px;line-height:1.75;margin-bottom:0;">{{ \App\Models\PageContent::text('lavora-con-noi', 'req_intro') }}</p>
         <div class="req-grid">
             <div class="req-item">
                 <div class="req-check">✓</div>
                 <div>
-                    <h4>Madrelingua o bilingue</h4>
-                    <p>Competenza linguistica nativa o equivalente nella lingua insegnata, con capacità di trasmettere sfumature culturali e contestuali.</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req1_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req1_text') }}</p>
                 </div>
             </div>
             <div class="req-item">
                 <div class="req-check">✓</div>
                 <div>
-                    <h4>Formazione universitaria</h4>
-                    <p>Laurea in Lingue, Letterature Straniere, Scienze della Formazione o disciplina affine.</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req2_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req2_text') }}</p>
                 </div>
             </div>
             <div class="req-item">
                 <div class="req-check">✓</div>
                 <div>
-                    <h4>Certificazione di insegnamento</h4>
-                    <p>Possesso di certificazioni riconosciute come TEFL, CELTA, DELTA, PGCE o equivalenti per la lingua di interesse.</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req3_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req3_text') }}</p>
                 </div>
             </div>
             <div class="req-item">
                 <div class="req-check">✓</div>
                 <div>
-                    <h4>Esperienza nell'insegnamento</h4>
-                    <p>Esperienza documentabile nell'insegnamento delle lingue, preferibilmente in contesti eterogenei (adulti, aziende, studenti).</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req4_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req4_text') }}</p>
                 </div>
             </div>
             <div class="req-item">
                 <div class="req-check">✓</div>
                 <div>
-                    <h4>Passione e capacità relazionali</h4>
-                    <p>Genuino interesse per l'insegnamento, pazienza, empatia e capacità di adattarsi ai diversi stili di apprendimento degli studenti.</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req5_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req5_text') }}</p>
                 </div>
             </div>
             <div class="req-item">
                 <div class="req-check">+</div>
                 <div>
-                    <h4>Esperienza aziendale (preferenziale)</h4>
-                    <p>Conoscenza del contesto lavorativo e capacità di insegnare linguaggi specialistici (Business English, legal, medical, ecc.).</p>
+                    <h4>{{ \App\Models\PageContent::text('lavora-con-noi', 'req6_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'req6_text') }}</p>
                 </div>
             </div>
         </div>
@@ -289,27 +287,27 @@
 {{-- ── COSA OFFRIAMO ── --}}
 <section class="sec">
     <div class="c">
-        <div class="sec-title"><h2>Cosa offriamo</h2></div>
+        <div class="sec-title"><h2>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer_title') }}</h2></div>
         <div class="offer-grid">
             <div class="offer-card">
                 <div class="offer-icon">🤝</div>
-                <h3>Ambiente accogliente</h3>
-                <p>Un team internazionale e collaborativo, dove ogni docente è valorizzato e ascoltato.</p>
+                <h3>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer1_text') }}</p>
             </div>
             <div class="offer-card">
                 <div class="offer-icon">⏰</div>
-                <h3>Flessibilità oraria</h3>
-                <p>Orari concordati in base alle disponibilità reciproche, per conciliare lavoro e vita privata.</p>
+                <h3>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer2_text') }}</p>
             </div>
             <div class="offer-card">
                 <div class="offer-icon">📚</div>
-                <h3>Aggiornamento continuo</h3>
-                <p>Accesso a materiali didattici aggiornati e opportunità di formazione professionale continua.</p>
+                <h3>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer3_text') }}</p>
             </div>
             <div class="offer-card">
                 <div class="offer-icon">🌍</div>
-                <h3>Team internazionale</h3>
-                <p>Lavora a fianco di colleghi provenienti da tutto il mondo in un clima multiculturale stimolante.</p>
+                <h3>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'offer4_text') }}</p>
             </div>
         </div>
     </div>
@@ -320,9 +318,8 @@
     <div class="c">
         <div class="sede-grid">
             <div class="sede-text">
-                <h2 class="sede-title">La nostra sede</h2>
-                <p>A&amp;A Language Center si trova nel vivace quartiere San Paolo di Roma, uno dei poli culturali e universitari più dinamici della città grazie alla presenza dell'Università Roma Tre.</p>
-                <p>La posizione è strategica e comodamente raggiungibile sia con i mezzi pubblici che in auto o bicicletta.</p>
+                <h2 class="sede-title">{{ \App\Models\PageContent::text('lavora-con-noi', 'sede_title') }}</h2>
+                {!! \App\Models\PageContent::html('lavora-con-noi', 'sede_text') !!}
                 <div class="sede-details">
                     <div class="sede-detail">
                         <div class="sede-detail-icon">📍</div>
@@ -339,7 +336,7 @@
                 </div>
             </div>
             <div class="sede-photo">
-                <img src="https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=85" alt="Quartiere San Paolo Roma">
+                <img src="{{ \App\Models\PageContent::image('lavora-con-noi', 'sede_image') }}" alt="Quartiere San Paolo Roma">
             </div>
         </div>
     </div>
@@ -349,11 +346,11 @@
 <section class="sec">
     <div class="c">
         <div class="sec-title" style="text-align:center;">
-            <h2 style="text-align:center;">Invia la tua candidatura</h2>
+            <h2 style="text-align:center;">{{ \App\Models\PageContent::text('lavora-con-noi', 'cand_title') }}</h2>
             <div style="margin:0 auto;"></div>
         </div>
         <div class="candidatura-box">
-            <p>Manda il tuo curriculum vitae con una breve lettera di presentazione all'indirizzo email della direzione, oppure contattaci tramite Instagram. Valutiamo ogni candidatura con la massima attenzione e risponderemo entro pochi giorni lavorativi.</p>
+            <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'cand_text') }}</p>
             <div class="candidatura-actions">
                 <a href="mailto:direzione@aealanguagecenter.it" class="btn-cta btn-primary-blue">
                     📧 Invia la tua candidatura
@@ -363,7 +360,7 @@
                 </a>
             </div>
             <p style="margin-top:24px;font-size:13px;color:#526173;">
-                Invia il tuo CV a <strong>direzione@aealanguagecenter.it</strong> con oggetto "Candidatura Docente — [Lingua]"
+                {!! \App\Models\PageContent::html('lavora-con-noi', 'cand_note') !!}
             </p>
         </div>
     </div>

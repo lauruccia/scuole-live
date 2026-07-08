@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'La Scuola di Lingue a Roma San Paolo | A&A Language Center')
-@section('description', 'A&A Language Center, scuola di lingue a Roma San Paolo dal 2002. Sede ufficiale esami Trinity College London n° 8241. Docenti qualificati madrelingua e/o bilingue, corsi personalizzati per tutte le età e tutti i livelli CEFR.')
-@section('keywords', 'scuola di lingue Roma San Paolo, scuola di inglese Roma San Paolo, centro esami Trinity Roma, sede Trinity College Roma 8241, scuola di lingue EUR, scuola di lingue Marconi, scuola di lingue Garbatella, A&A Language Center')
+@section('title', \App\Models\PageContent::text('la-scuola', 'meta_title'))
+@section('description', \App\Models\PageContent::text('la-scuola', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('la-scuola', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -129,8 +129,8 @@
             <span class="sep">›</span>
             <span>La Scuola</span>
         </div>
-        <h1>La <em>Scuola di Lingue</em> a Roma San Paolo</h1>
-        <p class="subtitle">Open Your Mind To The World — A&amp;A Language Center, dal 2002 a Roma. Sede ufficiale esami Trinity College London n° 8241.</p>
+        <h1>{!! \App\Models\PageContent::html('la-scuola', 'hero_title') !!}</h1>
+        <p class="subtitle">{!! \App\Models\PageContent::html('la-scuola', 'hero_subtitle') !!}</p>
     </div>
 </section>
 
@@ -139,16 +139,15 @@
     <div class="c">
         <div class="intro-grid">
             <div class="intro-text">
-                <div class="section-label">Chi siamo</div>
-                <h2 class="sec-heading">Una scuola con <em>una storia</em></h2>
-                <p>Hai mai pensato di imparare una lingua straniera ma non hai mai trovato il corso giusto? A&amp;A Language Center è la risposta. Dal 2002 offriamo corsi di <strong>Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Arabo</strong> e <strong>Italiano per Stranieri</strong>, costruiti su misura per ogni studente.</p>
-                <p>La nostra <strong>scuola di lingue a Roma</strong> si trova nel vivace quartiere <strong>San Paolo</strong>, polo universitario di Roma Tre, a pochi passi dalle fermate metro <strong>San Paolo</strong> e <strong>Marconi</strong>, ben collegata anche con i quartieri <strong>EUR</strong>, <strong>Garbatella</strong> e <strong>Ostiense</strong>. Un ambiente accogliente, moderno e stimolante dove imparare diventa un piacere.</p>
+                <div class="section-label">{{ \App\Models\PageContent::text('la-scuola', 'intro_label') }}</div>
+                <h2 class="sec-heading">{!! \App\Models\PageContent::html('la-scuola', 'intro_title') !!}</h2>
+                {!! \App\Models\PageContent::html('la-scuola', 'intro_text') !!}
                 <div class="orari-badge">
-                    🕐 <em>Lun–Ven</em> 10:00–19:00 &nbsp;·&nbsp; <em>Sab</em> 9:00–13:00
+                    {!! \App\Models\PageContent::html('la-scuola', 'intro_orari') !!}
                 </div>
             </div>
             <div class="intro-photo">
-                <img src="https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=900&q=85"
+                <img src="{{ \App\Models\PageContent::image('la-scuola', 'intro_image') }}"
                      alt="Aula di una scuola di lingue a Roma San Paolo — A&A Language Center" loading="lazy" width="900" height="600">
             </div>
         </div>
@@ -159,10 +158,10 @@
 <div class="stats-band">
     <div class="c">
         <div class="stats-inner">
-            <div class="stat-item"><div class="stat-num">15</div><div class="stat-label">Docenti qualificati</div></div>
-            <div class="stat-item"><div class="stat-num">250+</div><div class="stat-label">Studenti all'anno</div></div>
-            <div class="stat-item"><div class="stat-num">49</div><div class="stat-label">Corsi disponibili</div></div>
-            <div class="stat-item"><div class="stat-num">20+</div><div class="stat-label">Anni di esperienza</div></div>
+            <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat1_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat1_label') }}</div></div>
+            <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat2_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat2_label') }}</div></div>
+            <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat3_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat3_label') }}</div></div>
+            <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat4_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat4_label') }}</div></div>
         </div>
     </div>
 </div>
@@ -171,25 +170,25 @@
 <section class="sec sec-bg">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label">Il team</div>
-            <h2 class="sec-heading">Gli <em>Insegnanti</em></h2>
-            <p class="sec-subtext">Staff internazionale di madrelingua e bilingue, selezionati con rigore e costantemente aggiornati. Tutti certificati e con esperienza pluriennale nell'insegnamento.</p>
+            <div class="section-label">{{ \App\Models\PageContent::text('la-scuola', 'team_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('la-scuola', 'team_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('la-scuola', 'team_subtext') }}</p>
         </div>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🎯</div>
-                <h3>Lezioni personalizzate</h3>
-                <p>Ogni percorso è costruito sulle esigenze reali dello studente: obiettivi, tempi, livello di partenza e stile di apprendimento. Nessun corso uguale all'altro.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'team1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'team1_text') }}</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🌍</div>
-                <h3>Docenti qualificati madrelingua e/o bilingue</h3>
-                <p>Tutti i nostri insegnanti provengono da paesi di lingua madre o sono bilingue certificati, con aggiornamenti annuali tenuti dal Trinity College London.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'team2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'team2_text') }}</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>
-                <h3>Metodo A&A</h3>
-                <p>Veloce, flessibile e funzionale. Puoi scegliere dove frequentare: a scuola, a casa, in ufficio o anche al telefono. L'importante è che tu raggiunga i tuoi obiettivi.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'team3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'team3_text') }}</p>
             </div>
         </div>
     </div>
@@ -199,9 +198,9 @@
 <section class="sec sec-dark">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label white">Certificazioni</div>
-            <h2 class="sec-heading white">Sede ufficiale <span style="color:var(--gold)">Trinity College London</span></h2>
-            <p class="sec-subtext white">Siamo <strong style="color:#fff;">Sede d'esame n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l'anno e prepariamo i nostri studenti per le principali certificazioni internazionali. <a href="{{ route('le-certificazioni') }}" style="color:var(--gold);font-weight:700;text-decoration:underline;">Scopri le certificazioni →</a></p>
+            <div class="section-label white">{{ \App\Models\PageContent::text('la-scuola', 'cert_label') }}</div>
+            <h2 class="sec-heading white">{!! \App\Models\PageContent::html('la-scuola', 'cert_title') !!}</h2>
+            <p class="sec-subtext white">{!! \App\Models\PageContent::html('la-scuola', 'cert_text') !!}</p>
         </div>
         <div class="cert-grid">
             <a href="{{ route('le-certificazioni') }}" class="cert-tag gold" title="Scopri le certificazioni Trinity College London">★ Trinity College London — Sede n° 8241</a>
@@ -223,29 +222,29 @@
 <section class="sec">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label">Perché sceglierci</div>
-            <h2 class="sec-heading">I 4 pilastri di <em>A&A</em></h2>
+            <div class="section-label">{{ \App\Models\PageContent::text('la-scuola', 'pillars_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('la-scuola', 'pillars_title') !!}</h2>
         </div>
         <div class="pillars-grid">
             <div class="pillar-card">
                 <div class="pillar-num">01</div>
-                <h3>Esperienza</h3>
-                <p>A&amp;A Language Center opera dal 2002. In vent'anni abbiamo formato migliaia di studenti di ogni età e livello, costruendo un'esperienza didattica solida, collaudata e in continua evoluzione.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'pillar1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'pillar1_text') }}</p>
             </div>
             <div class="pillar-card">
                 <div class="pillar-num">02</div>
-                <h3>Eccellenza</h3>
-                <p>Sede d'esami GESE e ISE n° 8241 del Trinity College London. Prepariamo per IELTS, TOEFL, Cambridge, DELE, CILS, DELF/DALF, Zertifikat Deutsch, TRKI–TORFL e molte altre certificazioni.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'pillar2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'pillar2_text') }}</p>
             </div>
             <div class="pillar-card">
                 <div class="pillar-num">03</div>
-                <h3>Docenti di Qualità</h3>
-                <p>I nostri docenti provengono da ogni parte del mondo, portando un prezioso arricchimento culturale. Tutti certificati e con esperienza pluriennale, garantiscono un apprendimento autentico ed efficace.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'pillar3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'pillar3_text') }}</p>
             </div>
             <div class="pillar-card">
                 <div class="pillar-num">04</div>
-                <h3>Corsi Personalizzati</h3>
-                <p>Ogni studente riceve un programma didattico costruito su misura, con il monte ore più adatto ai propri obiettivi, tempi e stile di apprendimento. Nessun corso uguale all'altro.</p>
+                <h3>{{ \App\Models\PageContent::text('la-scuola', 'pillar4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('la-scuola', 'pillar4_text') }}</p>
             </div>
         </div>
     </div>
@@ -254,12 +253,12 @@
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Inizia ora</div>
-        <h2>Pronto a iniziare il tuo percorso linguistico?</h2>
-        <p>Prenota il tuo test di livello gratuito. Nessun impegno, solo il primo passo verso una nuova lingua.</p>
+        <div class="label">{{ \App\Models\PageContent::text('la-scuola', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('la-scuola', 'cta_title') }}</h2>
+        <p>{{ \App\Models\PageContent::text('la-scuola', 'cta_text') }}</p>
         <div class="cta-actions">
-            <a href="{{ route('iscrizione') }}" class="btn-gold">✦ Prenota il Test Gratuito</a>
-            <a href="{{ route('contattaci') }}" class="btn-outline-white">Contattaci →</a>
+            <a href="{{ route('iscrizione') }}" class="btn-gold">{{ \App\Models\PageContent::text('la-scuola', 'cta_btn1') }}</a>
+            <a href="{{ route('contattaci') }}" class="btn-outline-white">{{ \App\Models\PageContent::text('la-scuola', 'cta_btn2') }}</a>
         </div>
     </div>
 </section>

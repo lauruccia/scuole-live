@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Corsi di Inglese Aziendali a Roma | Formazione Linguistica B2B')
-@section('description', 'Corsi di lingue aziendali personalizzati a Roma per dipendenti, manager e team. Inglese commerciale, Business English, certificazioni CEFR. Lezioni in sede o online. Clienti: MEF, Confcommercio, H10 Hotels.')
-@section('keywords', 'corsi di inglese aziendali Roma, corsi di lingue aziendali Roma, formazione linguistica aziendale Roma, business English Roma, corsi inglese per dipendenti Roma, corsi inglese aziende in sede Roma, formazione linguistica B2B Roma, corso inglese commerciale Roma')
+@section('title', \App\Models\PageContent::text('per-le-aziende', 'meta_title'))
+@section('description', \App\Models\PageContent::text('per-le-aziende', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('per-le-aziende', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -127,8 +127,8 @@
             <span class="sep">›</span>
             <span>Per le Aziende</span>
         </div>
-        <h1>Corsi di Lingue <em>Aziendali</em> a Roma</h1>
-        <p class="subtitle">Formazione linguistica B2B su misura per il tuo team. "We make that language your tool. Not your obstacle."</p>
+        <h1>{!! \App\Models\PageContent::html('per-le-aziende', 'hero_title') !!}</h1>
+        <p class="subtitle">{{ \App\Models\PageContent::text('per-le-aziende', 'hero_subtitle') }}</p>
     </div>
 </section>
 
@@ -137,14 +137,12 @@
     <div class="c">
         <div class="intro-grid">
             <div class="intro-text">
-                <div class="section-label">Formazione aziendale</div>
-                <h2 class="sec-heading">Formiamo il vostro <em>team</em></h2>
-                <p>A&amp;A Language Center opera dal 2002 con una consolidata esperienza nella <strong>formazione linguistica aziendale a Roma</strong>. Tra i nostri clienti figurano grandi aziende come <strong>MEF</strong>, <strong>Confcommercio</strong> e <strong>H10 Hotels</strong>, oltre a università, enti pubblici nazionali e locali, scuole pubbliche e private.</p>
-                <p>Siamo specializzati in corsi personalizzati di <strong>Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Arabo</strong> e <strong>Italiano per stranieri</strong>, progettati per rispondere alle esigenze concrete del mondo professionale.</p>
-                <p>I certificati rilasciati sono validi per concorsi pubblici, aggiornamento professionale e formazione del personale finanziata.</p>
+                <div class="section-label">{{ \App\Models\PageContent::text('per-le-aziende', 'intro_label') }}</div>
+                <h2 class="sec-heading">{!! \App\Models\PageContent::html('per-le-aziende', 'intro_title') !!}</h2>
+                {!! \App\Models\PageContent::html('per-le-aziende', 'intro_text') !!}
             </div>
             <div class="intro-photo">
-                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=900&q=85"
+                <img src="{{ \App\Models\PageContent::image('per-le-aziende', 'intro_image') }}"
                      alt="Corso di inglese aziendale a Roma — formazione linguistica B2B A&A Language Center" loading="lazy" width="900" height="600">
             </div>
         </div>
@@ -155,25 +153,25 @@
 <section class="sec sec-bg">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label">Il processo</div>
-            <h2 class="sec-heading">Come <em>funziona</em></h2>
-            <p class="sec-subtext">Un percorso strutturato in tre fasi per garantire risultati concreti e misurabili.</p>
+            <div class="section-label">{{ \App\Models\PageContent::text('per-le-aziende', 'steps_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('per-le-aziende', 'steps_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('per-le-aziende', 'steps_subtext') }}</p>
         </div>
         <div class="steps-grid">
             <div class="step-card">
                 <div class="step-num">1</div>
-                <h3>Analisi delle esigenze</h3>
-                <p>Incontriamo il responsabile HR per individuare le esigenze dell'azienda, le aspettative del personale e gli obiettivi concreti da raggiungere.</p>
+                <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'step1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('per-le-aziende', 'step1_text') }}</p>
             </div>
             <div class="step-card">
                 <div class="step-num">2</div>
-                <h3>Programma su misura</h3>
-                <p>Strutturiamo il programma didattico seguendo i livelli CEFR di partenza del personale e i risultati attesi. Ogni modulo è calibrato sulle reali necessità comunicative.</p>
+                <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'step2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('per-le-aziende', 'step2_text') }}</p>
             </div>
             <div class="step-card">
                 <div class="step-num">3</div>
-                <h3>Formazione e certificazione</h3>
-                <p>Esame intermedio e finale per misurare i progressi. Al termine viene rilasciato un attestato con livello CEFR. Possibilità di certificazioni internazionali riconosciute.</p>
+                <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'step3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('per-le-aziende', 'step3_text') }}</p>
             </div>
         </div>
     </div>
@@ -183,37 +181,37 @@
 <section class="sec">
     <div class="c">
         <div class="sec-header">
-            <div class="section-label">Erogazione</div>
-            <h2 class="sec-heading">Modalità <em>flessibili</em></h2>
-            <p class="sec-subtext">Ci adattiamo alle esigenze logistiche e organizzative della vostra azienda.</p>
+            <div class="section-label">{{ \App\Models\PageContent::text('per-le-aziende', 'modalita_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('per-le-aziende', 'modalita_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('per-le-aziende', 'modalita_subtext') }}</p>
         </div>
         <div class="modalita-grid">
             <div class="modalita-item">
                 <div class="modalita-icon">🏫</div>
                 <div>
-                    <h3>In sede presso A&A</h3>
-                    <p>I dipendenti seguono le lezioni nella nostra sede di Roma San Paolo, in un ambiente dedicato e attrezzato per una formazione immersiva.</p>
+                    <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'mod1_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('per-le-aziende', 'mod1_text') }}</p>
                 </div>
             </div>
             <div class="modalita-item">
                 <div class="modalita-icon">🏢</div>
                 <div>
-                    <h3>Presso la vostra sede</h3>
-                    <p>I nostri docenti si recano direttamente nella vostra azienda, riducendo gli spostamenti del personale e ottimizzando i tempi.</p>
+                    <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'mod2_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('per-le-aziende', 'mod2_text') }}</p>
                 </div>
             </div>
             <div class="modalita-item">
                 <div class="modalita-icon">💻</div>
                 <div>
-                    <h3>Videoconferenza in diretta</h3>
-                    <p>Corsi online tramite Zoom, Teams o la piattaforma preferita dall'azienda. Stessa qualità didattica, massima flessibilità geografica.</p>
+                    <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'mod3_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('per-le-aziende', 'mod3_text') }}</p>
                 </div>
             </div>
             <div class="modalita-item">
                 <div class="modalita-icon">👥</div>
                 <div>
-                    <h3>Individuali o di gruppo</h3>
-                    <p>Corsi one-to-one per figure dirigenziali o piccoli gruppi omogenei per livello. Ogni formato è ottimizzato per il massimo apprendimento.</p>
+                    <h3>{{ \App\Models\PageContent::text('per-le-aziende', 'mod4_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('per-le-aziende', 'mod4_text') }}</p>
                 </div>
             </div>
         </div>
@@ -259,19 +257,11 @@
 {{-- CLIENTI --}}
 <div class="clienti-band">
     <div class="c">
-        <p class="clienti-label">Alcuni dei nostri clienti aziendali</p>
+        <p class="clienti-label">{{ \App\Models\PageContent::text('per-le-aziende', 'clienti_label') }}</p>
         <div class="clienti-grid">
-            <span class="cliente-tag">wpd Italia</span>
-            <span class="cliente-tag">CIOFS-FP</span>
-            <span class="cliente-tag">Promo.Ter Confcommercio Roma</span>
-            <span class="cliente-tag">Idea Congress</span>
-            <span class="cliente-tag">MEF — Ministero dell'Economia</span>
-            <span class="cliente-tag">ISCR</span>
-            <span class="cliente-tag">FORMACAMERA</span>
-            <span class="cliente-tag">H10 Hotels</span>
-            <span class="cliente-tag">ESC 2</span>
-            <span class="cliente-tag">Easy Parking</span>
-            <span class="cliente-tag">ECA Italia</span>
+            @foreach (\App\Models\PageContent::lines('per-le-aziende', 'clienti_tags') as $cliente)
+                <span class="cliente-tag">{{ $cliente }}</span>
+            @endforeach
         </div>
     </div>
 </div>
@@ -279,12 +269,12 @@
 {{-- CTA --}}
 <section class="cta-band">
     <div class="c cta-band-inner">
-        <div class="label">Formiamo il vostro team</div>
-        <h2>Richiedete un preventivo gratuito</h2>
-        <p>Contattateci per ricevere un preventivo personalizzato. Risponderemo entro 24 ore lavorative.</p>
+        <div class="label">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_label') }}</div>
+        <h2>{{ \App\Models\PageContent::text('per-le-aziende', 'cta_title') }}</h2>
+        <p>{{ \App\Models\PageContent::text('per-le-aziende', 'cta_text') }}</p>
         <div class="cta-actions">
-            <a href="{{ route('iscrizione') }}" class="btn-gold">✦ Richiedi Preventivo Gratuito</a>
-            <a href="mailto:info@aealanguagecenter.it" class="btn-outline-white">✉ Scrivi via email</a>
+            <a href="{{ route('iscrizione') }}" class="btn-gold">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_btn1') }}</a>
+            <a href="mailto:info@aealanguagecenter.it" class="btn-outline-white">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_btn2') }}</a>
         </div>
     </div>
 </section>

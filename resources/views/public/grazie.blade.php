@@ -115,26 +115,24 @@
 <div class="grazie-section">
     <div class="grazie-card">
         <div class="grazie-icon">✅</div>
-        <h1>Richiesta inviata!</h1>
+        <h1>{{ \App\Models\PageContent::text('grazie', 'grazie_title') }}</h1>
         <p>
-            Grazie per averci contattato. Il nostro team ha ricevuto la tua richiesta
-            e ti risponderà entro <strong style="color:#001b3f;">24 ore lavorative</strong>.<br>
-            Controlla anche la casella email — ti abbiamo inviato un riepilogo.
+            {!! \App\Models\PageContent::html('grazie', 'grazie_text') !!}
         </p>
 
         <div class="grazie-steps">
-            <h3>Cosa succede adesso?</h3>
+            <h3>{{ \App\Models\PageContent::text('grazie', 'steps_title') }}</h3>
             <div class="step">
                 <div class="step-num">1</div>
-                <span>Il nostro staff esamina la tua richiesta</span>
+                <span>{{ \App\Models\PageContent::text('grazie', 'step1_text') }}</span>
             </div>
             <div class="step">
                 <div class="step-num">2</div>
-                <span>Ti contattiamo via email o telefono per un colloquio conoscitivo</span>
+                <span>{{ \App\Models\PageContent::text('grazie', 'step2_text') }}</span>
             </div>
             <div class="step">
                 <div class="step-num">3</div>
-                <span>Definiamo insieme il percorso di studio più adatto a te</span>
+                <span>{{ \App\Models\PageContent::text('grazie', 'step3_text') }}</span>
             </div>
         </div>
 

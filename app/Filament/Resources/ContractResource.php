@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
@@ -392,6 +393,12 @@ class ContractResource extends Resource
                                 DatePicker::make('billing_birth_date')
                                     ->label('Nato/a il')
                                     ->nullable()
+                                    ->maxDate(today())
+                                    ->minDate('1900-01-01')
+                                    ->validationMessages([
+                                        'before_or_equal' => 'La data di nascita non può essere nel futuro.',
+                                        'after_or_equal'  => 'La data di nascita non è valida (troppo lontana nel passato).',
+                                    ])
                                     ->columnSpan(4)
                                     ->live()
                                     ->afterStateUpdated(fn (Get $get, Set $set) => static::syncSingleBeneficiaryFromBilling($get, $set)),
@@ -655,6 +662,9 @@ class ContractResource extends Resource
                             ->label('Data fine corso')
                             ->nullable()
                             ->minDate(fn (Get $get) => $get('starts_at') ?: null)
+                            ->validationMessages([
+                                'after_or_equal' => 'La data di fine corso non può essere precedente alla data di inizio.',
+                            ])
                             ->live()
                             ->hint(function (Get $get) {
                                 if (! $get('ends_at') && $get('status') === 'active') {
@@ -1026,6 +1036,12 @@ Select::make('student_id')
                                             DatePicker::make('beneficiary_birth_date')
                                                 ->label('Nato/a il')
                                                 ->nullable()
+                                                ->maxDate(today())
+                                                ->minDate('1900-01-01')
+                                                ->validationMessages([
+                                                    'before_or_equal' => 'La data di nascita non può essere nel futuro.',
+                                                    'after_or_equal'  => 'La data di nascita non è valida (troppo lontana nel passato).',
+                                                ])
                                                 // Abilitato se: nessuno studente selezionato OPPURE studente presente ma data mancante
                                                 ->disabled(fn (Get $get) => filled($get('student_id')) && filled($get('beneficiary_birth_date')))
                                                 ->helperText(fn (Get $get) => filled($get('student_id')) && blank($get('beneficiary_birth_date'))

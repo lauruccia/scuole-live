@@ -1,8 +1,8 @@
 @extends('public.layout')
 
-@section('title', 'Scuola di Lingue a Roma | A&A Language Center San Paolo')
-@section('description', 'Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri con docenti qualificati madrelingua e/o bilingue. Sede esami Trinity College London. Test di livello gratuito.')
-@section('keywords', 'scuola di lingue Roma, scuola di lingue Roma San Paolo, corsi di lingue Roma, corsi di inglese Roma, docenti madrelingua e bilingue Roma, Trinity College Roma, certificazioni internazionali lingue Roma, A&A Language Center')
+@section('title', \App\Models\PageContent::text('home', 'meta_title'))
+@section('description', \App\Models\PageContent::text('home', 'meta_description'))
+@section('keywords', \App\Models\PageContent::text('home', 'meta_keywords'))
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -51,7 +51,7 @@
             rgba(255,255,255,.52) 45%,
             rgba(255,255,255,.20) 60%,
             rgba(255,255,255,.03) 100%),
-        url('https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85')
+        url('{{ \App\Models\PageContent::image('home', 'hero_image') }}')
             center right / cover no-repeat,
         linear-gradient(135deg, #FFFFFF 0%, #F5F8FC 50%, #EEF3FF 100%);
     min-height: 620px;
@@ -445,7 +445,7 @@
 }
 .cta-final-bg {
     position: absolute; inset: 0;
-    background: url('https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&w=1600&q=70')
+    background: url('{{ \App\Models\PageContent::image('home', 'cta_image') }}')
         center / cover no-repeat;
 }
 .cta-final-overlay {
@@ -529,20 +529,16 @@
     <div class="hero-logo-glow" aria-hidden="true"></div>
     <img src="{{ asset('images/logo-hero.png') }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
     <div class="hero-left">
-        <div class="hero-eyebrow">
-            <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
-            DOCENTI QUALIFICATI MADRELINGUA E/O BILINGUE &nbsp;·&nbsp;
-            CERTIFICAZIONI INTERNAZIONALI
-        </div>
+        <div class="hero-eyebrow">{!! \App\Models\PageContent::html('home', 'hero_eyebrow') !!}</div>
         <h1>
-            <span class="h1-kicker">Scuola di Lingue a Roma San Paolo dal 2002</span>
-            Parla al mondo.
-            <span class="accent">Cambia il tuo futuro.</span>
+            <span class="h1-kicker">{{ \App\Models\PageContent::text('home', 'hero_kicker') }}</span>
+            {{ \App\Models\PageContent::text('home', 'hero_title') }}
+            <span class="accent">{{ \App\Models\PageContent::text('home', 'hero_title_accent') }}</span>
         </h1>
-        <p class="hero-desc">Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong> e <strong>italiano per stranieri</strong> con docenti qualificati madrelingua e/o bilingue. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito.</p>
+        <p class="hero-desc">{!! \App\Models\PageContent::html('home', 'hero_desc') !!}</p>
         <div class="hero-actions">
-            <a href="{{ route('iscrizione') }}" class="btn-hero-primary">PRENOTA IL TEST GRATUITO →</a>
-            <a href="#corsi" class="btn-hero-ghost">SCOPRI I CORSI →</a>
+            <a href="{{ route('iscrizione') }}" class="btn-hero-primary">{{ \App\Models\PageContent::text('home', 'hero_cta_primary') }}</a>
+            <a href="#corsi" class="btn-hero-ghost">{{ \App\Models\PageContent::text('home', 'hero_cta_secondary') }}</a>
         </div>
     </div>
 
@@ -552,8 +548,8 @@
         <a href="{{ route('le-certificazioni') }}" class="hero-trinity-badge" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Sede esami n° 8241">
             <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London">
             <span class="htb-text">
-                <strong>Sede Esami Ufficiale n° 8241</strong>
-                <span>GESE &amp; ISE — Scopri le certificazioni →</span>
+                <strong>{{ \App\Models\PageContent::text('home', 'trinity_badge_title') }}</strong>
+                <span>{!! \App\Models\PageContent::html('home', 'trinity_badge_sub') !!}</span>
             </span>
         </a>
     </div>
@@ -561,7 +557,7 @@
 
 {{-- ══ CERT STRIP ══ --}}
 <div class="cert-strip" aria-label="Certificazioni internazionali">
-    <p class="cert-strip-label">Sede Esami Ufficiale Trinity College London n° 8241 · Cambridge Preparation Centre · Preparazione a tutte le principali certificazioni</p>
+    <p class="cert-strip-label">{{ \App\Models\PageContent::text('home', 'cert_strip_label') }}</p>
     <div class="c">
         <div class="cert-logos">
             <a href="{{ route('le-certificazioni') }}" class="cert-logo-item" title="Le certificazioni Trinity College London — Sede esami n° 8241" aria-label="Scopri le certificazioni Trinity College London">
@@ -591,44 +587,44 @@
     <div class="c">
         <div class="why-grid">
             <div class="why-left">
-                <div class="section-label">Perché scegliere A&A</div>
-                <h2 class="sec-heading" id="why-title">Un metodo.<br>Un'esperienza.<br>Risultati concreti.</h2>
+                <div class="section-label">{{ \App\Models\PageContent::text('home', 'why_label') }}</div>
+                <h2 class="sec-heading" id="why-title">{!! \App\Models\PageContent::html('home', 'why_title') !!}</h2>
                 <div class="why-underline"></div>
-                <p><strong>A&amp;A Language Center</strong> è una <strong>scuola di lingue a Roma</strong>, nel quartiere San Paolo, con oltre 20 anni di esperienza nell'insegnamento delle lingue straniere. Metodi innovativi, docenti qualificati madrelingua e/o bilingue e un approccio completamente personalizzato sul tuo livello CEFR e sui tuoi obiettivi — sia che tu cerchi corsi di inglese, italiano per stranieri o lingue per il lavoro.</p>
+                <p>{!! \App\Models\PageContent::html('home', 'why_text') !!}</p>
                 <div class="why-cta">
-                    <a href="{{ route('iscrizione') }}" class="btn-primary">Prenota il test gratuito →</a>
+                    <a href="{{ route('iscrizione') }}" class="btn-primary">{{ \App\Models\PageContent::text('home', 'why_cta') }}</a>
                 </div>
             </div>
             <div class="features-grid">
                 <div class="feature-card">
                     <div class="feature-icon">🌍</div>
-                    <h4>Insegnanti internazionali</h4>
-                    <p>Docenti qualificati madrelingua e/o bilingue provenienti da tutto il mondo con esperienza didattica certificata.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature1_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature1_text') }}</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
-                    <h4>Percorsi personalizzati</h4>
-                    <p>Corsi costruiti sui tuoi obiettivi e sul tuo livello CEFR, valutato con test gratuito.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature2_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature2_text') }}</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🏆</div>
-                    <h4>Certificazioni riconosciute</h4>
-                    <p>Sede esami Trinity College London, Cambridge Preparation Centre e preparazione a IELTS e tutte le principali certificazioni.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature3_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature3_text') }}</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">💻</div>
-                    <h4>Online e in presenza</h4>
-                    <p>Scegli la modalità che preferisci. Sempre con qualità top e docenti dedicati.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature4_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature4_text') }}</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">👥</div>
-                    <h4>Mini gruppi</h4>
-                    <p>Classi a numero ridotto per la tua attenzione vera e un apprendimento efficace.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature5_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature5_text') }}</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🚀</div>
-                    <h4>Career focused</h4>
-                    <p>Lingue per il lavoro, l'università e la tua crescita professionale nel mercato globale.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'feature6_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'feature6_text') }}</p>
                 </div>
             </div>
         </div>
@@ -640,10 +636,10 @@
     <div class="c">
         <div class="corsi-inner">
             <div class="corsi-left">
-                <div class="section-label white">I nostri corsi</div>
-                <h2 class="sec-heading" id="corsi-title">Scegli la lingua.<br>Apri le porte<br>al <em>mondo</em>.</h2>
-                <p class="sec-subtext">Corsi per ogni livello e ogni età. Programmi allineati al framework CEFR con certificazioni riconosciute a livello internazionale.</p>
-                <a href="{{ route('checkout.catalogo') }}" class="btn-corsi-all">TUTTI I CORSI →</a>
+                <div class="section-label white">{{ \App\Models\PageContent::text('home', 'corsi_label') }}</div>
+                <h2 class="sec-heading" id="corsi-title">{!! \App\Models\PageContent::html('home', 'corsi_title') !!}</h2>
+                <p class="sec-subtext">{{ \App\Models\PageContent::text('home', 'corsi_subtext') }}</p>
+                <a href="{{ route('checkout.catalogo') }}" class="btn-corsi-all">{{ \App\Models\PageContent::text('home', 'corsi_cta') }}</a>
             </div>
 
             @php
@@ -704,11 +700,11 @@
     <div class="c">
         <div class="metodo-inner">
             <div class="metodo-left">
-                <div class="section-label">Il nostro metodo</div>
-                <h2 class="sec-heading" id="metodo-title">Un percorso su misura,<br>passo dopo passo.</h2>
-                <p class="sec-subtext">Ogni studente è unico. Iniziamo dal tuo livello reale e costruiamo insieme il percorso più efficace verso i tuoi obiettivi.</p>
+                <div class="section-label">{{ \App\Models\PageContent::text('home', 'metodo_label') }}</div>
+                <h2 class="sec-heading" id="metodo-title">{!! \App\Models\PageContent::html('home', 'metodo_title') !!}</h2>
+                <p class="sec-subtext">{{ \App\Models\PageContent::text('home', 'metodo_subtext') }}</p>
                 <div style="margin-top:24px;">
-                    <a href="{{ route('iscrizione') }}" class="btn-primary">Inizia ora →</a>
+                    <a href="{{ route('iscrizione') }}" class="btn-primary">{{ \App\Models\PageContent::text('home', 'metodo_cta') }}</a>
                 </div>
             </div>
             <div class="metodo-steps">
@@ -717,40 +713,40 @@
                         <span class="metodo-circle-num">01</span>
                         <span class="metodo-circle-icon">📋</span>
                     </div>
-                    <h4>Test iniziale</h4>
-                    <p>Valutiamo il tuo livello e i tuoi obiettivi.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'step1_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'step1_text') }}</p>
                 </div>
                 <div class="metodo-step">
                     <div class="metodo-circle">
                         <span class="metodo-circle-num">02</span>
                         <span class="metodo-circle-icon">👤</span>
                     </div>
-                    <h4>Piano personalizzato</h4>
-                    <p>Costruiamo il percorso perfetto per te.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'step2_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'step2_text') }}</p>
                 </div>
                 <div class="metodo-step">
                     <div class="metodo-circle">
                         <span class="metodo-circle-num">03</span>
                         <span class="metodo-circle-icon">💬</span>
                     </div>
-                    <h4>Speaking immersion</h4>
-                    <p>Parla, ascolta, vivi la lingua ogni giorno.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'step3_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'step3_text') }}</p>
                 </div>
                 <div class="metodo-step">
                     <div class="metodo-circle">
                         <span class="metodo-circle-num">04</span>
                         <span class="metodo-circle-icon">🏅</span>
                     </div>
-                    <h4>Preparazione certificazioni</h4>
-                    <p>Ti prepariamo e ti accompagniamo all'esame.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'step4_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'step4_text') }}</p>
                 </div>
                 <div class="metodo-step">
                     <div class="metodo-circle">
                         <span class="metodo-circle-num">05</span>
                         <span class="metodo-circle-icon">🚩</span>
                     </div>
-                    <h4>Obiettivi raggiunti</h4>
-                    <p>Nuove competenze, nuove opportunità, nuovo futuro.</p>
+                    <h4>{{ \App\Models\PageContent::text('home', 'step5_title') }}</h4>
+                    <p>{{ \App\Models\PageContent::text('home', 'step5_text') }}</p>
                 </div>
             </div>
         </div>
@@ -763,23 +759,23 @@
         <div class="stats-grid">
             <div class="stat-box">
                 <span class="stat-box-icon">🏆</span>
-                <div class="stat-box-num">20<sup>+</sup></div>
-                <div class="stat-box-label">Anni di esperienza</div>
+                <div class="stat-box-num">{!! \App\Models\PageContent::html('home', 'stat1_num') !!}</div>
+                <div class="stat-box-label">{{ \App\Models\PageContent::text('home', 'stat1_label') }}</div>
             </div>
             <div class="stat-box">
                 <span class="stat-box-icon">🎓</span>
-                <div class="stat-box-num">250<sup>+</sup></div>
-                <div class="stat-box-label">Studenti formati</div>
+                <div class="stat-box-num">{!! \App\Models\PageContent::html('home', 'stat2_num') !!}</div>
+                <div class="stat-box-label">{{ \App\Models\PageContent::text('home', 'stat2_label') }}</div>
             </div>
             <div class="stat-box">
                 <span class="stat-box-icon">👍</span>
-                <div class="stat-box-num">98<sup>%</sup></div>
-                <div class="stat-box-label">Studenti soddisfatti</div>
+                <div class="stat-box-num">{!! \App\Models\PageContent::html('home', 'stat3_num') !!}</div>
+                <div class="stat-box-label">{{ \App\Models\PageContent::text('home', 'stat3_label') }}</div>
             </div>
             <div class="stat-box">
                 <span class="stat-box-icon">🌐</span>
-                <div class="stat-box-num">6</div>
-                <div class="stat-box-label">Certificazioni internazionali</div>
+                <div class="stat-box-num">{!! \App\Models\PageContent::html('home', 'stat4_num') !!}</div>
+                <div class="stat-box-label">{{ \App\Models\PageContent::text('home', 'stat4_label') }}</div>
             </div>
         </div>
     </div>
@@ -826,18 +822,11 @@
 {{-- ══ FAQ ══ --}}
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
-    $faqItems = [
-        ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti qualificati madrelingua e/o bilingue. Vedi il <a href="' . route('checkout.catalogo') . '">catalogo completo</a>.</p>'],
-        ['q' => 'Dove si trova la scuola?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. A pochi passi dalle fermate metro San Paolo e Marconi (linea B), ben collegati con EUR, Garbatella, Ostiense e Testaccio.</p>'],
-        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente qualificato madrelingua o bilingue. Al termine ricevi una valutazione CEFR dettagliata. <a href="' . route('iscrizione') . '">Prenotalo qui</a>.</p>'],
-        ['q' => 'Posso seguire i corsi online?', 'a' => '<p>Sì. Tutti i nostri corsi sono disponibili anche in modalità online (videoconferenza live) con la stessa qualità delle lezioni in presenza. Offriamo inoltre il servizio esclusivo <strong>Inglese al Telefono</strong>: 30 minuti al giorno per migliorare lo speaking.</p>'],
-        ['q' => 'Siete sede d\'esame Trinity College London?', 'a' => '<p>Sì. A&amp;A Language Center è <strong>Sede d\'Esame Ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l\'anno direttamente nella nostra sede.</p>'],
-        ['q' => 'Avete corsi per aziende?', 'a' => '<p>Sì. Dal 2002 facciamo formazione linguistica B2B per aziende, enti pubblici, hotel e studi professionali. Tra i clienti: MEF, Confcommercio, H10 Hotels. Vedi <a href="' . route('landing.aziendali') . '">Corsi Aziendali</a>.</p>'],
-    ];
+    $faqItems = \App\Models\PageContent::items('home', 'faq_items');
 @endphp
 <x-seo-faq
-    title="Domande frequenti su A&A Language Center"
-    subtitle="Le risposte alle domande più comuni su corsi, prezzi, certificazioni e modalità."
+    :title="\App\Models\PageContent::text('home', 'faq_title')"
+    :subtitle="\App\Models\PageContent::text('home', 'faq_subtitle')"
     :items="$faqItems"
 />
 
@@ -846,9 +835,9 @@
     <div class="cta-final-bg"></div>
     <div class="cta-final-overlay"></div>
     <div class="c cta-final-inner">
-        <h2 id="cta-title">Entri per imparare una lingua.<br>Esci con nuove opportunità.</h2>
-        <p>Il tuo futuro parla più lingue. Inizia oggi il tuo percorso con A&A Language Center.</p>
-        <a href="{{ route('iscrizione') }}" class="btn-hero-primary">PRENOTA IL TUO TEST GRATUITO →</a>
+        <h2 id="cta-title">{!! \App\Models\PageContent::html('home', 'cta_title') !!}</h2>
+        <p>{{ \App\Models\PageContent::text('home', 'cta_text') }}</p>
+        <a href="{{ route('iscrizione') }}" class="btn-hero-primary">{{ \App\Models\PageContent::text('home', 'cta_button') }}</a>
     </div>
 </section>
 
