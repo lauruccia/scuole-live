@@ -155,40 +155,31 @@
     position: relative; height: 600px;
     z-index: 2;
 }
-.hero-float-wrap {
-    position: absolute; inset: 0; pointer-events: none;
-}
-.hf {
+/* Badge Trinity in evidenza — unico elemento sopra la foto */
+.hero-trinity-badge {
     position: absolute;
-    background: rgba(255,255,255,.92);
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex; align-items: center; gap: 10px;
+    right: 5%;
+    bottom: 10%;
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(255,255,255,.96);
+    border-radius: 14px;
+    border-left: 5px solid var(--gold);
+    padding: 18px 24px;
+    max-width: 400px;
     backdrop-filter: blur(8px);
-    box-shadow: 0 8px 32px rgba(0,0,0,.2);
-    min-width: 150px;
-}
-.hf-icon {
-    width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1rem;
-}
-.hf-text strong { display: block; font-size: .82rem; font-weight: 700; color: #0d1b2e; line-height: 1.2; }
-.hf-text span { font-size: .68rem; color: #4e5d72; }
-.hf-1 { top: 18%;  right: 52%; background: rgba(255,255,255,.95); }
-.hf-2 { top: 38%;  right: 4%;  }
-/* La card Trinity è un link cliccabile (il wrapper ha pointer-events: none) */
-.hf-link {
-    pointer-events: auto;
-    cursor: pointer;
+    box-shadow: 0 14px 44px rgba(0,0,0,.35);
     transition: transform .2s, box-shadow .2s;
 }
-.hf-link:hover {
-    transform: translateY(-4px) scale(1.03);
-    box-shadow: 0 14px 40px rgba(0,0,0,.3);
+.hero-trinity-badge:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 56px rgba(0,0,0,.45);
 }
-.hf-3 { bottom: 30%; right: 52%; }
-.hf-4 { bottom: 15%; right: 6%;  }
+.hero-trinity-badge img { height: 52px; width: auto; flex-shrink: 0; }
+.htb-text strong {
+    display: block; font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .95rem; font-weight: 800; color: #0d1b2e; line-height: 1.25;
+}
+.htb-text > span { display: block; font-size: .76rem; color: var(--gold-d); font-weight: 600; margin-top: 3px; }
 
 /* ── CERT STRIP ───────────────────────────────────── */
 .cert-strip {
@@ -541,36 +532,15 @@
     </div>
 
     <div class="hero-right">
-        <div class="hero-float-wrap">
-            <div class="hf hf-1">
-                <div class="hf-icon" style="background:#EEF3FF;">⭐</div>
-                <div class="hf-text">
-                    <strong>20+ Anni</strong>
-                    <span>di esperienza</span>
-                </div>
-            </div>
-            <a href="{{ route('le-certificazioni') }}" class="hf hf-2 hf-link" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Sede esami n° 8241">
-                <div class="hf-icon" style="background:#5C2D8E;border-radius:6px;color:#fff;font-size:.65rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.1;text-align:center;padding:4px;">TRINITY<br>COLLEGE</div>
-                <div class="hf-text">
-                    <strong>Official Exam Center</strong>
-                    <span>GESE & ISE · n° 8241</span>
-                </div>
-            </a>
-            <div class="hf hf-3">
-                <div class="hf-icon" style="background:#EEF9F4;">💻</div>
-                <div class="hf-text">
-                    <strong>Online e in presenza</strong>
-                    <span>Scegli tu come studiare</span>
-                </div>
-            </div>
-            <div class="hf hf-4">
-                <div class="hf-icon" style="background:#FEF9EC;">🌍</div>
-                <div class="hf-text">
-                    <strong>Docenti madrelingua</strong>
-                    <span>Certificati & qualificati</span>
-                </div>
-            </div>
-        </div>
+        {{-- Unico badge in evidenza: Trinity College London (cliccabile).
+             Le altre card sono state rimosse perché coprivano foto e logo. --}}
+        <a href="{{ route('le-certificazioni') }}" class="hero-trinity-badge" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Sede esami n° 8241">
+            <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London">
+            <span class="htb-text">
+                <strong>Sede Esami Ufficiale n° 8241</strong>
+                <span>GESE &amp; ISE — Scopri le certificazioni →</span>
+            </span>
+        </a>
     </div>
 </section>
 
