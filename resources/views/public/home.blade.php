@@ -74,6 +74,17 @@
     position: relative; z-index: 2;
     padding: 90px 56px 90px max(24px, calc((100vw - 1140px) / 2));
 }
+/* Logo scuola in evidenza nella slide principale */
+.hero-logo {
+    display: block;
+    height: 150px;
+    width: auto;
+    margin-bottom: 26px;
+    filter: drop-shadow(0 0 22px rgba(255,255,255,.28)) drop-shadow(0 4px 14px rgba(0,0,0,.45));
+}
+@media (max-width: 640px) {
+    .hero-logo { height: 110px; margin-bottom: 20px; }
+}
 .hero-eyebrow {
     font-size: .68rem; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
@@ -155,6 +166,16 @@
 .hf-text span { font-size: .68rem; color: #4e5d72; }
 .hf-1 { top: 18%;  right: 52%; background: rgba(255,255,255,.95); }
 .hf-2 { top: 38%;  right: 4%;  }
+/* La card Trinity è un link cliccabile (il wrapper ha pointer-events: none) */
+.hf-link {
+    pointer-events: auto;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s;
+}
+.hf-link:hover {
+    transform: translateY(-4px) scale(1.03);
+    box-shadow: 0 14px 40px rgba(0,0,0,.3);
+}
 .hf-3 { bottom: 30%; right: 52%; }
 .hf-4 { bottom: 15%; right: 6%;  }
 
@@ -488,6 +509,9 @@
 {{-- ══ HERO ══ --}}
 <section class="hero" aria-label="Banner principale">
     <div class="hero-left">
+        @if(file_exists(public_path('images/logo-scuola.png')))
+            <img src="{{ asset('images/logo-scuola.png') }}" alt="A&A Language Center — Scuola di Lingue a Roma" class="hero-logo" loading="eager">
+        @endif
         <div class="hero-eyebrow">
             <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
             DOCENTI MADRELINGUA &nbsp;·&nbsp;
@@ -505,7 +529,7 @@
         </div>
     </div>
 
-    <div class="hero-right" aria-hidden="true">
+    <div class="hero-right">
         <div class="hero-float-wrap">
             <div class="hf hf-1">
                 <div class="hf-icon" style="background:#EEF3FF;">⭐</div>
@@ -514,13 +538,13 @@
                     <span>di esperienza</span>
                 </div>
             </div>
-            <div class="hf hf-2">
+            <a href="{{ route('le-certificazioni') }}" class="hf hf-2 hf-link" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Sede esami n° 8241">
                 <div class="hf-icon" style="background:#5C2D8E;border-radius:6px;color:#fff;font-size:.65rem;font-weight:800;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.1;text-align:center;padding:4px;">TRINITY<br>COLLEGE</div>
                 <div class="hf-text">
                     <strong>Official Exam Center</strong>
                     <span>GESE & ISE · n° 8241</span>
                 </div>
-            </div>
+            </a>
             <div class="hf hf-3">
                 <div class="hf-icon" style="background:#EEF9F4;">💻</div>
                 <div class="hf-text">
