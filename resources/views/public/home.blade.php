@@ -46,11 +46,11 @@
        foto visibile a destra, così il logo della scuola risalta. */
     background:
         linear-gradient(95deg,
-            rgba(255,255,255,.97) 0%,
-            rgba(255,255,255,.94) 30%,
-            rgba(255,255,255,.82) 45%,
-            rgba(255,255,255,.38) 60%,
-            rgba(255,255,255,.08) 100%),
+            rgba(255,255,255,.92) 0%,
+            rgba(255,255,255,.86) 30%,
+            rgba(255,255,255,.70) 45%,
+            rgba(255,255,255,.30) 60%,
+            rgba(255,255,255,.05) 100%),
         url('https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85')
             center right / cover no-repeat,
         linear-gradient(135deg, #FFFFFF 0%, #F5F8FC 50%, #EEF3FF 100%);
@@ -76,9 +76,23 @@
     position: relative; z-index: 2;
     padding: 90px 56px 90px max(24px, calc((100vw - 1140px) / 2));
 }
-/* Logo scuola come watermark sfumato, fuso con la foto di sfondo dell'hero.
-   mix-blend-mode: screen lo fa "emergere" dallo scuro; la mask radiale
-   dissolve i bordi così non sembra un secondo logo appiccicato. */
+/* Logo scuola in evidenza nell'hero: pieno, nitido, con un alone di luce
+   morbido dietro (glow) che lo stacca dalla foto — effetto "premium". */
+.hero-logo-glow {
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translate(-12%, -50%);
+    width: min(640px, 48vw);
+    height: min(520px, 85%);
+    background: radial-gradient(ellipse closest-side,
+        rgba(255,255,255,.85) 0%,
+        rgba(255,255,255,.45) 45%,
+        rgba(255,255,255,0) 75%);
+    filter: blur(6px);
+    pointer-events: none;
+    z-index: 1;
+}
 .hero-logo-watermark {
     position: absolute;
     top: 50%;
@@ -86,17 +100,14 @@
     transform: translateY(-50%);
     height: min(440px, 75%);
     width: auto;
-    opacity: .92;
-    filter: drop-shadow(0 10px 34px rgba(13,27,46,.30));
-    -webkit-mask-image: radial-gradient(closest-side, #000 68%, transparent 100%);
-    mask-image: radial-gradient(closest-side, #000 68%, transparent 100%);
+    filter: drop-shadow(0 18px 44px rgba(13,27,46,.38));
     pointer-events: none;
     z-index: 1;
 }
 @media (max-width: 1050px) {
     /* Su schermi stretti il testo occupa tutta la larghezza: il watermark
        sotto al testo disturberebbe la lettura. */
-    .hero-logo-watermark { display: none; }
+    .hero-logo-watermark, .hero-logo-glow { display: none; }
 }
 .hero-eyebrow {
     font-size: .68rem; font-weight: 700;
@@ -513,6 +524,7 @@
 {{-- ══ HERO ══ --}}
 <section class="hero" aria-label="Banner principale">
     @if(file_exists(public_path('images/logo-scuola.png')))
+        <div class="hero-logo-glow" aria-hidden="true"></div>
         <img src="{{ asset('images/logo-scuola.png') }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
     @endif
     <div class="hero-left">
