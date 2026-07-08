@@ -152,8 +152,20 @@
     </div>
 </section>
 
-{{-- A COSA SERVONO --}}
+{{-- CAMBRIDGE PREPARATION CENTRE + ALTRE CERTIFICAZIONI --}}
 <section class="cert-sec alt">
+    <div class="c cert-narrow">
+        <h2>Cambridge <em>Preparation Centre</em> e le altre certificazioni</h2>
+        <p>A&amp;A Language Center è <strong>Preparation Centre di Cambridge English</strong>: prepariamo i nostri studenti agli esami Cambridge (KET, PET, First, Advanced, Proficiency) con percorsi mirati tenuti da docenti qualificati.</p>
+        <p>Prepariamo inoltre a tutte le principali certificazioni internazionali — <strong>IELTS, TOEFL, DELE (Instituto Cervantes), DELF/DALF (France Éducation International), Goethe-Zertifikat, PLIDA, CILS/CELI, TRKI–TORFL, CAPLE</strong> — i cui esami si sostengono presso i rispettivi enti certificatori ufficiali.</p>
+        <div class="cert-highlight">
+            ℹ️ <strong>In sintesi:</strong> siamo sede d'esami ufficiale <strong>solo per Trinity College London</strong> (n° 8241): gli esami Trinity si sostengono direttamente da noi. Per tutte le altre certificazioni siamo centro di preparazione.
+        </div>
+    </div>
+</section>
+
+{{-- A COSA SERVONO --}}
+<section class="cert-sec">
     <div class="c">
         <div class="cert-narrow" style="text-align:center;">
             <h2>A cosa servono le certificazioni Trinity</h2>

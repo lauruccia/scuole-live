@@ -523,9 +523,15 @@
 
 {{-- ══ HERO ══ --}}
 <section class="hero" aria-label="Banner principale">
-    @if(file_exists(public_path('images/logo-scuola.png')))
+    @php
+        // Versione quadrata del logo (globo + bandiere) dedicata all'hero;
+        // fallback sul logo standard se non ancora caricata.
+        $heroLogo = file_exists(public_path('images/logo-hero.png')) ? 'images/logo-hero.png'
+                  : (file_exists(public_path('images/logo-scuola.png')) ? 'images/logo-scuola.png' : null);
+    @endphp
+    @if($heroLogo)
         <div class="hero-logo-glow" aria-hidden="true"></div>
-        <img src="{{ asset('images/logo-scuola.png') }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
+        <img src="{{ asset($heroLogo) }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
     @endif
     <div class="hero-left">
         <div class="hero-eyebrow">
@@ -559,8 +565,8 @@
 </section>
 
 {{-- ══ CERT STRIP ══ --}}
-<div class="cert-strip" aria-label="Enti certificatori ufficiali">
-    <p class="cert-strip-label">Sedi esami ufficiali — Certificazioni internazionali riconosciute</p>
+<div class="cert-strip" aria-label="Certificazioni internazionali">
+    <p class="cert-strip-label">Sede Esami Ufficiale Trinity College London n° 8241 · Cambridge Preparation Centre · Preparazione a tutte le principali certificazioni</p>
     <div class="c">
         <div class="cert-logos">
             <a href="{{ route('le-certificazioni') }}" class="cert-logo-item" title="Le certificazioni Trinity College London — Sede esami n° 8241" aria-label="Scopri le certificazioni Trinity College London">
@@ -612,7 +618,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🏆</div>
                     <h4>Certificazioni riconosciute</h4>
-                    <p>Preparazione ufficiale per Trinity, IELTS, Cambridge e tutte le principali certificazioni.</p>
+                    <p>Sede esami Trinity College London, Cambridge Preparation Centre e preparazione a IELTS e tutte le principali certificazioni.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">💻</div>
