@@ -1,8 +1,8 @@
 @extends('public.layout')
 
 @section('title', 'Scuola di Lingue a Roma | A&A Language Center San Paolo')
-@section('description', 'Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri con docenti madrelingua. Sede esami Trinity College London. Test di livello gratuito.')
-@section('keywords', 'scuola di lingue Roma, scuola di lingue Roma San Paolo, corsi di lingue Roma, corsi di inglese Roma, docenti madrelingua Roma, Trinity College Roma, certificazioni internazionali lingue Roma, A&A Language Center')
+@section('description', 'Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri con docenti qualificati madrelingua e/o bilingue. Sede esami Trinity College London. Test di livello gratuito.')
+@section('keywords', 'scuola di lingue Roma, scuola di lingue Roma San Paolo, corsi di lingue Roma, corsi di inglese Roma, docenti madrelingua e bilingue Roma, Trinity College Roma, certificazioni internazionali lingue Roma, A&A Language Center')
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -518,7 +518,7 @@
     <div class="hero-left">
         <div class="hero-eyebrow">
             <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
-            DOCENTI MADRELINGUA &nbsp;·&nbsp;
+            DOCENTI QUALIFICATI MADRELINGUA E/O BILINGUE &nbsp;·&nbsp;
             CERTIFICAZIONI INTERNAZIONALI
         </div>
         <h1>
@@ -581,7 +581,7 @@
                 <div class="section-label">Perché scegliere A&A</div>
                 <h2 class="sec-heading" id="why-title">Un metodo.<br>Un'esperienza.<br>Risultati concreti.</h2>
                 <div class="why-underline"></div>
-                <p><strong>A&amp;A Language Center</strong> è una <strong>scuola di lingue a Roma</strong>, nel quartiere San Paolo, con oltre 20 anni di esperienza nell'insegnamento delle lingue straniere. Metodi innovativi, docenti madrelingua qualificati e un approccio completamente personalizzato sul tuo livello CEFR e sui tuoi obiettivi — sia che tu cerchi corsi di inglese, italiano per stranieri o lingue per il lavoro.</p>
+                <p><strong>A&amp;A Language Center</strong> è una <strong>scuola di lingue a Roma</strong>, nel quartiere San Paolo, con oltre 20 anni di esperienza nell'insegnamento delle lingue straniere. Metodi innovativi, docenti qualificati madrelingua e/o bilingue e un approccio completamente personalizzato sul tuo livello CEFR e sui tuoi obiettivi — sia che tu cerchi corsi di inglese, italiano per stranieri o lingue per il lavoro.</p>
                 <div class="why-cta">
                     <a href="{{ route('iscrizione') }}" class="btn-primary">Prenota il test gratuito →</a>
                 </div>
@@ -590,7 +590,7 @@
                 <div class="feature-card">
                     <div class="feature-icon">🌍</div>
                     <h4>Insegnanti internazionali</h4>
-                    <p>Madrelingua qualificati provenienti da tutto il mondo con esperienza didattica certificata.</p>
+                    <p>Docenti qualificati madrelingua e/o bilingue provenienti da tutto il mondo con esperienza didattica certificata.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🎯</div>
@@ -814,9 +814,9 @@
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
     $faqItems = [
-        ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti madrelingua qualificati. Vedi il <a href="' . route('checkout.catalogo') . '">catalogo completo</a>.</p>'],
+        ['q' => 'Che corsi di lingue offrite a Roma?', 'a' => '<p>Offriamo corsi di <strong>inglese, spagnolo, francese, tedesco, arabo, russo, portoghese, cinese</strong> e <strong>italiano per stranieri</strong>. Tutti i livelli CEFR (A1–C2), con docenti qualificati madrelingua e/o bilingue. Vedi il <a href="' . route('checkout.catalogo') . '">catalogo completo</a>.</p>'],
         ['q' => 'Dove si trova la scuola?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. A pochi passi dalle fermate metro San Paolo e Marconi (linea B), ben collegati con EUR, Garbatella, Ostiense e Testaccio.</p>'],
-        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente madrelingua. Al termine ricevi una valutazione CEFR dettagliata. <a href="' . route('iscrizione') . '">Prenotalo qui</a>.</p>'],
+        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente qualificato madrelingua o bilingue. Al termine ricevi una valutazione CEFR dettagliata. <a href="' . route('iscrizione') . '">Prenotalo qui</a>.</p>'],
         ['q' => 'Posso seguire i corsi online?', 'a' => '<p>Sì. Tutti i nostri corsi sono disponibili anche in modalità online (videoconferenza live) con la stessa qualità delle lezioni in presenza. Offriamo inoltre il servizio esclusivo <strong>Inglese al Telefono</strong>: 30 minuti al giorno per migliorare lo speaking.</p>'],
         ['q' => 'Siete sede d\'esame Trinity College London?', 'a' => '<p>Sì. A&amp;A Language Center è <strong>Sede d\'Esame Ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l\'anno direttamente nella nostra sede.</p>'],
         ['q' => 'Avete corsi per aziende?', 'a' => '<p>Sì. Dal 2002 facciamo formazione linguistica B2B per aziende, enti pubblici, hotel e studi professionali. Tra i clienti: MEF, Confcommercio, H10 Hotels. Vedi <a href="' . route('landing.aziendali') . '">Corsi Aziendali</a>.</p>'],

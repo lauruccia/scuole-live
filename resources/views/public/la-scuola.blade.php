@@ -1,7 +1,7 @@
 @extends('public.layout')
 
 @section('title', 'La Scuola di Lingue a Roma San Paolo | A&A Language Center')
-@section('description', 'A&A Language Center, scuola di lingue a Roma San Paolo dal 2002. Sede ufficiale esami Trinity College London n° 8241. Docenti madrelingua, corsi personalizzati per tutte le età e tutti i livelli CEFR.')
+@section('description', 'A&A Language Center, scuola di lingue a Roma San Paolo dal 2002. Sede ufficiale esami Trinity College London n° 8241. Docenti qualificati madrelingua e/o bilingue, corsi personalizzati per tutte le età e tutti i livelli CEFR.')
 @section('keywords', 'scuola di lingue Roma San Paolo, scuola di inglese Roma San Paolo, centro esami Trinity Roma, sede Trinity College Roma 8241, scuola di lingue EUR, scuola di lingue Marconi, scuola di lingue Garbatella, A&A Language Center')
 
 @section('breadcrumb-jsonld')
@@ -183,7 +183,7 @@
             </div>
             <div class="feature-card">
                 <div class="feature-icon">🌍</div>
-                <h3>Docenti madrelingua</h3>
+                <h3>Docenti qualificati madrelingua e/o bilingue</h3>
                 <p>Tutti i nostri insegnanti provengono da paesi di lingua madre o sono bilingue certificati, con aggiornamenti annuali tenuti dal Trinity College London.</p>
             </div>
             <div class="feature-card">

@@ -8,8 +8,8 @@
     {{-- ════════════════════════════════════════════
          SEO META — Indicizzazione & Crawling
     ════════════════════════════════════════════ --}}
-    <meta name="description" content="@yield('description', 'A&A Language Center: scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri. Docenti madrelingua, sede esami Trinity College London n° 8241.')">
-    <meta name="keywords" content="@yield('keywords', 'scuola di lingue Roma, corsi di lingue Roma, corsi di inglese Roma, scuola di inglese Roma San Paolo, preparazione Trinity Roma, preparazione IELTS Roma, preparazione Cambridge Roma, italiano per stranieri Roma, corsi aziendali lingue Roma, docenti madrelingua Roma, certificazioni internazionali lingue Roma, A&A Language Center')">
+    <meta name="description" content="@yield('description', 'A&A Language Center: scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri. Docenti qualificati madrelingua e/o bilingue, sede esami Trinity College London n° 8241.')">
+    <meta name="keywords" content="@yield('keywords', 'scuola di lingue Roma, corsi di lingue Roma, corsi di inglese Roma, scuola di inglese Roma San Paolo, preparazione Trinity Roma, preparazione IELTS Roma, preparazione Cambridge Roma, italiano per stranieri Roma, corsi aziendali lingue Roma, docenti madrelingua e bilingue Roma, certificazioni internazionali lingue Roma, A&A Language Center')">
     <meta name="author" content="A&A Language Center">
     <meta name="robots" content="@yield('robots', 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1')">
     <meta name="googlebot" content="index, follow">
@@ -646,7 +646,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             "@@id": "{{ config('app.url') }}/#languageschool",
             "name": "{{ config('app.name') }}",
             "alternateName": "A&A Language Center Roma",
-            "description": "Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri e altre lingue con docenti madrelingua qualificati. Sede ufficiale esami Trinity College London n° 8241. Corsi individuali, mini gruppi, aziendali, online e in presenza.",
+            "description": "Scuola di lingue a Roma San Paolo dal 2002. Corsi di inglese, spagnolo, francese, tedesco, arabo, italiano per stranieri e altre lingue con docenti qualificati madrelingua e/o bilingue. Sede ufficiale esami Trinity College London n° 8241. Corsi individuali, mini gruppi, aziendali, online e in presenza.",
             "url": "{{ config('app.url') }}",
             "image": "{{ asset('images/og-default.jpg') }}",
             "telephone": "+39-06-5743734",
@@ -786,7 +786,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 @else
                     <div class="footer-brand-name">A&A Language Center</div>
                 @endif
-                <p class="footer-desc">Scuola di lingue a Roma San Paolo dal 2002. Corsi personalizzati con docenti madrelingua. Sede ufficiale esami Trinity College London n° 8241.</p>
+                <p class="footer-desc">Scuola di lingue a Roma San Paolo dal 2002. Corsi personalizzati con docenti qualificati madrelingua e/o bilingue. Sede ufficiale esami Trinity College London n° 8241.</p>
                 <div class="footer-certs">
                     <a href="{{ route('le-certificazioni') }}" class="footer-cert-tag" title="Le certificazioni Trinity College London">Trinity College London</a>
                     <span class="footer-cert-tag">Cambridge</span>

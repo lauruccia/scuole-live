@@ -1,7 +1,7 @@
 @extends('public.layout')
 
 @section('title', 'Corsi di Inglese a Roma — Trinity, Cambridge, IELTS | A&A')
-@section('description', 'Corsi di inglese a Roma San Paolo con docenti madrelingua. Preparazione esami Trinity, Cambridge, IELTS, TOEFL. Lezioni individuali, mini gruppi, online. Test di livello gratuito.')
+@section('description', 'Corsi di inglese a Roma San Paolo con docenti qualificati madrelingua e/o bilingue. Preparazione esami Trinity, Cambridge, IELTS, TOEFL. Lezioni individuali, mini gruppi, online. Test di livello gratuito.')
 @section('keywords', 'corsi di inglese Roma, scuola di inglese Roma, corsi inglese Roma San Paolo, preparazione Trinity Roma, esame Trinity Roma, preparazione IELTS Roma, preparazione Cambridge Roma, corsi inglese certificati Roma, corsi inglese adulti Roma, corsi inglese bambini Roma, corso inglese individuale Roma, corso inglese intensivo Roma, corso inglese serale Roma, centro esami Trinity Roma')
 @section('og-image-alt', 'Corsi di inglese a Roma — A&A Language Center')
 
@@ -24,7 +24,7 @@
     "@@context": "https://schema.org",
     "@@type": "Course",
     "name": "Corsi di Inglese a Roma",
-    "description": "Corsi di inglese a Roma con docenti madrelingua qualificati. Tutti i livelli CEFR (A1–C2). Preparazione esami Trinity, Cambridge, IELTS, TOEFL. Lezioni individuali, mini gruppi, online o in presenza.",
+    "description": "Corsi di inglese a Roma con docenti qualificati madrelingua e/o bilingue. Tutti i livelli CEFR (A1–C2). Preparazione esami Trinity, Cambridge, IELTS, TOEFL. Lezioni individuali, mini gruppi, online o in presenza.",
     "provider": {
         "@@type": "EducationalOrganization",
         "name": "A&A Language Center",
@@ -121,7 +121,7 @@
             <span>Corsi di Inglese a Roma</span>
         </div>
         <h1>Corsi di <em>Inglese</em> a Roma</h1>
-        <p class="subtitle">Trinity, Cambridge, IELTS, TOEFL. Lezioni con docenti madrelingua. Tutti i livelli CEFR — dall'A1 al C2. Sede ufficiale esami Trinity College London n° 8241.</p>
+        <p class="subtitle">Trinity, Cambridge, IELTS, TOEFL. Lezioni con docenti qualificati madrelingua e/o bilingue. Tutti i livelli CEFR — dall'A1 al C2. Sede ufficiale esami Trinity College London n° 8241.</p>
     </div>
 </section>
 
@@ -223,7 +223,7 @@
             <div class="modalita-c">
                 <div class="modalita-c-icon">👤</div>
                 <h4>Individuale</h4>
-                <p>Lezioni 1-a-1 con docente madrelingua. Massima personalizzazione e velocità.</p>
+                <p>Lezioni 1-a-1 con docente qualificato madrelingua o bilingue. Massima personalizzazione e velocità.</p>
             </div>
             <div class="modalita-c">
                 <div class="modalita-c-icon">👥</div>
@@ -254,7 +254,7 @@
         ['q' => 'Sostenete gli esami Trinity direttamente nella vostra sede?', 'a' => '<p>Sì. Siamo <strong>Sede d\'Esame ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE (Graded Examinations in Spoken English) e ISE (Integrated Skills in English) durante tutto l\'anno. Gli esami si sostengono direttamente nella nostra sede di Viale Leonardo da Vinci 193 a Roma.</p>'],
         ['q' => 'Dove si trova la scuola e con quali mezzi pubblici si raggiunge?', 'a' => '<p>Siamo in <strong>Viale Leonardo da Vinci 193, 00145 Roma</strong>, nel quartiere San Paolo. Siamo a pochi passi dalle fermate metro <strong>San Paolo</strong> (linea B) e <strong>Marconi</strong>, ben collegati anche con i quartieri EUR, Garbatella e Ostiense.</p>'],
         ['q' => 'Offrite corsi di inglese intensivi?', 'a' => '<p>Sì. Oltre ai corsi standard a frequenza bisettimanale, organizziamo corsi intensivi (anche tutti i giorni) e ultra-intensivi per chi ha esigenze rapide: preparazione last-minute IELTS, colloqui di lavoro, trasferimenti all\'estero.</p>'],
-        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Il nostro Entrance Test si compone di una parte scritta (grammatica, lettura, comprensione) e una parte orale (5–10 minuti con un docente madrelingua). Al termine ricevi una valutazione CEFR dettagliata e una proposta di corso. Puoi <a href="' . route('iscrizione') . '">prenotarlo qui</a>.</p>'],
+        ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Il nostro Entrance Test si compone di una parte scritta (grammatica, lettura, comprensione) e una parte orale (5–10 minuti con un docente qualificato madrelingua o bilingue). Al termine ricevi una valutazione CEFR dettagliata e una proposta di corso. Puoi <a href="' . route('iscrizione') . '">prenotarlo qui</a>.</p>'],
         ['q' => 'Fate corsi di inglese per bambini e ragazzi?', 'a' => '<p>Sì. Abbiamo corsi dedicati a bambini (5–10 anni) e ragazzi (11–17 anni), con metodologia ludica per i più piccoli e preparazione esami Trinity/Cambridge YLE per i ragazzi. I corsi sono in piccoli gruppi omogenei per età e livello.</p>'],
     ];
 @endphp
