@@ -74,16 +74,27 @@
     position: relative; z-index: 2;
     padding: 90px 56px 90px max(24px, calc((100vw - 1140px) / 2));
 }
-/* Logo scuola in evidenza nella slide principale */
-.hero-logo {
-    display: block;
-    height: 150px;
+/* Logo scuola come watermark sfumato, fuso con la foto di sfondo dell'hero.
+   mix-blend-mode: screen lo fa "emergere" dallo scuro; la mask radiale
+   dissolve i bordi così non sembra un secondo logo appiccicato. */
+.hero-logo-watermark {
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translateY(-50%);
+    height: min(440px, 75%);
     width: auto;
-    margin-bottom: 26px;
-    filter: drop-shadow(0 0 22px rgba(255,255,255,.28)) drop-shadow(0 4px 14px rgba(0,0,0,.45));
+    opacity: .16;
+    mix-blend-mode: screen;
+    -webkit-mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
+    pointer-events: none;
+    z-index: 1;
 }
-@media (max-width: 640px) {
-    .hero-logo { height: 110px; margin-bottom: 20px; }
+@media (max-width: 1050px) {
+    /* Su schermi stretti il testo occupa tutta la larghezza: il watermark
+       sotto al testo disturberebbe la lettura. */
+    .hero-logo-watermark { display: none; }
 }
 .hero-eyebrow {
     font-size: .68rem; font-weight: 700;
@@ -508,10 +519,10 @@
 
 {{-- ══ HERO ══ --}}
 <section class="hero" aria-label="Banner principale">
+    @if(file_exists(public_path('images/logo-scuola.png')))
+        <img src="{{ asset('images/logo-scuola.png') }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
+    @endif
     <div class="hero-left">
-        @if(file_exists(public_path('images/logo-scuola.png')))
-            <img src="{{ asset('images/logo-scuola.png') }}" alt="A&A Language Center — Scuola di Lingue a Roma" class="hero-logo" loading="eager">
-        @endif
         <div class="hero-eyebrow">
             <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
             DOCENTI MADRELINGUA &nbsp;·&nbsp;
