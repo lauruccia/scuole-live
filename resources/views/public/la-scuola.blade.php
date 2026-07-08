@@ -201,10 +201,10 @@
         <div class="sec-header">
             <div class="section-label white">Certificazioni</div>
             <h2 class="sec-heading white">Sede ufficiale <span style="color:var(--gold)">Trinity College London</span></h2>
-            <p class="sec-subtext white">Siamo <strong style="color:#fff;">Sede d'esame n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l'anno e prepariamo i nostri studenti per le principali certificazioni internazionali.</p>
+            <p class="sec-subtext white">Siamo <strong style="color:#fff;">Sede d'esame n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l'anno e prepariamo i nostri studenti per le principali certificazioni internazionali. <a href="{{ route('le-certificazioni') }}" style="color:var(--gold);font-weight:700;text-decoration:underline;">Scopri le certificazioni →</a></p>
         </div>
         <div class="cert-grid">
-            <span class="cert-tag gold">★ Trinity College London — Sede n° 8241</span>
+            <a href="{{ route('le-certificazioni') }}" class="cert-tag gold" title="Scopri le certificazioni Trinity College London">★ Trinity College London — Sede n° 8241</a>
             <span class="cert-tag">IELTS</span>
             <span class="cert-tag">TOEFL</span>
             <span class="cert-tag">Cambridge</span>

@@ -89,6 +89,8 @@ class SitemapController extends Controller
             ['loc' => route('iscrizione'),      'changefreq' => 'monthly', 'priority' => 0.9, 'lastmod' => $today],
             ['loc' => route('contattaci'),      'changefreq' => 'monthly', 'priority' => 0.7, 'lastmod' => $today],
             ['loc' => route('lavora-con-noi'),  'changefreq' => 'monthly', 'priority' => 0.5, 'lastmod' => $today],
+            ['loc' => route('le-certificazioni'), 'changefreq' => 'monthly', 'priority' => 0.8, 'lastmod' => $today],
+            ['loc' => route('news.index'),      'changefreq' => 'weekly',  'priority' => 0.7, 'lastmod' => $today],
             ['loc' => route('privacy'),         'changefreq' => 'yearly',  'priority' => 0.3, 'lastmod' => $today],
         ];
 
@@ -127,6 +129,24 @@ class SitemapController extends Controller
             report($e);
         }
 
-        return array_merge($static, $landings, $courseUrls);
+        // News ed eventi pubblicati
+        $newsUrls = [];
+        try {
+            $posts = \App\Models\NewsPost::published()->get(['slug', 'updated_at']);
+
+            foreach ($posts as $p) {
+                $newsUrls[] = [
+                    'loc'        => route('news.show', $p->slug),
+                    'changefreq' => 'monthly',
+                    'priority'   => 0.6,
+                    'lastmod'    => optional($p->updated_at)->toIso8601String() ?? $today,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Tabella non ancora migrata o DB non disponibile: non rompiamo la sitemap.
+            report($e);
+        }
+
+        return array_merge($static, $landings, $courseUrls, $newsUrls);
     }
 }

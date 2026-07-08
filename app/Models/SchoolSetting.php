@@ -42,6 +42,26 @@ class SchoolSetting extends Model
         return static::bool('digital_signature_enabled', false);
     }
 
+    // ─── Avviso sul sito (es. chiusura per ferie) ────────────────────────────
+
+    /** Il popup di avviso sulle pagine pubbliche è attivo? */
+    public static function siteNoticeEnabled(): bool
+    {
+        return static::bool('site_notice_enabled', false);
+    }
+
+    /** Titolo dell'avviso (es. "Chiusura estiva") */
+    public static function siteNoticeTitle(): string
+    {
+        return static::get('site_notice_title', 'Avviso');
+    }
+
+    /** Testo dell'avviso (es. "La scuola è chiusa per ferie dal ... al ...") */
+    public static function siteNoticeText(): string
+    {
+        return static::get('site_notice_text', '');
+    }
+
     // ─── Brand / Identità scuola ─────────────────────────────────────────────
 
     /** Nome commerciale (es. "A&A Language Center") */

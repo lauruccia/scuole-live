@@ -72,6 +72,10 @@ class ImpostazioniScuola extends Page implements HasForms
             'payment_bonifico_enabled'  => SchoolSetting::paymentBonificoEnabled(),
             'payment_stripe_enabled'    => SchoolSetting::paymentStripeEnabled(),
             'payment_paypal_enabled'    => SchoolSetting::paymentPaypalEnabled(),
+            // Avviso sul sito (es. chiusura per ferie)
+            'site_notice_enabled'       => SchoolSetting::siteNoticeEnabled(),
+            'site_notice_title'         => SchoolSetting::siteNoticeTitle(),
+            'site_notice_text'          => SchoolSetting::siteNoticeText(),
         ]);
     }
 
@@ -137,6 +141,33 @@ class ImpostazioniScuola extends Page implements HasForms
                             ->placeholder('info@aealanguagecenter.it')
                             ->email()
                             ->maxLength(255),
+                    ]),
+
+                // ── Avviso sul sito (es. chiusura per ferie) ──────────────────
+                Section::make('Avviso sul sito pubblico')
+                    ->description('Mostra un popup su tutte le pagine del sito (es. "La scuola è chiusa per ferie"). Resta visibile a tutti i visitatori finché non lo disattivi.')
+                    ->icon('heroicon-o-megaphone')
+                    ->columns(2)
+                    ->schema([
+                        Toggle::make('site_notice_enabled')
+                            ->label('Mostra l\'avviso sul sito')
+                            ->helperText('Attiva/disattiva il popup. La modifica è visibile sul sito entro pochi minuti.')
+                            ->onColor('danger')
+                            ->offColor('gray')
+                            ->columnSpanFull(),
+
+                        TextInput::make('site_notice_title')
+                            ->label('Titolo dell\'avviso')
+                            ->placeholder('Chiusura estiva')
+                            ->maxLength(120),
+
+                        Textarea::make('site_notice_text')
+                            ->label('Testo dell\'avviso')
+                            ->placeholder("La scuola è chiusa per ferie dal 1 al 31 agosto.\nLe attività riprenderanno regolarmente il 1 settembre.")
+                            ->rows(4)
+                            ->maxLength(1000)
+                            ->helperText('Puoi andare a capo: le righe vengono mantenute nel popup.')
+                            ->columnSpanFull(),
                     ]),
 
                 // ── Dati bancari ──────────────────────────────────────────────
@@ -289,6 +320,11 @@ class ImpostazioniScuola extends Page implements HasForms
         SchoolSetting::set('payment_bonifico_enabled', !empty($state['payment_bonifico_enabled']) ? '1' : '0');
         SchoolSetting::set('payment_stripe_enabled',   !empty($state['payment_stripe_enabled'])   ? '1' : '0');
         SchoolSetting::set('payment_paypal_enabled',   !empty($state['payment_paypal_enabled'])   ? '1' : '0');
+
+        // Avviso sul sito (es. chiusura per ferie)
+        SchoolSetting::set('site_notice_enabled', !empty($state['site_notice_enabled']) ? '1' : '0');
+        SchoolSetting::set('site_notice_title',   $state['site_notice_title'] ?? 'Avviso');
+        SchoolSetting::set('site_notice_text',    $state['site_notice_text'] ?? '');
 
         Notification::make()
             ->title('Impostazioni salvate')

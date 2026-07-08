@@ -429,6 +429,34 @@
     max-width: 440px; margin: 0 auto 36px; line-height: 1.7;
 }
 
+/* ── NEWS ED EVENTI ──────────────────────────────── */
+.home-news-section { padding: 84px 0; background: var(--bg); }
+.home-news-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
+@media (max-width: 900px) { .home-news-grid { grid-template-columns: 1fr; } }
+.home-news-card {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform .25s, box-shadow .25s;
+}
+.home-news-card:hover { transform: translateY(-5px); box-shadow: var(--shadow); }
+.home-news-img { aspect-ratio: 16 / 9; background: var(--blue-l); overflow: hidden; display: block; }
+.home-news-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-news-body { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.home-news-badge {
+    align-self: flex-start; font-size: .66rem; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 999px;
+    background: var(--blue-l); color: var(--blue);
+}
+.home-news-badge.evento { background: var(--gold-l); color: var(--gold-d); }
+.home-news-card h3 { font-size: 1.05rem; font-weight: 700; line-height: 1.35; }
+.home-news-card h3 a:hover { color: var(--blue); }
+.home-news-date { font-size: .76rem; color: var(--muted); }
+.home-news-excerpt { font-size: .87rem; color: var(--muted); flex: 1; }
+.home-news-more { font-size: .84rem; font-weight: 600; color: var(--blue); }
+.home-news-all { text-align: center; margin-top: 36px; }
+
 /* ── RESPONSIVE ──────────────────────────────────── */
 @media (max-width: 1050px) {
     .hero                { grid-template-columns: 1fr; min-height: auto; }
@@ -516,9 +544,9 @@
     <p class="cert-strip-label">Sedi esami ufficiali — Certificazioni internazionali riconosciute</p>
     <div class="c">
         <div class="cert-logos">
-            <div class="cert-logo-item">
+            <a href="{{ route('le-certificazioni') }}" class="cert-logo-item" title="Le certificazioni Trinity College London — Sede esami n° 8241" aria-label="Scopri le certificazioni Trinity College London">
                 <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London" loading="lazy">
-            </div>
+            </a>
             <div class="cert-logo-item">
                 <img src="{{ asset('images/cert-cambridge.svg') }}" alt="Cambridge Assessment English" loading="lazy">
             </div>
@@ -737,6 +765,44 @@
     </div>
 </section>
 
+{{-- ══ NEWS ED EVENTI ══ --}}
+@if(isset($latestNews) && $latestNews->isNotEmpty())
+<section class="home-news-section" aria-labelledby="news-title">
+    <div class="c">
+        <div class="sec-header center">
+            <div class="section-label" style="justify-content:center;">Dalla scuola</div>
+            <h2 class="sec-heading" id="news-title">News ed <em>Eventi</em></h2>
+        </div>
+        <div class="home-news-grid">
+            @foreach($latestNews as $post)
+                <article class="home-news-card">
+                    @if($post->cover_image)
+                        <a href="{{ route('news.show', $post->slug) }}" class="home-news-img" aria-hidden="true" tabindex="-1">
+                            <img src="{{ asset('storage/' . $post->cover_image) }}" alt="{{ $post->title }}" loading="lazy">
+                        </a>
+                    @endif
+                    <div class="home-news-body">
+                        <span class="home-news-badge {{ $post->type }}">{{ $post->type_label }}</span>
+                        <h3><a href="{{ route('news.show', $post->slug) }}">{{ $post->title }}</a></h3>
+                        <span class="home-news-date">
+                            {{ optional($post->published_at)->translatedFormat('d F Y') }}
+                            @if($post->type === 'evento' && $post->event_date)
+                                · {{ $post->event_date->translatedFormat('d F Y') }}
+                            @endif
+                        </span>
+                        <p class="home-news-excerpt">{{ \Illuminate\Support\Str::limit($post->excerpt ?: strip_tags($post->body), 110) }}</p>
+                        <a class="home-news-more" href="{{ route('news.show', $post->slug) }}">Leggi tutto →</a>
+                    </div>
+                </article>
+            @endforeach
+        </div>
+        <div class="home-news-all">
+            <a href="{{ route('news.index') }}" class="btn-hero-primary">TUTTE LE NEWS →</a>
+        </div>
+    </div>
+</section>
+@endif
+
 {{-- ══ FAQ ══ --}}
 {{-- @cache-bust-faq 2026-05-18 --}}
 @php
@@ -746,7 +812,6 @@
         ['q' => 'Il test di livello è davvero gratuito?', 'a' => '<p>Sì, completamente gratuito e senza impegno. Comprende una parte scritta e una orale con un docente madrelingua. Al termine ricevi una valutazione CEFR dettagliata. <a href="' . route('iscrizione') . '">Prenotalo qui</a>.</p>'],
         ['q' => 'Posso seguire i corsi online?', 'a' => '<p>Sì. Tutti i nostri corsi sono disponibili anche in modalità online (videoconferenza live) con la stessa qualità delle lezioni in presenza. Offriamo inoltre il servizio esclusivo <strong>Inglese al Telefono</strong>: 30 minuti al giorno per migliorare lo speaking.</p>'],
         ['q' => 'Siete sede d\'esame Trinity College London?', 'a' => '<p>Sì. A&amp;A Language Center è <strong>Sede d\'Esame Ufficiale Trinity College London n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l\'anno direttamente nella nostra sede.</p>'],
-        ['q' => 'Posso pagare con la Carta del Docente?', 'a' => '<p>Sì. Siamo ente accreditato MIUR. I docenti di ruolo possono usare la Carta del Docente per pagare integralmente i corsi di lingue, sia per la propria formazione che per la preparazione di certificazioni linguistiche.</p>'],
         ['q' => 'Avete corsi per aziende?', 'a' => '<p>Sì. Dal 2002 facciamo formazione linguistica B2B per aziende, enti pubblici, hotel e studi professionali. Tra i clienti: MEF, Confcommercio, H10 Hotels. Vedi <a href="' . route('landing.aziendali') . '">Corsi Aziendali</a>.</p>'],
     ];
 @endphp

@@ -1,8 +1,8 @@
 @extends('public.layout')
 
 @section('title', 'Servizi — Corsi di Lingue Online e in Presenza a Roma')
-@section('description', 'Corsi di lingue online e in presenza a Roma, inglese al telefono, test di livello gratuito, preparazione certificazioni Trinity, Cambridge, IELTS. Corsi per docenti con Carta del Docente.')
-@section('keywords', 'corsi di lingue online Roma, corsi di lingue in presenza Roma, inglese al telefono Roma, test livello inglese gratuito Roma, Carta del Docente corsi lingue, corso inglese individuale Roma, corso inglese mini gruppo Roma, preparazione certificazioni lingue Roma')
+@section('description', 'Corsi di lingue online e in presenza a Roma, inglese al telefono, test di livello gratuito, preparazione certificazioni Trinity, Cambridge, IELTS. Corsi di formazione per docenti.')
+@section('keywords', 'corsi di lingue online Roma, corsi di lingue in presenza Roma, inglese al telefono Roma, test livello inglese gratuito Roma, corsi formazione docenti lingue Roma, corso inglese individuale Roma, corso inglese mini gruppo Roma, preparazione certificazioni lingue Roma')
 
 @section('breadcrumb-jsonld')
 <script type="application/ld+json">
@@ -111,7 +111,7 @@
             <span>Servizi</span>
         </div>
         <h1>I Nostri <em>Servizi</em> — Corsi di Lingue a Roma</h1>
-        <p class="subtitle">Corsi online e in presenza, inglese al telefono, test di livello gratuito, preparazione certificazioni internazionali e Carta del Docente.</p>
+        <p class="subtitle">Corsi online e in presenza, inglese al telefono, test di livello gratuito, preparazione certificazioni internazionali e formazione docenti.</p>
     </div>
 </section>
 
@@ -157,8 +157,8 @@
             <div class="service-card">
                 <div class="service-icon">🎓</div>
                 <h3>Corsi per Docenti</h3>
-                <p>A&amp;A Language Center è accreditata MIUR come ente di formazione. I docenti di ruolo possono utilizzare la <strong>Carta del Docente</strong> per sostenere integralmente i costi del corso.</p>
-                <span class="service-tag">Carta del Docente · MIUR</span>
+                <p>A&amp;A Language Center è accreditata MIUR come ente di formazione. Offriamo corsi di lingue dedicati ai docenti, per la formazione personale e la preparazione di certificazioni linguistiche valide ai fini concorsuali.</p>
+                <span class="service-tag">Formazione docenti · MIUR</span>
             </div>
         </div>
     </div>

@@ -183,7 +183,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        height: 76px;
+        height: 96px;
     }
 
     /* Brand */
@@ -194,7 +194,11 @@
         text-decoration: none;
         flex-shrink: 0;
     }
-    .nav-brand img { height: 90px; width: auto; }
+    .nav-brand img {
+        height: 128px;
+        width: auto;
+        filter: drop-shadow(0 3px 10px rgba(0,0,0,.35));
+    }
     .nav-brand-name {
         font-family: 'Plus Jakarta Sans', sans-serif;
         font-size: 1rem;
@@ -579,6 +583,8 @@
     @media (max-width: 960px) {
         .nav-links { display: none; }
         .nav-hamburger { display: flex; }
+        .nav-inner { height: 80px; }
+        .nav-brand img { height: 100px; }
     }
     @media (max-width: 768px) {
         .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
@@ -739,6 +745,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <a href="{{ route('checkout.catalogo') }}" class="nav-link {{ request()->routeIs('checkout.catalogo') ? 'active' : '' }}">Corsi</a>
                 <a href="{{ route('per-le-aziende') }}" class="nav-link {{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
                 <a href="{{ route('servizi') }}" class="nav-link {{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
+                <a href="{{ route('news.index') }}" class="nav-link {{ request()->routeIs('news.*') ? 'active' : '' }}">News</a>
                 <a href="{{ route('contattaci') }}" class="nav-link {{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
                 <a href="{{ route('iscrizione') }}" class="btn-nav-cta">Iscriviti ↗</a>
             </div>
@@ -757,6 +764,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <a href="{{ route('checkout.catalogo') }}" class="{{ request()->routeIs('checkout.catalogo') ? 'active' : '' }}">Corsi</a>
         <a href="{{ route('per-le-aziende') }}" class="{{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
         <a href="{{ route('servizi') }}" class="{{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
+        <a href="{{ route('news.index') }}" class="{{ request()->routeIs('news.*') ? 'active' : '' }}">📰 News ed Eventi</a>
         <a href="{{ route('contattaci') }}" class="{{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
         <a href="{{ route('iscrizione') }}" class="mobile-cta">✨ Iscriviti ora →</a>
     </nav>
@@ -774,13 +782,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             {{-- Col 1: Brand --}}
             <div>
                 @if(file_exists(public_path('images/logo-scuola.png')))
-                    <img src="{{ asset('images/logo-scuola.png') }}" alt="{{ config('app.name') }}" class="footer-brand-logo" style="height:48px;width:auto;display:block;margin-bottom:14px;">
+                    <img src="{{ asset('images/logo-scuola.png') }}" alt="{{ config('app.name') }}" class="footer-brand-logo" style="height:72px;width:auto;display:block;margin-bottom:14px;">
                 @else
                     <div class="footer-brand-name">A&A Language Center</div>
                 @endif
                 <p class="footer-desc">Scuola di lingue a Roma San Paolo dal 2002. Corsi personalizzati con docenti madrelingua. Sede ufficiale esami Trinity College London n° 8241.</p>
                 <div class="footer-certs">
-                    <span class="footer-cert-tag">Trinity College London</span>
+                    <a href="{{ route('le-certificazioni') }}" class="footer-cert-tag" title="Le certificazioni Trinity College London">Trinity College London</a>
                     <span class="footer-cert-tag">Cambridge</span>
                     <span class="footer-cert-tag">IELTS</span>
                     <span class="footer-cert-tag">Goethe</span>
@@ -811,6 +819,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <li><a href="{{ route('landing.italiano-stranieri') }}">Italiano per Stranieri</a></li>
                     <li><a href="{{ route('landing.aziendali') }}">Corsi Aziendali a Roma</a></li>
                     <li><a href="{{ route('servizi') }}">Servizi</a></li>
+                    <li><a href="{{ route('le-certificazioni') }}">Le Certificazioni Trinity</a></li>
+                    <li><a href="{{ route('news.index') }}">News ed Eventi</a></li>
                     <li><a href="{{ route('lavora-con-noi') }}">Lavora con Noi</a></li>
                 </ul>
             </div>
@@ -893,6 +903,47 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
 })();
 </script>
+
+{{-- ══ AVVISO SITO (es. chiusura per ferie) ═══════════════════════════════════
+     Attivabile da Filament → Impostazioni scuola → "Avviso sul sito".
+     Resta visibile su tutte le pagine pubbliche finché lo staff non lo disattiva.
+     Il visitatore può chiuderlo: la scelta vale per la sessione del browser
+     (sessionStorage) e si azzera se lo staff modifica il testo. --}}
+@php
+    $siteNoticeOn    = \App\Models\SchoolSetting::siteNoticeEnabled();
+    $siteNoticeTitle = \App\Models\SchoolSetting::siteNoticeTitle();
+    $siteNoticeText  = \App\Models\SchoolSetting::siteNoticeText();
+@endphp
+@if($siteNoticeOn && trim($siteNoticeText) !== '')
+<div id="siteNoticeOverlay" role="dialog" aria-modal="true" aria-labelledby="siteNoticeTitle" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(7,20,40,.72); backdrop-filter:blur(3px); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:18px; max-width:520px; width:100%; padding:38px 34px 32px; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.35); position:relative;">
+        <button type="button" id="siteNoticeClose" aria-label="Chiudi avviso" style="position:absolute; top:14px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#EEF3FF; color:#1A56DB; font-size:1.05rem; font-weight:700; cursor:pointer; line-height:1;">✕</button>
+        <div style="font-size:2.2rem; margin-bottom:10px;">📢</div>
+        <h2 id="siteNoticeTitle" style="font-family:'Plus Jakarta Sans',sans-serif; font-size:1.35rem; font-weight:800; color:#071428; margin-bottom:12px;">{{ $siteNoticeTitle }}</h2>
+        <div style="font-size:.98rem; color:#4E5D72; line-height:1.65; white-space:pre-line;">{{ $siteNoticeText }}</div>
+        <button type="button" id="siteNoticeOk" style="margin-top:24px; padding:11px 30px; border:none; border-radius:999px; background:#1A56DB; color:#fff; font-weight:700; font-size:.9rem; cursor:pointer;">Ho capito</button>
+    </div>
+</div>
+<script>
+(function () {
+    var overlay = document.getElementById('siteNoticeOverlay');
+    if (!overlay) return;
+    // Chiave legata al contenuto: se lo staff cambia il testo, l'avviso riappare.
+    var key = 'siteNoticeDismissed_' + @json(md5($siteNoticeTitle . '|' . $siteNoticeText));
+    var dismissed = false;
+    try { dismissed = sessionStorage.getItem(key) === '1'; } catch (e) {}
+    if (!dismissed) { overlay.style.display = 'flex'; }
+    function close() {
+        overlay.style.display = 'none';
+        try { sessionStorage.setItem(key, '1'); } catch (e) {}
+    }
+    document.getElementById('siteNoticeClose').addEventListener('click', close);
+    document.getElementById('siteNoticeOk').addEventListener('click', close);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+})();
+</script>
+@endif
 
 @stack('scripts')
 </body>

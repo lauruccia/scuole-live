@@ -25,6 +25,11 @@ Route::get('/per-le-aziende', [PublicController::class, 'perLeAziende'])->name('
 Route::get('/servizi', [PublicController::class, 'servizi'])->name('servizi');
 Route::get('/lavora-con-noi', [PublicController::class, 'lavoraConNoi'])->name('lavora-con-noi');
 Route::get('/contattaci', [PublicController::class, 'contattaci'])->name('contattaci');
+Route::get('/le-certificazioni', [PublicController::class, 'leCertificazioni'])->name('le-certificazioni');
+
+// ─── News ed Eventi ───────────────────────────────────────────────────────────
+Route::get('/news', [PublicController::class, 'newsIndex'])->name('news.index');
+Route::get('/news/{slug}', [PublicController::class, 'newsShow'])->name('news.show');
 
 // ─── SEO Landing pages (long-tail keyword) ───────────────────────────────────
 Route::get('/corsi-inglese-roma', [PublicController::class, 'landingInglese'])->name('landing.inglese');

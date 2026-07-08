@@ -21,7 +21,47 @@ class PublicController extends Controller
             ->groupBy('language_id')
             ->filter(fn ($group, $key) => ! empty($key));
 
-        return view('public.home', compact('coursesByLanguage'));
+        // Ultime news/eventi pubblicati da mostrare in home.
+        // try/catch: se la tabella non è ancora migrata (deploy codice prima
+        // della migration) la home non deve rompersi.
+        try {
+            $latestNews = \App\Models\NewsPost::published()->take(3)->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $latestNews = collect();
+        }
+
+        return view('public.home', compact('coursesByLanguage', 'latestNews'));
+    }
+
+    // ─── News ed Eventi ───────────────────────────────────────────────────────
+
+    public function newsIndex()
+    {
+        $posts = \App\Models\NewsPost::published()->paginate(9);
+
+        return view('public.news.index', compact('posts'));
+    }
+
+    public function newsShow(string $slug)
+    {
+        $post = \App\Models\NewsPost::published()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        $related = \App\Models\NewsPost::published()
+            ->where('id', '!=', $post->id)
+            ->take(3)
+            ->get();
+
+        return view('public.news.show', compact('post', 'related'));
+    }
+
+    // ─── Certificazioni (Trinity College London) ─────────────────────────────
+
+    public function leCertificazioni()
+    {
+        return view('public.le-certificazioni');
     }
 
     public function iscriviti()
