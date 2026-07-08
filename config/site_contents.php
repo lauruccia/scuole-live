@@ -560,7 +560,7 @@ return [
                 'fields' => [
                     'intro_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Formazione aziendale"],
                     'intro_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Formiamo il vostro <em>team</em>"],
-                    'intro_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>A&amp;A Language Center opera dal 2002 con una consolidata esperienza nella <strong>formazione linguistica aziendale a Roma</strong>. Tra i nostri clienti figurano grandi aziende come <strong>MEF</strong>, <strong>Confcommercio</strong> e <strong>H10 Hotels</strong>, oltre a università, enti pubblici nazionali e locali, scuole pubbliche e private.</p><p>Siamo specializzati in corsi personalizzati di <strong>Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Arabo</strong> e <strong>Italiano per stranieri</strong>, progettati per rispondere alle esigenze concrete del mondo professionale.</p><p>I certificati rilasciati sono validi per concorsi pubblici, aggiornamento professionale e formazione del personale finanziata.</p>"],
+                    'intro_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>A&amp;A Language Center opera dal 2002 con una consolidata esperienza nella <strong>formazione linguistica aziendale a Roma</strong>. Tra i nostri clienti figurano grandi aziende come <strong>MEF</strong>, <strong>Confcommercio</strong> e <strong>H10 Hotels</strong>, oltre a università, enti pubblici nazionali e locali, scuole pubbliche e private.</p><p>Siamo specializzati in corsi personalizzati di <strong>Inglese, Spagnolo, Francese, Tedesco, Portoghese, Russo, Arabo</strong> e <strong>Italiano per stranieri</strong>, progettati per rispondere alle esigenze concrete del mondo professionale.</p><p>Organizziamo corsi per il personale nelle sedi aziendali e <strong>Corsi Executive per dirigenti e professionisti</strong>, strutturati sulle esigenze specifiche di ognuno, con particolare attenzione alla <strong>terminologia del proprio settore di attività</strong>.</p><p>I certificati rilasciati sono validi per concorsi pubblici, aggiornamento professionale e formazione del personale finanziata.</p>"],
                     'intro_image' => ['label' => 'Foto', 'type' => 'image', 'default' => "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=900&q=85"],
                 ],
             ],
@@ -576,6 +576,14 @@ return [
                     'step2_text' => ['label' => 'Fase 2 — testo', 'type' => 'textarea', 'default' => "Strutturiamo il programma didattico seguendo i livelli CEFR di partenza del personale e i risultati attesi. Ogni modulo è calibrato sulle reali necessità comunicative."],
                     'step3_title' => ['label' => 'Fase 3 — titolo', 'type' => 'text', 'default' => "Formazione e certificazione"],
                     'step3_text' => ['label' => 'Fase 3 — testo', 'type' => 'textarea', 'default' => "Esame intermedio e finale per misurare i progressi. Al termine viene rilasciato un attestato con livello CEFR. Possibilità di certificazioni internazionali riconosciute."],
+                ],
+            ],
+            'metodo' => [
+                'label' => 'Metodo e docenti',
+                'fields' => [
+                    'metodo_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Metodo e docenti"],
+                    'metodo_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Un metodo <em>comunicativo</em>, docenti da tutto il mondo"],
+                    'metodo_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>A&amp;A Language Center applica le più recenti <strong>metodologie comunicative</strong>: gli insegnanti parlano in lingua fin dalle prime lezioni, focalizzando l'attenzione sulla capacità di parlare e capire. La grammatica viene introdotta in contesti pratici di vita quotidiana e professionale, per accrescere lessico e potere comunicativo in situazioni di lavoro e sociali.</p><p>Il nostro <strong>staff di docenti</strong>, competenti e appassionati, proviene da ogni parte del mondo. Selezionati per la professionalità certificata e per le doti caratteriali, seguono corsi di formazione continua e sanno mettere a proprio agio studenti di ogni età, individuando per ciascuno il materiale didattico più adeguato.</p>"],
                 ],
             ],
             'modalita' => [
@@ -609,6 +617,8 @@ return [
                     'cta_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Contattateci per ricevere un preventivo personalizzato. Risponderemo entro 24 ore lavorative."],
                     'cta_btn1' => ['label' => 'Bottone 1', 'type' => 'text', 'default' => "✦ Richiedi Preventivo Gratuito"],
                     'cta_btn2' => ['label' => 'Bottone 2', 'type' => 'text', 'default' => "✉ Scrivi via email"],
+                    'cta_email' => ['label' => 'Indirizzo email del bottone 2', 'type' => 'text', 'default' => "info@aealanguagecenter.it"],
+                    'cta_phone' => ['label' => 'Telefono sotto i bottoni', 'type' => 'html', 'default' => "Oppure chiama la segreteria: <a href=\"tel:+39065743734\"><strong>06 5743734</strong></a>"],
                 ],
             ],
         ],

@@ -60,6 +60,25 @@
 .step-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--navy); }
 .step-card p { font-size: .875rem; line-height: 1.7; color: var(--muted); margin: 0; }
 
+/* METODO E DOCENTI */
+.metodo-box {
+    max-width: 820px; margin: 0 auto;
+}
+.metodo-box p { font-size: .975rem; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+.metodo-box p:last-of-type { margin-bottom: 0; }
+
+/* CTA telefono */
+.cta-band .cta-phone {
+    margin-top: 24px; font-size: .95rem;
+    color: rgba(255,255,255,.75);
+}
+.cta-band .cta-phone a { color: #fff; }
+.cta-band .cta-phone a strong {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 1.1rem; letter-spacing: .02em;
+}
+.cta-band .cta-phone a:hover strong { color: var(--gold); }
+
 /* MODALITA */
 .modalita-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .modalita-item {
@@ -177,8 +196,21 @@
     </div>
 </section>
 
-{{-- MODALITA --}}
+{{-- METODO E DOCENTI --}}
 <section class="sec">
+    <div class="c">
+        <div class="sec-header">
+            <div class="section-label">{{ \App\Models\PageContent::text('per-le-aziende', 'metodo_label') }}</div>
+            <h2 class="sec-heading">{!! \App\Models\PageContent::html('per-le-aziende', 'metodo_title') !!}</h2>
+        </div>
+        <div class="metodo-box">
+            {!! \App\Models\PageContent::html('per-le-aziende', 'metodo_text') !!}
+        </div>
+    </div>
+</section>
+
+{{-- MODALITA --}}
+<section class="sec sec-bg">
     <div class="c">
         <div class="sec-header">
             <div class="section-label">{{ \App\Models\PageContent::text('per-le-aziende', 'modalita_label') }}</div>
@@ -219,7 +251,7 @@
 </section>
 
 {{-- SERVIZI AGGIUNTIVI --}}
-<section class="sec sec-bg">
+<section class="sec">
     <div class="c">
         <div class="sec-header">
             <div class="section-label">Plus</div>
@@ -274,8 +306,9 @@
         <p>{{ \App\Models\PageContent::text('per-le-aziende', 'cta_text') }}</p>
         <div class="cta-actions">
             <a href="{{ route('iscrizione') }}" class="btn-gold">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_btn1') }}</a>
-            <a href="mailto:info@aealanguagecenter.it" class="btn-outline-white">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_btn2') }}</a>
+            <a href="mailto:{{ \App\Models\PageContent::text('per-le-aziende', 'cta_email') }}" class="btn-outline-white">{{ \App\Models\PageContent::text('per-le-aziende', 'cta_btn2') }}</a>
         </div>
+        <p class="cta-phone">📞 {!! \App\Models\PageContent::html('per-le-aziende', 'cta_phone') !!}</p>
     </div>
 </section>
 
