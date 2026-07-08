@@ -12,6 +12,8 @@ final class LanguageOptions
             'Arabo' => 'Arabo',
             'Francese' => 'Francese',
             'Inglese' => 'Inglese',
+            'Portoghese' => 'Portoghese',
+            'Russo' => 'Russo',
             'Spagnolo' => 'Spagnolo',
             'Tedesco' => 'Tedesco',
             'Italiano per stranieri' => 'Italiano per stranieri',

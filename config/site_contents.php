@@ -21,6 +21,9 @@
  *
  * NB: qui NON si usa route() (il file config viene caricato prima delle
  * route e verrebbe rotto da config:cache) — usare i path statici (/corsi…).
+ *
+ * Ultimo aggiornamento: 2026-07-08 — sezioni home: eta, insegnanti, claim,
+ * telefono in evidenza (hero_phone / cta_phone), why_text2.
  */
 
 return [
@@ -44,9 +47,10 @@ return [
                     'hero_kicker' => ['label' => 'Kicker (riga piccola sopra il titolo)', 'type' => 'text', 'default' => "Scuola di Lingue a Roma San Paolo dal 2002"],
                     'hero_title' => ['label' => 'Titolo principale', 'type' => 'text', 'default' => "Parla al mondo."],
                     'hero_title_accent' => ['label' => 'Titolo — seconda riga (blu)', 'type' => 'text', 'default' => "Cambia il tuo futuro."],
-                    'hero_desc' => ['label' => 'Descrizione', 'type' => 'html', 'default' => "Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong> e <strong>italiano per stranieri</strong> con docenti qualificati madrelingua e/o bilingue. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito."],
+                    'hero_desc' => ['label' => 'Descrizione', 'type' => 'html', 'default' => "Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong>, <strong>russo</strong>, <strong>portoghese</strong> e <strong>italiano per stranieri</strong> con docenti qualificati madrelingua e/o bilingue. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito."],
                     'hero_cta_primary' => ['label' => 'Bottone principale', 'type' => 'text', 'default' => "PRENOTA IL TEST GRATUITO →"],
                     'hero_cta_secondary' => ['label' => 'Bottone secondario', 'type' => 'text', 'default' => "SCOPRI I CORSI →"],
+                    'hero_phone' => ['label' => 'Telefono in evidenza (sotto i bottoni)', 'type' => 'html', 'default' => "Segreteria: <a href=\"tel:+39065743734\"><strong>06 5743734</strong></a>"],
                     'hero_image' => ['label' => 'Foto di sfondo', 'type' => 'image', 'default' => "https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85"],
                     'trinity_badge_title' => ['label' => 'Badge Trinity — titolo', 'type' => 'text', 'default' => "Sede Esami Ufficiale n° 8241"],
                     'trinity_badge_sub' => ['label' => 'Badge Trinity — sottotitolo', 'type' => 'html', 'default' => "GESE &amp; ISE — Scopri le certificazioni →"],
@@ -64,6 +68,7 @@ return [
                     'why_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Perché scegliere A&A"],
                     'why_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Un metodo.<br>Un'esperienza.<br>Risultati concreti."],
                     'why_text' => ['label' => 'Paragrafo', 'type' => 'html', 'default' => "<strong>A&amp;A Language Center</strong> è una <strong>scuola di lingue a Roma</strong>, nel quartiere San Paolo, con oltre 20 anni di esperienza nell'insegnamento delle lingue straniere. Metodi innovativi, docenti qualificati madrelingua e/o bilingue e un approccio completamente personalizzato sul tuo livello CEFR e sui tuoi obiettivi — sia che tu cerchi corsi di inglese, italiano per stranieri o lingue per il lavoro."],
+                    'why_text2' => ['label' => 'Secondo paragrafo', 'type' => 'html', 'default' => "La scuola, nel vivace quartiere San Paolo — polo universitario di Roma Tre — si trova <strong>a pochi passi dalle fermate metro San Paolo e Marconi</strong> ed è servita da numerosi mezzi pubblici. I certificati rilasciati al termine di ogni corso, in linea con i programmi del CEFR, sono <strong>validi per concorsi pubblici, crediti formativi per la maturità e crediti universitari</strong>, oltre che per la formazione del personale."],
                     'why_cta' => ['label' => 'Bottone', 'type' => 'text', 'default' => "Prenota il test gratuito →"],
                     'feature1_title' => ['label' => 'Card 1 — titolo', 'type' => 'text', 'default' => "Insegnanti internazionali"],
                     'feature1_text' => ['label' => 'Card 1 — testo', 'type' => 'textarea', 'default' => "Docenti qualificati madrelingua e/o bilingue provenienti da tutto il mondo con esperienza didattica certificata."],
@@ -88,6 +93,22 @@ return [
                     'corsi_cta' => ['label' => 'Bottone', 'type' => 'text', 'default' => "TUTTI I CORSI →"],
                 ],
             ],
+            'eta' => [
+                'label' => 'Corsi per età (Bambini / Ragazzi / Adulti / Aziende)',
+                'fields' => [
+                    'eta_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Per tutte le età"],
+                    'eta_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Corsi per ogni età<br>e ogni livello."],
+                    'eta_subtext' => ['label' => 'Sottotitolo', 'type' => 'textarea', 'default' => "Dai più piccoli ai professionisti: percorsi dedicati a ogni fase della vita, in mini gruppi o con lezioni individuali."],
+                    'eta1_title' => ['label' => 'Card 1 — titolo', 'type' => 'text', 'default' => "Corsi per Bambini"],
+                    'eta1_text' => ['label' => 'Card 1 — testo', 'type' => 'textarea', 'default' => "Imparare una lingua giocando: corsi pensati per i più piccoli, con docenti specializzati nella didattica per l'infanzia."],
+                    'eta2_title' => ['label' => 'Card 2 — titolo', 'type' => 'text', 'default' => "Corsi per Ragazzi"],
+                    'eta2_text' => ['label' => 'Card 2 — testo', 'type' => 'textarea', 'default' => "Percorsi per studenti di medie e superiori: recupero, potenziamento e preparazione alle certificazioni Trinity e Cambridge, valide come credito formativo."],
+                    'eta3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Corsi per Adulti"],
+                    'eta3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Corsi personalizzati per lavoro, università, viaggi o crescita personale. Orari flessibili, anche online, pensati per chi ha poco tempo."],
+                    'eta4_title' => ['label' => 'Card 4 — titolo', 'type' => 'text', 'default' => "Corsi per Aziende"],
+                    'eta4_text' => ['label' => 'Card 4 — testo', 'type' => 'textarea', 'default' => "Formazione linguistica B2B in sede o presso l'azienda: dal 2002 al fianco di imprese, enti pubblici e studi professionali."],
+                ],
+            ],
             'metodo' => [
                 'label' => 'Il nostro metodo',
                 'fields' => [
@@ -105,6 +126,29 @@ return [
                     'step4_text' => ['label' => 'Passo 4 — testo', 'type' => 'textarea', 'default' => "Ti prepariamo e ti accompagniamo all'esame."],
                     'step5_title' => ['label' => 'Passo 5 — titolo', 'type' => 'text', 'default' => "Obiettivi raggiunti"],
                     'step5_text' => ['label' => 'Passo 5 — testo', 'type' => 'textarea', 'default' => "Nuove competenze, nuove opportunità, nuovo futuro."],
+                ],
+            ],
+            'insegnanti' => [
+                'label' => 'Gli insegnanti e il metodo (approfondimento)',
+                'fields' => [
+                    'insegnanti_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Insegnanti e metodo"],
+                    'insegnanti_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Docenti qualificati,<br>metodo collaudato."],
+                    'insegnanti_subtext' => ['label' => 'Sottotitolo', 'type' => 'textarea', 'default' => "L'impronta internazionale di A&A si fonda su insegnanti madrelingua e/o bilingue provenienti da tutto il mondo: tutti laureati e in possesso delle certificazioni che li abilitano all'insegnamento della propria lingua come lingua straniera."],
+                    'insegnanti1_title' => ['label' => 'Blocco 1 — titolo', 'type' => 'text', 'default' => "Gli insegnanti"],
+                    'insegnanti1_text' => ['label' => 'Blocco 1 — testo', 'type' => 'textarea', 'default' => "Docenti competenti e appassionati, selezionati oltre che per la professionalità certificata anche per le doti caratteriali: sanno rapportarsi con chi ha già provato a migliorare una lingua e si aspetta risultati concreti da un corso personalizzato."],
+                    'insegnanti2_title' => ['label' => 'Blocco 2 — titolo', 'type' => 'text', 'default' => "Le competenze dei docenti"],
+                    'insegnanti2_text' => ['label' => 'Blocco 2 — testo', 'type' => 'textarea', 'default' => "Formazione e aggiornamento annuali con Trinity College London e gli altri enti certificatori. Fin dalla prima lezione parlano in lingua, mettendo a proprio agio studenti di ogni età e livello. Preparano a esami universitari, colloqui di lavoro, concorsi pubblici e presentazioni, con assistenza sul lessico specialistico (medico, legale, economico)."],
+                    'insegnanti3_title' => ['label' => 'Blocco 3 — titolo', 'type' => 'text', 'default' => "Test di entrata"],
+                    'insegnanti3_text' => ['label' => 'Blocco 3 — testo', 'type' => 'textarea', 'default' => "Un test scritto e orale stabilisce il livello di partenza; segue un colloquio con un consulente didattico per individuare il corso più adatto. La grammatica viene introdotta in contesti pratici di vita quotidiana, per accrescere lessico e capacità comunicativa in situazioni professionali e sociali."],
+                    'insegnanti4_title' => ['label' => 'Blocco 4 — titolo', 'type' => 'text', 'default' => "Materiale didattico"],
+                    'insegnanti4_text' => ['label' => 'Blocco 4 — testo', 'type' => 'textarea', 'default' => "Esami interni periodici tengono sotto controllo il livello di apprendimento raggiunto. In classe si utilizzano audio e materiale multimediale in base alle necessità del corso, e i docenti consigliano ulteriori strumenti per proseguire lo studio in autonomia."],
+                ],
+            ],
+            'claim' => [
+                'label' => 'Claim (motto della scuola)',
+                'fields' => [
+                    'claim_eyebrow' => ['label' => 'Riga sopra il claim', 'type' => 'text', 'default' => "A&A Language Center è presente sul mercato da oltre 20 anni"],
+                    'claim_text' => ['label' => 'Claim', 'type' => 'html', 'default' => "We make that language <em>your tool</em>.<br>Not your obstacle."],
                 ],
             ],
             'stats' => [
@@ -141,6 +185,7 @@ return [
                     'cta_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Entri per imparare una lingua.<br>Esci con nuove opportunità."],
                     'cta_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Il tuo futuro parla più lingue. Inizia oggi il tuo percorso con A&A Language Center."],
                     'cta_button' => ['label' => 'Bottone', 'type' => 'text', 'default' => "PRENOTA IL TUO TEST GRATUITO →"],
+                    'cta_phone' => ['label' => 'Telefono sotto il bottone', 'type' => 'html', 'default' => "Oppure chiama la segreteria: <a href=\"tel:+39065743734\"><strong>06 5743734</strong></a>"],
                     'cta_image' => ['label' => 'Foto di sfondo', 'type' => 'image', 'default' => "https://images.unsplash.com/photo-1531572753322-ad063cecc140?auto=format&fit=crop&w=1600&q=70"],
                 ],
             ],

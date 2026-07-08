@@ -138,6 +138,17 @@
     line-height: 1.75; max-width: 480px; margin-bottom: 36px;
 }
 .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.hero-phone {
+    margin-top: 22px;
+    font-size: .95rem; color: var(--muted);
+}
+.hero-phone a { color: var(--navy); }
+.hero-phone a strong {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 1.05rem;
+    letter-spacing: .02em;
+}
+.hero-phone a:hover strong { color: var(--blue); }
 .btn-hero-primary {
     display: inline-flex; align-items: center; gap: 8px;
     padding: .85rem 1.8rem;
@@ -344,6 +355,101 @@
 }
 .corso-card:hover .corso-arrow { background: var(--blue); border-color: var(--blue); color: #fff; }
 
+/* ── CORSI PER ETÀ ───────────────────────────────── */
+.eta-section {
+    background: #f5f8fc;
+    padding: 80px 0;
+}
+.eta-header { max-width: 640px; margin-bottom: 40px; }
+.eta-header .sec-heading { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.eta-header .sec-subtext { margin-top: 12px; }
+.eta-grid {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 16px;
+}
+.eta-card {
+    display: flex; flex-direction: column;
+    background: #fff;
+    border: 1px solid #e8eef8;
+    border-radius: 14px;
+    padding: 26px 22px;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+}
+.eta-card:hover {
+    border-color: rgba(26,86,219,.3);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px rgba(13,27,46,.08);
+}
+.eta-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: var(--blue-l);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 16px;
+}
+.eta-card h3 { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.eta-card p  { font-size: .82rem; color: var(--muted); line-height: 1.65; margin: 0 0 14px; flex: 1; }
+.eta-more { font-size: .82rem; font-weight: 700; color: var(--blue); }
+.eta-card:hover .eta-more { text-decoration: underline; }
+
+/* ── INSEGNANTI E METODO (approfondimento) ───────── */
+.insegnanti-section {
+    background: #f5f8fc;
+    padding: 80px 0;
+}
+.insegnanti-inner {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 64px;
+    align-items: start;
+}
+.insegnanti-left .sec-heading { font-size: clamp(1.6rem, 3vw, 2.2rem); }
+.insegnanti-left .sec-subtext { margin-top: 12px; }
+.insegnanti-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.insegnante-card {
+    background: #fff;
+    border: 1px solid #e8eef8;
+    border-radius: 14px;
+    padding: 24px 22px;
+    transition: border-color .2s, transform .2s;
+}
+.insegnante-card:hover {
+    border-color: rgba(26,86,219,.25);
+    transform: translateY(-3px);
+}
+.insegnante-num {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .68rem; font-weight: 800;
+    letter-spacing: .12em; color: var(--gold-d);
+    margin-bottom: 10px;
+}
+.insegnante-card h3 { font-size: .95rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+.insegnante-card p  { font-size: .82rem; color: var(--muted); line-height: 1.7; margin: 0; }
+
+/* ── CLAIM ───────────────────────────────────────── */
+.claim-band {
+    background: #fff;
+    padding: 84px 0;
+    text-align: center;
+}
+.claim-eyebrow {
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--gold-d);
+    margin-bottom: 18px;
+}
+.claim-band h2 {
+    font-size: clamp(1.7rem, 3.6vw, 2.9rem);
+    font-weight: 800; letter-spacing: -.04em;
+    line-height: 1.2; color: var(--navy);
+    max-width: 820px; margin: 0 auto;
+}
+.claim-band h2 em { color: var(--blue); font-style: normal; }
+
 /* ── METODO ──────────────────────────────────────── */
 .metodo-section {
     background: #fff;
@@ -464,6 +570,16 @@
     font-size: 1rem; color: rgba(255,255,255,.65);
     max-width: 440px; margin: 0 auto 36px; line-height: 1.7;
 }
+.cta-final .cta-final-phone {
+    margin: 26px auto 0; font-size: .95rem;
+    color: rgba(255,255,255,.75);
+}
+.cta-final-phone a { color: #fff; }
+.cta-final-phone a strong {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 1.1rem; letter-spacing: .02em;
+}
+.cta-final-phone a:hover strong { color: var(--gold); }
 
 /* ── NEWS ED EVENTI ──────────────────────────────── */
 .home-news-section { padding: 84px 0; background: var(--bg); }
@@ -501,6 +617,8 @@
     .why-grid            { grid-template-columns: 1fr; gap: 36px; }
     .corsi-inner         { grid-template-columns: 1fr; }
     .corsi-left          { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center; }
+    .eta-grid            { grid-template-columns: 1fr 1fr; }
+    .insegnanti-inner    { grid-template-columns: 1fr; gap: 36px; }
     .metodo-inner        { grid-template-columns: 1fr; }
     .metodo-steps        { grid-template-columns: 1fr 1fr; gap: 24px; }
     .metodo-steps::before { display: none; }
@@ -513,6 +631,8 @@
     .hero h1             { font-size: 2.2rem; }
     .features-grid       { grid-template-columns: 1fr 1fr; }
     .corsi-left          { grid-template-columns: 1fr; }
+    .eta-grid            { grid-template-columns: 1fr; }
+    .insegnanti-grid     { grid-template-columns: 1fr; }
     .metodo-steps        { grid-template-columns: 1fr; }
     .stats-grid          { grid-template-columns: 1fr 1fr; }
 }
@@ -540,6 +660,7 @@
             <a href="{{ route('iscrizione') }}" class="btn-hero-primary">{{ \App\Models\PageContent::text('home', 'hero_cta_primary') }}</a>
             <a href="#corsi" class="btn-hero-ghost">{{ \App\Models\PageContent::text('home', 'hero_cta_secondary') }}</a>
         </div>
+        <p class="hero-phone">📞 {!! \App\Models\PageContent::html('home', 'hero_phone') !!}</p>
     </div>
 
     <div class="hero-right">
@@ -591,6 +712,7 @@
                 <h2 class="sec-heading" id="why-title">{!! \App\Models\PageContent::html('home', 'why_title') !!}</h2>
                 <div class="why-underline"></div>
                 <p>{!! \App\Models\PageContent::html('home', 'why_text') !!}</p>
+                <p style="margin-top:14px;">{!! \App\Models\PageContent::html('home', 'why_text2') !!}</p>
                 <div class="why-cta">
                     <a href="{{ route('iscrizione') }}" class="btn-primary">{{ \App\Models\PageContent::text('home', 'why_cta') }}</a>
                 </div>
@@ -656,8 +778,18 @@
             ];
             @endphp
 
+            @php
+                // Lingue con corsi attivi a catalogo + tutte le lingue insegnate
+                // (LanguageOptions): così ogni lingua della scuola — es. Russo e
+                // Portoghese — resta visibile in home anche senza un corso
+                // pubblico attivo in quel momento.
+                $homeLangs = collect($coursesByLanguage->keys())
+                    ->merge(array_keys(\App\Support\LanguageOptions::all()))
+                    ->unique()
+                    ->values();
+            @endphp
             <div class="corsi-scroll" role="list">
-                @forelse($coursesByLanguage as $lang => $group)
+                @foreach($homeLangs as $lang)
                     @php $m = $langMeta[$lang] ?? ['flag'=>'🌐','cert'=>'','img'=>'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80']; @endphp
                     <a href="{{ route('checkout.catalogo') }}" class="corso-card" role="listitem">
                         <div class="corso-img" style="background-image:url('{{ $m['img'] }}')">
@@ -672,25 +804,45 @@
                             <div class="corso-arrow">→</div>
                         </div>
                     </a>
-                @empty
-                    @foreach(\App\Support\LanguageOptions::all() as $lang => $label)
-                        @php $m = $langMeta[$lang] ?? ['flag'=>'🌐','cert'=>'','img'=>'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=400&q=80']; @endphp
-                        <a href="{{ route('checkout.catalogo') }}" class="corso-card" role="listitem">
-                            <div class="corso-img" style="background-image:url('{{ $m['img'] }}')">
-                                <span class="corso-flag">{{ $m['flag'] }}</span>
-                            </div>
-                            <div class="corso-body">
-                                <div class="corso-lang">{{ strtoupper($label) }}</div>
-                                <div class="corso-level">Tutti i livelli</div>
-                                @if($m['cert'])
-                                    <div class="corso-cert">Certificazioni<br>{{ $m['cert'] }}</div>
-                                @endif
-                                <div class="corso-arrow">→</div>
-                            </div>
-                        </a>
-                    @endforeach
-                @endforelse
+                @endforeach
             </div>
+        </div>
+    </div>
+</section>
+
+{{-- ══ CORSI PER ETÀ ══ --}}
+<section class="eta-section" aria-labelledby="eta-title">
+    <div class="c">
+        <div class="eta-header">
+            <div class="section-label">{{ \App\Models\PageContent::text('home', 'eta_label') }}</div>
+            <h2 class="sec-heading" id="eta-title">{!! \App\Models\PageContent::html('home', 'eta_title') !!}</h2>
+            <p class="sec-subtext">{{ \App\Models\PageContent::text('home', 'eta_subtext') }}</p>
+        </div>
+        <div class="eta-grid">
+            <a href="{{ route('checkout.catalogo') }}" class="eta-card">
+                <div class="eta-icon">🧒</div>
+                <h3>{{ \App\Models\PageContent::text('home', 'eta1_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('home', 'eta1_text') }}</p>
+                <span class="eta-more">Scopri i corsi →</span>
+            </a>
+            <a href="{{ route('checkout.catalogo') }}" class="eta-card">
+                <div class="eta-icon">🎒</div>
+                <h3>{{ \App\Models\PageContent::text('home', 'eta2_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('home', 'eta2_text') }}</p>
+                <span class="eta-more">Scopri i corsi →</span>
+            </a>
+            <a href="{{ route('checkout.catalogo') }}" class="eta-card">
+                <div class="eta-icon">💼</div>
+                <h3>{{ \App\Models\PageContent::text('home', 'eta3_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('home', 'eta3_text') }}</p>
+                <span class="eta-more">Scopri i corsi →</span>
+            </a>
+            <a href="{{ route('per-le-aziende') }}" class="eta-card">
+                <div class="eta-icon">🏢</div>
+                <h3>{{ \App\Models\PageContent::text('home', 'eta4_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('home', 'eta4_text') }}</p>
+                <span class="eta-more">Scopri i corsi →</span>
+            </a>
         </div>
     </div>
 </section>
@@ -750,6 +902,49 @@
                 </div>
             </div>
         </div>
+    </div>
+</section>
+
+{{-- ══ INSEGNANTI E METODO (approfondimento) ══ --}}
+<section class="insegnanti-section" aria-labelledby="insegnanti-title">
+    <div class="c">
+        <div class="insegnanti-inner">
+            <div class="insegnanti-left">
+                <div class="section-label">{{ \App\Models\PageContent::text('home', 'insegnanti_label') }}</div>
+                <h2 class="sec-heading" id="insegnanti-title">{!! \App\Models\PageContent::html('home', 'insegnanti_title') !!}</h2>
+                <p class="sec-subtext">{{ \App\Models\PageContent::text('home', 'insegnanti_subtext') }}</p>
+            </div>
+            <div class="insegnanti-grid">
+                <div class="insegnante-card">
+                    <div class="insegnante-num">01</div>
+                    <h3>{{ \App\Models\PageContent::text('home', 'insegnanti1_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('home', 'insegnanti1_text') }}</p>
+                </div>
+                <div class="insegnante-card">
+                    <div class="insegnante-num">02</div>
+                    <h3>{{ \App\Models\PageContent::text('home', 'insegnanti2_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('home', 'insegnanti2_text') }}</p>
+                </div>
+                <div class="insegnante-card">
+                    <div class="insegnante-num">03</div>
+                    <h3>{{ \App\Models\PageContent::text('home', 'insegnanti3_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('home', 'insegnanti3_text') }}</p>
+                </div>
+                <div class="insegnante-card">
+                    <div class="insegnante-num">04</div>
+                    <h3>{{ \App\Models\PageContent::text('home', 'insegnanti4_title') }}</h3>
+                    <p>{{ \App\Models\PageContent::text('home', 'insegnanti4_text') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- ══ CLAIM ══ --}}
+<section class="claim-band" aria-label="Il motto della scuola">
+    <div class="c">
+        <p class="claim-eyebrow">{{ \App\Models\PageContent::text('home', 'claim_eyebrow') }}</p>
+        <h2>{!! \App\Models\PageContent::html('home', 'claim_text') !!}</h2>
     </div>
 </section>
 
@@ -820,7 +1015,7 @@
 @endif
 
 {{-- ══ FAQ ══ --}}
-{{-- @cache-bust-faq 2026-05-18 --}}
+{{-- @cache-bust-faq 2026-07-08 --}}
 @php
     $faqItems = \App\Models\PageContent::items('home', 'faq_items');
 @endphp
@@ -838,6 +1033,7 @@
         <h2 id="cta-title">{!! \App\Models\PageContent::html('home', 'cta_title') !!}</h2>
         <p>{{ \App\Models\PageContent::text('home', 'cta_text') }}</p>
         <a href="{{ route('iscrizione') }}" class="btn-hero-primary">{{ \App\Models\PageContent::text('home', 'cta_button') }}</a>
+        <p class="cta-final-phone">📞 {!! \App\Models\PageContent::html('home', 'cta_phone') !!}</p>
     </div>
 </section>
 
