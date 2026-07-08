@@ -46,11 +46,11 @@
        foto visibile a destra, così il logo della scuola risalta. */
     background:
         linear-gradient(95deg,
-            rgba(255,255,255,.92) 0%,
-            rgba(255,255,255,.86) 30%,
-            rgba(255,255,255,.70) 45%,
-            rgba(255,255,255,.30) 60%,
-            rgba(255,255,255,.05) 100%),
+            rgba(255,255,255,.80) 0%,
+            rgba(255,255,255,.72) 30%,
+            rgba(255,255,255,.52) 45%,
+            rgba(255,255,255,.20) 60%,
+            rgba(255,255,255,.03) 100%),
         url('https://images.unsplash.com/photo-1543269865-cbf427effbad?auto=format&fit=crop&w=1920&q=85')
             center right / cover no-repeat,
         linear-gradient(135deg, #FFFFFF 0%, #F5F8FC 50%, #EEF3FF 100%);
@@ -80,11 +80,11 @@
    morbido dietro (glow) che lo stacca dalla foto — effetto "premium". */
 .hero-logo-glow {
     position: absolute;
-    top: 50%;
-    left: 58%;
+    top: 42%;
+    left: 60%;
     transform: translate(-12%, -50%);
-    width: min(640px, 48vw);
-    height: min(520px, 85%);
+    width: min(520px, 40vw);
+    height: min(440px, 72%);
     background: radial-gradient(ellipse closest-side,
         rgba(255,255,255,.85) 0%,
         rgba(255,255,255,.45) 45%,
@@ -95,10 +95,10 @@
 }
 .hero-logo-watermark {
     position: absolute;
-    top: 50%;
-    left: 58%;
+    top: 42%;
+    left: 60%;
     transform: translateY(-50%);
-    height: min(440px, 75%);
+    height: min(360px, 60%);
     width: auto;
     filter: drop-shadow(0 18px 44px rgba(13,27,46,.38));
     pointer-events: none;
