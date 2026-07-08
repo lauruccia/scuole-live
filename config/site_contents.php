@@ -208,7 +208,7 @@ return [
                 'label' => 'Testata',
                 'fields' => [
                     'hero_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "La <em>Scuola di Lingue</em> a Roma San Paolo"],
-                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'html', 'default' => "Open Your Mind To The World — A&amp;A Language Center, dal 2002 a Roma. Sede ufficiale esami Trinity College London n° 8241."],
+                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'html', 'default' => "Open Your Mind To The World · We Unlock Your Future — A&amp;A Language Center, dal 2002 a Roma. Sede ufficiale esami Trinity College London n° 8241."],
                 ],
             ],
             'intro' => [
@@ -224,6 +224,7 @@ return [
             'stats' => [
                 'label' => 'Numeri (fascia blu)',
                 'fields' => [
+                    'stats_title' => ['label' => 'Motto sopra i numeri', 'type' => 'text', 'default' => "Experience you can trust!"],
                     'stat1_num' => ['label' => 'Dato 1 — numero', 'type' => 'text', 'default' => "15"],
                     'stat1_label' => ['label' => 'Dato 1 — etichetta', 'type' => 'text', 'default' => "Docenti qualificati"],
                     'stat2_num' => ['label' => 'Dato 2 — numero', 'type' => 'text', 'default' => "250+"],
@@ -246,6 +247,8 @@ return [
                     'team2_text' => ['label' => 'Card 2 — testo', 'type' => 'textarea', 'default' => "Tutti i nostri insegnanti provengono da paesi di lingua madre o sono bilingue certificati, con aggiornamenti annuali tenuti dal Trinity College London."],
                     'team3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Metodo A&A"],
                     'team3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Veloce, flessibile e funzionale. Puoi scegliere dove frequentare: a scuola, a casa, in ufficio o anche al telefono. L'importante è che tu raggiunga i tuoi obiettivi."],
+                    'team_roles' => ['label' => 'Figure docenti (una per riga)', 'type' => 'lines', 'default' => "Docenti madrelingua di Inglese\nDocente bilingue Inglese e Russo\nDocente di Portoghese\nDocente di Lingua Araba\nDocente di Francese e Tedesco\nDocente di Spagnolo\nDocente di Italiano per Stranieri"],
+                    'team_highlight' => ['label' => 'Frase in evidenza sotto le card', 'type' => 'html', 'default' => "<strong>Ovunque sei, puoi prenotare e gestire le tue lezioni!</strong> A scuola, a casa, in ufficio oppure al telefono."],
                 ],
             ],
             'cert' => [
@@ -254,6 +257,7 @@ return [
                     'cert_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Certificazioni"],
                     'cert_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Sede ufficiale <span style=\"color:var(--gold)\">Trinity College London</span>"],
                     'cert_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Siamo <strong style=\"color:#fff;\">Sede d'esame n° 8241</strong>. Organizziamo sessioni GESE e ISE durante tutto l'anno e prepariamo i nostri studenti per le principali certificazioni internazionali. <a href=\"/le-certificazioni\" style=\"color:var(--gold);font-weight:700;text-decoration:underline;\">Scopri le certificazioni →</a>"],
+                    'cert_validity' => ['label' => 'Nota validità certificati', 'type' => 'html', 'default' => "I certificati internazionali sono validi per <strong>concorsi pubblici</strong>, <strong>crediti formativi per la maturità</strong> e <strong>crediti universitari</strong>, oltre che nell'ambito della formazione del personale."],
                 ],
             ],
             'pillars' => [

@@ -44,6 +44,12 @@
 
 /* STATS BAND */
 .stats-band { background: var(--blue); }
+.stats-motto {
+    text-align: center; color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem; font-weight: 800; letter-spacing: -.02em;
+    padding-top: 30px; margin: 0;
+}
 .stats-inner {
     display: grid; grid-template-columns: repeat(4, 1fr);
 }
@@ -72,6 +78,26 @@
 .feature-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--navy); }
 .feature-card p { font-size: .875rem; line-height: 1.7; color: var(--muted); margin: 0; }
 
+/* Figure docenti (chips) + frase in evidenza */
+.team-roles {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    justify-content: center; margin-top: 32px;
+}
+.team-role-tag {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 50px; padding: 8px 20px;
+    font-size: .84rem; font-weight: 600; color: var(--text);
+    transition: border-color .2s, color .2s;
+}
+.team-role-tag:hover { border-color: var(--blue); color: var(--blue); }
+.team-highlight {
+    text-align: center; margin: 30px auto 0; max-width: 620px;
+    background: var(--blue-l); border-radius: 12px;
+    padding: 16px 26px;
+    font-size: .95rem; color: var(--text); line-height: 1.65;
+}
+.team-highlight strong { color: var(--blue); }
+
 /* CERT SECTION */
 .cert-grid {
     display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px;
@@ -84,6 +110,14 @@
 }
 .cert-tag:hover { background: rgba(255,255,255,.2); }
 .cert-tag.gold { border-color: var(--gold); color: var(--gold); background: rgba(201,164,44,.08); }
+.cert-validity {
+    margin-top: 28px; padding: 16px 24px;
+    border-left: 3px solid var(--gold);
+    background: rgba(255,255,255,.06); border-radius: 0 12px 12px 0;
+    font-size: .92rem; color: rgba(255,255,255,.85); line-height: 1.7;
+    max-width: 720px;
+}
+.cert-validity strong { color: var(--gold); }
 
 /* PILLAR CARDS */
 .pillars-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
@@ -157,6 +191,7 @@
 {{-- STATS --}}
 <div class="stats-band">
     <div class="c">
+        <p class="stats-motto">{{ \App\Models\PageContent::text('la-scuola', 'stats_title') }}</p>
         <div class="stats-inner">
             <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat1_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat1_label') }}</div></div>
             <div class="stat-item"><div class="stat-num">{{ \App\Models\PageContent::text('la-scuola', 'stat2_num') }}</div><div class="stat-label">{{ \App\Models\PageContent::text('la-scuola', 'stat2_label') }}</div></div>
@@ -191,6 +226,15 @@
                 <p>{{ \App\Models\PageContent::text('la-scuola', 'team3_text') }}</p>
             </div>
         </div>
+        @php $teamRoles = \App\Models\PageContent::lines('la-scuola', 'team_roles'); @endphp
+        @if($teamRoles)
+            <div class="team-roles">
+                @foreach($teamRoles as $role)
+                    <span class="team-role-tag">{{ $role }}</span>
+                @endforeach
+            </div>
+        @endif
+        <p class="team-highlight">{!! \App\Models\PageContent::html('la-scuola', 'team_highlight') !!}</p>
     </div>
 </section>
 
@@ -215,6 +259,7 @@
             <span class="cert-tag">CAPLE</span>
             <span class="cert-tag">PLIDA</span>
         </div>
+        <p class="cert-validity">{!! \App\Models\PageContent::html('la-scuola', 'cert_validity') !!}</p>
     </div>
 </section>
 
