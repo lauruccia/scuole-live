@@ -84,10 +84,10 @@
     transform: translateY(-50%);
     height: min(440px, 75%);
     width: auto;
-    opacity: .16;
-    mix-blend-mode: screen;
-    -webkit-mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
-    mask-image: radial-gradient(closest-side, #000 50%, transparent 100%);
+    opacity: .55;
+    filter: drop-shadow(0 8px 30px rgba(0,0,0,.55));
+    -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 62%, transparent 100%);
     pointer-events: none;
     z-index: 1;
 }
