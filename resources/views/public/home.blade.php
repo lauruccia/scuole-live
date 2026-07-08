@@ -524,7 +524,7 @@
             Parla al mondo.
             <span class="accent">Cambia il tuo futuro.</span>
         </h1>
-        <p class="hero-desc">Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong> e <strong>italiano per stranieri</strong> con docenti madrelingua. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito.</p>
+        <p class="hero-desc">Corsi di <strong>inglese</strong>, <strong>spagnolo</strong>, <strong>francese</strong>, <strong>tedesco</strong>, <strong>arabo</strong> e <strong>italiano per stranieri</strong> con docenti qualificati madrelingua e/o bilingue. Preparazione certificazioni Trinity, Cambridge, IELTS, DELE, DELF e Goethe. Test di livello gratuito.</p>
         <div class="hero-actions">
             <a href="{{ route('iscrizione') }}" class="btn-hero-primary">PRENOTA IL TEST GRATUITO →</a>
             <a href="#corsi" class="btn-hero-ghost">SCOPRI I CORSI →</a>
