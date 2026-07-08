@@ -523,16 +523,11 @@
 
 {{-- ══ HERO ══ --}}
 <section class="hero" aria-label="Banner principale">
-    @php
-        // Versione quadrata del logo (globo + bandiere) dedicata all'hero;
-        // fallback sul logo standard se non ancora caricata.
-        $heroLogo = file_exists(public_path('images/logo-hero.png')) ? 'images/logo-hero.png'
-                  : (file_exists(public_path('images/logo-scuola.png')) ? 'images/logo-scuola.png' : null);
-    @endphp
-    @if($heroLogo)
-        <div class="hero-logo-glow" aria-hidden="true"></div>
-        <img src="{{ asset($heroLogo) }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
-    @endif
+    {{-- NB: niente file_exists() qui — in produzione public_path() punta a
+         scuole_app/public che NON riceve le immagini (il deploy le copia solo
+         in public_html), quindi il check fallirebbe sempre. --}}
+    <div class="hero-logo-glow" aria-hidden="true"></div>
+    <img src="{{ asset('images/logo-hero.png') }}" alt="" aria-hidden="true" class="hero-logo-watermark" loading="eager">
     <div class="hero-left">
         <div class="hero-eyebrow">
             <span>20+ ANNI DI ESPERIENZA</span> &nbsp;·&nbsp;
