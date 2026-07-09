@@ -107,6 +107,27 @@ class SitemapController extends Controller
             }
         }
 
+        // Test di livello online (hub + una pagina per lingua)
+        $testPages = [];
+        if (\Route::has('test.livello')) {
+            $testPages[] = [
+                'loc'        => route('test.livello'),
+                'changefreq' => 'monthly',
+                'priority'   => 0.8,
+                'lastmod'    => $today,
+            ];
+        }
+        if (\Route::has('test.lingua')) {
+            foreach (array_keys(config('level_tests', [])) as $lingua) {
+                $testPages[] = [
+                    'loc'        => route('test.lingua', $lingua),
+                    'changefreq' => 'monthly',
+                    'priority'   => 0.8,
+                    'lastmod'    => $today,
+                ];
+            }
+        }
+
         // Corsi pubblici e attivi dal DB
         $courseUrls = [];
         try {
@@ -147,6 +168,6 @@ class SitemapController extends Controller
             report($e);
         }
 
-        return array_merge($static, $landings, $courseUrls, $newsUrls);
+        return array_merge($static, $landings, $testPages, $courseUrls, $newsUrls);
     }
 }

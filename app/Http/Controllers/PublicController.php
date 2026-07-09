@@ -262,4 +262,30 @@ class PublicController extends Controller
     {
         return view('public.landing.aziendali');
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Test di livello online (SEO — stessi slug del vecchio sito WP)
+    |--------------------------------------------------------------------------
+    | Le 5 pagine "test di lingua" del vecchio sito intercettavano ricerche
+    | di valore ("test di inglese online", ecc.). Qui le ricreiamo sugli
+    | stessi slug: hub /test-sul-livello-di-lingua + 4 quiz per lingua.
+    | Le domande vivono in config/level_tests.php; i testi sono editabili
+    | dal pannello Contenuti sito (pagina "test-livello").
+    */
+    public function testLivello()
+    {
+        $tests = config('level_tests', []);
+
+        return view('public.test.index', compact('tests'));
+    }
+
+    public function testLingua(string $lingua)
+    {
+        $test = config("level_tests.{$lingua}");
+
+        abort_unless(is_array($test), 404);
+
+        return view('public.test.quiz', compact('lingua', 'test'));
+    }
 }

@@ -890,4 +890,65 @@ return [
         ],
     ],
 
+    /* ═══════════ TEST DI LIVELLO (hub + 4 pagine quiz) ═══════════ */
+    // Le domande dei quiz NON sono qui: vivono in config/level_tests.php
+    // (contenuto tecnico, con le risposte corrette — non editabile dal pannello).
+    'test-livello' => [
+        'label' => 'Test di livello (5 pagine)',
+        'sections' => [
+            'hub' => [
+                'label' => 'Pagina indice (/test-sul-livello-di-lingua)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Livello di Lingua Online Gratuito | A&A Language Center Roma"],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Fai il test sul livello di lingua online gratuito: inglese, francese, spagnolo e italiano per stranieri. Scopri il tuo livello CEFR in pochi minuti e prenota il colloquio gratuito con i nostri docenti a Roma."],
+                    'hero_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Test sul <em>livello di lingua</em>"],
+                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'text', 'default' => "Inglese, francese, spagnolo e italiano per stranieri. Gratuito, online e senza registrazione: scopri il tuo livello CEFR in pochi minuti."],
+                    'intro_text' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "«Vorrei imparare una lingua straniera». Quante volte lo hai pensato? Il primo passo è scoprire da dove parti. Fai il test online della lingua che ti interessa: in pochi minuti ottieni una stima del tuo livello CEFR, senza registrazione. Subito dopo puoi fissare un colloquio conoscitivo gratuito con uno dei nostri docenti qualificati per stabilire l'esatto livello di partenza — e soprattutto un preciso punto di arrivo."],
+                    'entrance_title' => ['label' => 'Titolo blocco Entrance Test', 'type' => 'text', 'default' => "Il test completo? In sede, ed è gratuito"],
+                    'entrance_text' => ['label' => 'Testo blocco Entrance Test', 'type' => 'textarea', 'default' => "Tutti i nostri corsi sono preceduti da un Entrance Test scritto e da un colloquio orale gratuito con un docente qualificato. È la valutazione che fa fede: il test online ti dà una prima stima, il colloquio definisce il livello esatto e il percorso su misura. A&A è anche Sede d'Esame Full Trinity College London n° 8241 e prepara a IELTS, TOEFL, Cambridge, DELF/DALF, DELE e CILS."],
+                ],
+            ],
+            'inglese' => [
+                'label' => 'Test di Inglese',
+                'fields' => [
+                    'en_meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Inglese Online Gratuito — Scopri il tuo Livello | A&A Roma"],
+                    'en_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di inglese online gratuito: 20 domande per scoprire il tuo livello CEFR (A1–C1) in pochi minuti, senza registrazione. Poi prenota il colloquio gratuito nella nostra scuola di Roma San Paolo."],
+                    'en_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di inglese: scopri il tuo livello in pochi minuti! Rispondi alle 20 domande a scelta multipla, in ordine di difficoltà crescente. Al termine ricevi subito una stima del tuo livello CEFR e puoi fissare un colloquio conoscitivo gratuito con un nostro docente qualificato madrelingua o bilingue."],
+                ],
+            ],
+            'francese' => [
+                'label' => 'Test di Francese',
+                'fields' => [
+                    'fr_meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Francese Online Gratuito — Scopri il tuo Livello | A&A Roma"],
+                    'fr_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di francese online gratuito: 20 domande per scoprire il tuo livello CEFR (A1–C1) in pochi minuti, senza registrazione. Poi prenota il colloquio gratuito nella nostra scuola di Roma San Paolo."],
+                    'fr_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di francese: scopri il tuo livello in pochi minuti! Rispondi alle 20 domande a scelta multipla, in ordine di difficoltà crescente. Al termine ricevi subito una stima del tuo livello CEFR e puoi fissare un colloquio conoscitivo gratuito con un nostro docente qualificato — anche in preparazione a DELF e DALF."],
+                ],
+            ],
+            'spagnolo' => [
+                'label' => 'Test di Spagnolo',
+                'fields' => [
+                    'es_meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Spagnolo Online Gratuito — Scopri il tuo Livello | A&A Roma"],
+                    'es_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di spagnolo online gratuito: 20 domande per scoprire il tuo livello CEFR (A1–C1) in pochi minuti, senza registrazione. Poi prenota il colloquio gratuito nella nostra scuola di Roma San Paolo."],
+                    'es_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di spagnolo: scopri il tuo livello in pochi minuti! Rispondi alle 20 domande a scelta multipla, in ordine di difficoltà crescente. Al termine ricevi subito una stima del tuo livello CEFR e puoi fissare un colloquio conoscitivo gratuito con un nostro docente qualificato — anche in preparazione al DELE."],
+                ],
+            ],
+            'italiano' => [
+                'label' => 'Test di Italiano (per stranieri)',
+                'fields' => [
+                    'it_meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Italiano Online — Free Italian Level Test | A&A Roma"],
+                    'it_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di italiano per stranieri online gratuito: 20 domande per scoprire il tuo livello CEFR. Free online Italian placement test — then book a free interview at our school in Rome (CILS, PLIDA)."],
+                    'it_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di italiano: scopri il tuo livello in pochi minuti! Welcome to your Italian level test: answer 20 multiple-choice questions and get an instant CEFR estimate. Al termine puoi fissare un colloquio conoscitivo gratuito con un nostro docente madrelingua — anche in preparazione a CILS e PLIDA."],
+                ],
+            ],
+            'cta' => [
+                'label' => 'Invito finale (CTA, comune alle 5 pagine)',
+                'fields' => [
+                    'cta_label' => ['label' => 'Etichetta', 'type' => 'text', 'default' => "Il passo successivo"],
+                    'cta_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Prenota il colloquio conoscitivo gratuito"],
+                    'cta_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Il test online è solo l'inizio. Fissa l'Entrance Test completo — prova scritta + colloquio orale con un docente qualificato — nella nostra sede di Roma San Paolo o online. Gratuito e senza impegno."],
+                ],
+            ],
+        ],
+    ],
+
 ];

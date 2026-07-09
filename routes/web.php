@@ -41,6 +41,13 @@ Route::get('/corsi-inglese-roma', [PublicController::class, 'landingInglese'])->
 Route::get('/corsi-italiano-stranieri-roma', [PublicController::class, 'landingItalianoStranieri'])->name('landing.italiano-stranieri');
 Route::get('/corsi-aziendali-roma', [PublicController::class, 'landingAziendali'])->name('landing.aziendali');
 
+// ─── Test di livello online (stessi slug del vecchio sito WP — SEO) ──────────
+// Domande in config/level_tests.php; testi editabili da "Contenuti sito".
+Route::get('/test-sul-livello-di-lingua', [PublicController::class, 'testLivello'])->name('test.livello');
+Route::get('/test-di-{lingua}', [PublicController::class, 'testLingua'])
+    ->whereIn('lingua', ['inglese', 'francese', 'spagnolo', 'italiano'])
+    ->name('test.lingua');
+
 // Throttle anti-spam: max 5 invii per IP al minuto
 Route::post('/iscriviti', [PublicController::class, 'iscrivitiStore'])
     ->middleware('throttle:5,1')
@@ -159,3 +166,10 @@ Route::get('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController:
 Route::post('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController::class, 'confirm'])
     ->middleware('throttle:10,1')
     ->name('unsubscribe.confirm');
+
+/*
+|──────────────────────────────────────────────────────────────────────────────
+| Redirect 301 dal vecchio sito WordPress (migrazione SEO)
+|──────────────────────────────────────────────────────────────────────────────
+*/
+require __DIR__ . '/redirects.php';
