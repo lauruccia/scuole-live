@@ -746,6 +746,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <a href="{{ route('per-le-aziende') }}" class="nav-link {{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
                 <a href="{{ route('servizi') }}" class="nav-link {{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
                 <a href="{{ route('news.index') }}" class="nav-link {{ request()->routeIs('news.*') ? 'active' : '' }}">News</a>
+                <a href="{{ route('lavora-con-noi') }}" class="nav-link {{ request()->routeIs('lavora-con-noi') ? 'active' : '' }}">Lavora con Noi</a>
                 <a href="{{ route('contattaci') }}" class="nav-link {{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
                 <a href="{{ route('iscrizione') }}" class="btn-nav-cta">Iscriviti ↗</a>
             </div>
@@ -765,6 +766,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <a href="{{ route('per-le-aziende') }}" class="{{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
         <a href="{{ route('servizi') }}" class="{{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
         <a href="{{ route('news.index') }}" class="{{ request()->routeIs('news.*') ? 'active' : '' }}">📰 News ed Eventi</a>
+        <a href="{{ route('lavora-con-noi') }}" class="{{ request()->routeIs('lavora-con-noi') ? 'active' : '' }}">Lavora con Noi</a>
         <a href="{{ route('contattaci') }}" class="{{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
         <a href="{{ route('iscrizione') }}" class="mobile-cta">✨ Iscriviti ora →</a>
     </nav>
