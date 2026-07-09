@@ -86,6 +86,18 @@
 .orari-visual { border-radius: var(--radius-lg); overflow: hidden; height: 320px; }
 .orari-visual img { width: 100%; height: 100%; object-fit: cover; opacity: .85; }
 
+/* CTA telefono */
+.cta-band .cta-phone {
+    margin-top: 24px; font-size: .95rem;
+    color: rgba(255,255,255,.75);
+}
+.cta-band .cta-phone a { color: #fff; }
+.cta-band .cta-phone a strong {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 1.1rem; letter-spacing: .02em;
+}
+.cta-band .cta-phone a:hover strong { color: var(--gold); }
+
 /* RESPONSIVE */
 @media (max-width: 900px) {
     .services-grid { grid-template-columns: 1fr 1fr; }
@@ -160,6 +172,30 @@
                 <p>{{ \App\Models\PageContent::text('servizi', 'service6_text') }}</p>
                 <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service6_tag') }}</span>
             </div>
+            <div class="service-card">
+                <div class="service-icon">📄</div>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service7_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service7_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service7_tag') }}</span>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🤝</div>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service8_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service8_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service8_tag') }}</span>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🏕️</div>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service9_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service9_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service9_tag') }}</span>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🎁</div>
+                <h3>{{ \App\Models\PageContent::text('servizi', 'service10_title') }}</h3>
+                <p>{{ \App\Models\PageContent::text('servizi', 'service10_text') }}</p>
+                <span class="service-tag">{{ \App\Models\PageContent::text('servizi', 'service10_tag') }}</span>
+            </div>
         </div>
     </div>
 </section>
@@ -231,6 +267,7 @@
             <a href="{{ route('iscrizione') }}" class="btn-gold">{{ \App\Models\PageContent::text('servizi', 'cta_btn1') }}</a>
             <a href="{{ route('contattaci') }}" class="btn-outline-white">{{ \App\Models\PageContent::text('servizi', 'cta_btn2') }}</a>
         </div>
+        <p class="cta-phone">📞 {!! \App\Models\PageContent::html('servizi', 'cta_phone') !!}</p>
     </div>
 </section>
 
