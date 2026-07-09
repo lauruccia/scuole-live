@@ -169,6 +169,73 @@ class PublicController extends Controller
         return view('public.lavora-con-noi');
     }
 
+    /**
+     * Riceve la candidatura docente dal form /lavora-con-noi.
+     *
+     * Il CV viene salvato su storage/app/candidature (privato, mai esposto
+     * via web) e allegato all'email inviata all'indirizzo configurato dal
+     * pannello (Contenuti sito → Lavora con Noi → "Email candidature").
+     *
+     * Anti-spam: honeypot "website" (campo nascosto che i bot compilano) +
+     * throttle 5/min sulla route. Se il honeypot è pieno rispondiamo con lo
+     * stesso redirect di successo senza processare nulla, così il bot non
+     * capisce di essere stato scartato.
+     */
+    public function lavoraConNoiStore(Request $request)
+    {
+        // Honeypot: gli umani non vedono (né compilano) questo campo.
+        if ($request->filled('website')) {
+            return redirect()->route('lavora-con-noi')->with('candidatura_ok', true);
+        }
+
+        $data = $request->validate([
+            'first_name'     => 'required|string|max:100',
+            'last_name'      => 'required|string|max:100',
+            'email'          => 'required|email|max:255',
+            'phone'          => 'required|string|max:50',
+            'lingua'         => 'required|string|max:120',
+            'laurea'         => 'nullable|string|max:255',
+            'certificazioni' => 'nullable|string|max:255',
+            'esperienze'     => 'nullable|string|max:3000',
+            'message'        => 'nullable|string|max:3000',
+            'cv'             => 'required|file|mimes:pdf,doc,docx|max:5120',
+            'privacy'        => 'accepted',
+        ], [
+            'first_name.required' => 'Il nome è obbligatorio.',
+            'last_name.required'  => 'Il cognome è obbligatorio.',
+            'email.required'      => 'L\'email è obbligatoria.',
+            'email.email'         => 'Inserisci un indirizzo email valido.',
+            'phone.required'      => 'Il telefono è obbligatorio.',
+            'lingua.required'     => 'Indica la lingua (o le lingue) che insegni.',
+            'cv.required'         => 'Allega il tuo CV.',
+            'cv.mimes'            => 'Il CV deve essere in formato PDF o Word (doc/docx).',
+            'cv.max'              => 'Il CV non può superare i 5 MB.',
+            'privacy.accepted'    => 'Devi accettare la privacy policy per inviare la candidatura.',
+        ]);
+
+        // Salva il CV su disk local (storage/app/candidature — NON pubblico).
+        $cvFile     = $request->file('cv');
+        $cvFilename = 'CV ' . $data['first_name'] . ' ' . $data['last_name'] . '.' . $cvFile->getClientOriginalExtension();
+        $cvPath     = $cvFile->store('candidature', 'local');
+
+        $to = \App\Models\PageContent::text('lavora-con-noi', 'cand_email', 'direzione@aealanguagecenter.it');
+
+        try {
+            Mail::to(trim($to))->queue(new \App\Mail\JobApplicationMail(
+                collect($data)->except(['cv', 'privacy'])->all(),
+                $cvPath,
+                $cvFilename,
+            ));
+        } catch (\Throwable $e) {
+            // Il CV è comunque salvato in storage/app/candidature: la
+            // candidatura non va persa anche se l'email fallisce.
+            Log::error('Email candidatura NON accodata: ' . $e->getMessage(), ['cv' => $cvPath]);
+            report($e);
+        }
+
+        return redirect()->route('lavora-con-noi')->with('candidatura_ok', true);
+    }
+
     public function contattaci()
     {
         return view('public.contattaci');

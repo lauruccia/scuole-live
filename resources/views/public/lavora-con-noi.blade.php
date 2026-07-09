@@ -182,6 +182,56 @@
     }
     .btn-instagram:hover { transform: translateY(-2px); opacity: .9; }
 
+    /* FORM CANDIDATURA */
+    .cand-form { max-width: 760px; margin: 8px auto 0; }
+    .cand-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        text-align: left;
+    }
+    .cand-field { display: flex; flex-direction: column; gap: 6px; }
+    .cand-field-full { grid-column: 1 / -1; }
+    .cand-field label { font-size: 13px; font-weight: 700; color: #001b3f; }
+    .cand-field input[type="text"],
+    .cand-field input[type="email"],
+    .cand-field input[type="tel"],
+    .cand-field textarea {
+        border: 1.5px solid #d8e0ec; border-radius: 8px;
+        padding: 11px 14px; font-size: 14px; font-family: inherit;
+        color: #18243a; background: #fff;
+        transition: border-color .2s;
+    }
+    .cand-field input:focus, .cand-field textarea:focus {
+        outline: none; border-color: var(--blue);
+    }
+    .cand-field input[type="file"] {
+        border: 1.5px dashed #d8e0ec; border-radius: 8px;
+        padding: 11px 14px; font-size: 13px; background: #f8fafd;
+    }
+    .cand-privacy {
+        display: flex; gap: 10px; align-items: flex-start;
+        margin: 20px 0 26px; text-align: left;
+        font-size: 13px; color: #526173; line-height: 1.6;
+        cursor: pointer;
+    }
+    .cand-privacy input { margin-top: 3px; flex-shrink: 0; }
+    .cand-privacy a { color: var(--blue); text-decoration: underline; }
+    .cand-form .btn-cta { border: none; font-family: inherit; }
+    .cand-hp { position: absolute; left: -9999px; top: -9999px; height: 0; overflow: hidden; }
+    .cand-success {
+        max-width: 680px; margin: 0 auto; text-align: center;
+        background: #e8f8ee; border: 1.5px solid #7fd8a2; border-radius: 12px;
+        padding: 22px 28px; font-size: 15px; color: #14532d; line-height: 1.6;
+    }
+    .cand-errors {
+        max-width: 760px; margin: 0 auto 22px; text-align: left;
+        background: #fdecec; border: 1.5px solid #f1a8a8; border-radius: 12px;
+        padding: 16px 22px; font-size: 14px; color: #7f1d1d; line-height: 1.6;
+    }
+    .cand-errors ul { margin: 8px 0 0 18px; padding: 0; }
+    @media (max-width: 640px) {
+        .cand-grid { grid-template-columns: 1fr; }
+    }
+
     footer {
         background: #001126 !important;
         color: #fff !important;
@@ -351,18 +401,92 @@
         </div>
         <div class="candidatura-box">
             <p>{{ \App\Models\PageContent::text('lavora-con-noi', 'cand_text') }}</p>
-            <div class="candidatura-actions">
-                <a href="mailto:direzione@aealanguagecenter.it" class="btn-cta btn-primary-blue">
-                    📧 Invia la tua candidatura
-                </a>
-                <a href="https://www.instagram.com/aealanguagecenter/" target="_blank" rel="noopener" class="btn-cta btn-instagram">
-                    📷 Seguici su Instagram
-                </a>
+        </div>
+
+        @if (session('candidatura_ok'))
+            <div class="cand-success" role="status">
+                ✅ <strong>Candidatura inviata!</strong> Grazie per il tuo interesse: valuteremo il tuo profilo e ti risponderemo entro pochi giorni lavorativi.
             </div>
-            <p style="margin-top:24px;font-size:13px;color:#526173;">
+        @else
+            @if ($errors->any())
+                <div class="cand-errors" role="alert">
+                    <strong>Controlla i campi segnalati:</strong>
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
+            <form method="POST" action="{{ route('lavora-con-noi.store') }}" enctype="multipart/form-data" class="cand-form">
+                @csrf
+
+                {{-- Honeypot: campo invisibile agli umani, i bot lo compilano --}}
+                <div class="cand-hp" aria-hidden="true">
+                    <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+                </div>
+
+                <div class="cand-grid">
+                    <div class="cand-field">
+                        <label for="cand-first_name">Nome *</label>
+                        <input type="text" id="cand-first_name" name="first_name" value="{{ old('first_name') }}" required maxlength="100">
+                    </div>
+                    <div class="cand-field">
+                        <label for="cand-last_name">Cognome *</label>
+                        <input type="text" id="cand-last_name" name="last_name" value="{{ old('last_name') }}" required maxlength="100">
+                    </div>
+                    <div class="cand-field">
+                        <label for="cand-email">Email *</label>
+                        <input type="email" id="cand-email" name="email" value="{{ old('email') }}" required maxlength="255">
+                    </div>
+                    <div class="cand-field">
+                        <label for="cand-phone">Telefono *</label>
+                        <input type="tel" id="cand-phone" name="phone" value="{{ old('phone') }}" required maxlength="50">
+                    </div>
+                    <div class="cand-field">
+                        <label for="cand-lingua">Lingua/e che insegni *</label>
+                        <input type="text" id="cand-lingua" name="lingua" value="{{ old('lingua') }}" required maxlength="120" placeholder="Es. Inglese, Spagnolo…">
+                    </div>
+                    <div class="cand-field">
+                        <label for="cand-laurea">Laurea</label>
+                        <input type="text" id="cand-laurea" name="laurea" value="{{ old('laurea') }}" maxlength="255" placeholder="Es. Lingue e Letterature Straniere">
+                    </div>
+                    <div class="cand-field cand-field-full">
+                        <label for="cand-certificazioni">Certificazioni di insegnamento</label>
+                        <input type="text" id="cand-certificazioni" name="certificazioni" value="{{ old('certificazioni') }}" maxlength="255" placeholder="Es. TEFL, CELTA, DELTA…">
+                    </div>
+                    <div class="cand-field cand-field-full">
+                        <label for="cand-esperienze">Esperienze di lavoro rilevanti</label>
+                        <textarea id="cand-esperienze" name="esperienze" rows="3" maxlength="3000">{{ old('esperienze') }}</textarea>
+                    </div>
+                    <div class="cand-field cand-field-full">
+                        <label for="cand-message">Dicci qualcosa di te</label>
+                        <textarea id="cand-message" name="message" rows="3" maxlength="3000">{{ old('message') }}</textarea>
+                    </div>
+                    <div class="cand-field cand-field-full">
+                        <label for="cand-cv">Curriculum vitae (PDF o Word, max 5 MB) *</label>
+                        <input type="file" id="cand-cv" name="cv" accept=".pdf,.doc,.docx" required>
+                    </div>
+                </div>
+
+                <label class="cand-privacy">
+                    <input type="checkbox" name="privacy" value="1" required {{ old('privacy') ? 'checked' : '' }}>
+                    <span>Ho letto l'<a href="{{ route('privacy') }}" target="_blank">informativa privacy</a> e acconsento al trattamento dei miei dati per la valutazione della candidatura. *</span>
+                </label>
+
+                <div class="candidatura-actions">
+                    <button type="submit" class="btn-cta btn-primary-blue">📧 Invia la candidatura</button>
+                    <a href="https://www.instagram.com/aealanguagecenter/" target="_blank" rel="noopener" class="btn-cta btn-instagram">
+                        📷 Seguici su Instagram
+                    </a>
+                </div>
+            </form>
+
+            <p style="margin-top:24px;font-size:13px;color:#526173;text-align:center;">
                 {!! \App\Models\PageContent::html('lavora-con-noi', 'cand_note') !!}
             </p>
-        </div>
+        @endif
     </div>
 </section>
 

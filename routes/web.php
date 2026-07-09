@@ -24,6 +24,11 @@ Route::get('/la-scuola', [PublicController::class, 'laScuola'])->name('la-scuola
 Route::get('/per-le-aziende', [PublicController::class, 'perLeAziende'])->name('per-le-aziende');
 Route::get('/servizi', [PublicController::class, 'servizi'])->name('servizi');
 Route::get('/lavora-con-noi', [PublicController::class, 'lavoraConNoi'])->name('lavora-con-noi');
+
+// Candidatura docenti (form con upload CV) — throttle anti-spam come /iscriviti
+Route::post('/lavora-con-noi', [PublicController::class, 'lavoraConNoiStore'])
+    ->middleware('throttle:5,1')
+    ->name('lavora-con-noi.store');
 Route::get('/contattaci', [PublicController::class, 'contattaci'])->name('contattaci');
 Route::get('/le-certificazioni', [PublicController::class, 'leCertificazioni'])->name('le-certificazioni');
 

@@ -708,8 +708,9 @@ return [
                 'label' => 'Candidatura',
                 'fields' => [
                     'cand_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Invia la tua candidatura"],
-                    'cand_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Manda il tuo curriculum vitae con una breve lettera di presentazione all'indirizzo email della direzione, oppure contattaci tramite Instagram. Valutiamo ogni candidatura con la massima attenzione e risponderemo entro pochi giorni lavorativi."],
-                    'cand_note' => ['label' => 'Nota finale', 'type' => 'html', 'default' => "Invia il tuo CV a <strong>direzione@aealanguagecenter.it</strong> con oggetto \"Candidatura Docente — [Lingua]\""],
+                    'cand_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Compila il form con i tuoi dati e allega il curriculum vitae, oppure scrivici direttamente via email. Valutiamo ogni candidatura con la massima attenzione e risponderemo entro pochi giorni lavorativi."],
+                    'cand_note' => ['label' => 'Nota finale', 'type' => 'html', 'default' => "In alternativa invia il tuo CV a <strong>direzione@aealanguagecenter.it</strong> con oggetto \"Candidatura Docente — [Lingua]\""],
+                    'cand_email' => ['label' => 'Email candidature (destinatario del form)', 'type' => 'text', 'default' => "direzione@aealanguagecenter.it"],
                 ],
             ],
         ],
