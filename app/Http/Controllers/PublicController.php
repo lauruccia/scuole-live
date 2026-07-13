@@ -64,6 +64,31 @@ class PublicController extends Controller
         return view('public.le-certificazioni');
     }
 
+    // ─── Vacanze Studio (Summer Camp + programmi estero) ──────────────────────
+
+    public function vacanzeStudio()
+    {
+        return view('public.vacanze-studio');
+    }
+
+    // ─── Insegnanti (profili pubblici) ────────────────────────────────────────
+
+    public function insegnantiIndex()
+    {
+        $teachers = \App\Models\TeacherProfile::published()->get();
+
+        return view('public.insegnanti.index', compact('teachers'));
+    }
+
+    public function insegnantiShow(string $slug)
+    {
+        $teacher = \App\Models\TeacherProfile::published()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return view('public.insegnanti.show', compact('teacher'));
+    }
+
     public function iscriviti()
     {
         return view('public.iscriviti');
@@ -151,7 +176,16 @@ class PublicController extends Controller
 
     public function laScuola()
     {
-        return view('public.la-scuola');
+        // try/catch: se la tabella teacher_profiles non è ancora migrata
+        // (deploy codice prima della migration) la pagina non deve rompersi.
+        try {
+            $teachers = \App\Models\TeacherProfile::published()->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $teachers = collect();
+        }
+
+        return view('public.la-scuola', compact('teachers'));
     }
 
     public function perLeAziende()

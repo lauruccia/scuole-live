@@ -256,6 +256,19 @@
     </div>
 </section>
 
+{{-- Il nostro metodo (testo editoriale dal vecchio sito, editabile dal pannello) --}}
+<section class="tipologie-section" style="background:#fff;" aria-labelledby="metodo-title">
+    <div class="c" style="max-width:820px;">
+        <div class="tipologie-header" style="margin-bottom:20px;">
+            <div class="section-label">{{ \App\Models\PageContent::text('corsi', 'metodo_label') }}</div>
+            <h2 class="sec-heading" id="metodo-title">{!! \App\Models\PageContent::html('corsi', 'metodo_title') !!}</h2>
+        </div>
+        <div style="font-size:.95rem; color:var(--muted, #5a6b84); line-height:1.8;">
+            {!! \App\Models\PageContent::html('corsi', 'metodo_text') !!}
+        </div>
+    </div>
+</section>
+
 <section class="cta-strip">
     <div class="c cta-inner">
         <div>

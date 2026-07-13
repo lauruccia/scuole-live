@@ -823,6 +823,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <li><a href="{{ route('test.livello') }}">Test di Livello Gratuito</a></li>
                     <li><a href="{{ route('servizi') }}">Servizi</a></li>
                     <li><a href="{{ route('le-certificazioni') }}">Le Certificazioni Trinity</a></li>
+                    <li><a href="{{ route('vacanze-studio') }}">Vacanze Studio</a></li>
+                    <li><a href="{{ route('insegnanti.index') }}">I Nostri Insegnanti</a></li>
                     <li><a href="{{ route('news.index') }}">News ed Eventi</a></li>
                     <li><a href="{{ route('lavora-con-noi') }}">Lavora con Noi</a></li>
                 </ul>

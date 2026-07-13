@@ -33,6 +33,14 @@ Route::permanentRedirect('/le-convenzioni', '/per-le-aziende');
 Route::permanentRedirect('/corsi-per-le-aziende', '/corsi-aziendali-roma');
 Route::permanentRedirect('/preparazione-esami-internazionali', '/le-certificazioni');
 
+// ─── Insegnanti (profili pubblici ricreati 2026-07-13) ────────────────────────
+// Devono stare PRIMA del wildcard /teachers/{any} più sotto: Laravel matcha
+// la prima route che corrisponde. Stesso slug del vecchio sito, solo il
+// prefisso cambia da /teachers a /insegnanti.
+Route::permanentRedirect('/teachers/insegnante-di-lingua-inglese', '/insegnanti/insegnante-di-lingua-inglese');
+Route::permanentRedirect('/teachers/insegnante-di-francese-e-tedesco', '/insegnanti/insegnante-di-francese-e-tedesco');
+Route::permanentRedirect('/teachers/insegnante-di-lingua-araba', '/insegnanti/insegnante-di-lingua-araba');
+
 // ─── Catalogo corsi (pagine WP "tipologia corso") ─────────────────────────────
 Route::permanentRedirect('/i-corsi', '/corsi');
 Route::permanentRedirect('/corsi-per-adulti', '/corsi');
@@ -42,7 +50,10 @@ Route::permanentRedirect('/corsipersonalizzati-one-to-one', '/corsi');
 Route::permanentRedirect('/corsi-in-presenza', '/corsi');
 Route::permanentRedirect('/corsi-online', '/corsi');
 Route::permanentRedirect('/inglese-al-telefono', '/corsi-inglese-roma');
-Route::permanentRedirect('/vacanze-studio-2024', '/servizi');
+// Pagina ricreata 2026-07-13 con i contenuti del vecchio sito (La Casella
+// Summer Camp + programmi Junior/Adulti all'estero): non più un redirect
+// generico a /servizi.
+Route::permanentRedirect('/vacanze-studio-2024', '/vacanze-studio');
 Route::permanentRedirect('/traduzioni', '/servizi');
 
 // ─── Test di livello ──────────────────────────────────────────────────────────
@@ -98,8 +109,14 @@ foreach ($oldPosts as $slug) {
 
 // ─── Tassonomie e archivi WP (categorie, tag, autori, insegnanti) ─────────────
 Route::get('/category/{any}', fn () => redirect('/news', 301))->where('any', '.*');
+// Alias italiano usato dal vecchio sito per l'archivio categoria (es.
+// /categoria/news/): stesso target di /category/{any}, mancava (bug trovato
+// nel confronto vecchio↔nuovo sito del 2026-07-13).
+Route::get('/categoria/{any}', fn () => redirect('/news', 301))->where('any', '.*');
 Route::get('/tag/{any}', fn () => redirect('/news', 301))->where('any', '.*');
 Route::get('/author/{any}', fn () => redirect('/news', 301))->where('any', '.*');
+// Fallback per qualunque altro profilo insegnante del vecchio sito non
+// ricreato su /insegnanti/{slug} (vedi redirect specifici più sopra).
 Route::get('/teachers/{any}', fn () => redirect('/la-scuola', 301))->where('any', '.*');
 Route::get('/category-teacher/{any}', fn () => redirect('/la-scuola', 301))->where('any', '.*');
 Route::get('/difficulty-level-course/{any}', fn () => redirect('/corsi', 301))->where('any', '.*');

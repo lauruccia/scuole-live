@@ -235,6 +235,21 @@
             </div>
         @endif
         <p class="team-highlight">{!! \App\Models\PageContent::html('la-scuola', 'team_highlight') !!}</p>
+
+        @if($teachers->isNotEmpty())
+            <div class="features-grid" style="margin-top:32px;">
+                @foreach($teachers as $teacher)
+                    <a href="{{ route('insegnanti.show', $teacher->slug) }}" class="feature-card" style="text-decoration:none;display:block;">
+                        <div class="feature-icon">🧑‍🏫</div>
+                        <h3>{{ $teacher->name }}</h3>
+                        <p>{{ \Illuminate\Support\Str::limit(strip_tags($teacher->bio), 110) }}</p>
+                    </a>
+                @endforeach
+            </div>
+            <p style="text-align:center;margin-top:20px;">
+                <a href="{{ route('insegnanti.index') }}" style="color:var(--blue);font-weight:600;font-size:.9rem;">Scopri tutti i profili degli insegnanti →</a>
+            </p>
+        @endif
     </div>
 </section>
 

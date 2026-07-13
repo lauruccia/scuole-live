@@ -31,6 +31,11 @@ Route::post('/lavora-con-noi', [PublicController::class, 'lavoraConNoiStore'])
     ->name('lavora-con-noi.store');
 Route::get('/contattaci', [PublicController::class, 'contattaci'])->name('contattaci');
 Route::get('/le-certificazioni', [PublicController::class, 'leCertificazioni'])->name('le-certificazioni');
+Route::get('/vacanze-studio', [PublicController::class, 'vacanzeStudio'])->name('vacanze-studio');
+
+// ─── Insegnanti (profili pubblici) ────────────────────────────────────────────
+Route::get('/insegnanti', [PublicController::class, 'insegnantiIndex'])->name('insegnanti.index');
+Route::get('/insegnanti/{slug}', [PublicController::class, 'insegnantiShow'])->name('insegnanti.show');
 
 // ─── News ed Eventi ───────────────────────────────────────────────────────────
 Route::get('/news', [PublicController::class, 'newsIndex'])->name('news.index');

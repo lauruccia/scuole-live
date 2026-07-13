@@ -326,6 +326,14 @@ return [
                     'tip_orari' => ['label' => 'Nota orari (in fondo)', 'type' => 'html', 'default' => "🕐 <strong>Lezioni no-stop:</strong> Lunedì–Venerdì 10:00–19:00 e Sabato 9:00–13:00. Ogni studente sceglie giorno e ora della lezione con la massima flessibilità."],
                 ],
             ],
+            'metodo' => [
+                'label' => 'Il nostro metodo (testo editoriale, dal vecchio sito)',
+                'fields' => [
+                    'metodo_label' => ['label' => 'Etichetta sezione', 'type' => 'text', 'default' => "Il nostro metodo"],
+                    'metodo_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Un percorso su misura, <em>qualunque sia il tuo obiettivo</em>"],
+                    'metodo_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>Con A&amp;A Language Center non c'è più bisogno di rimandare: costruiamo un piano di studio flessibile che si adatta ai tuoi tempi, che tu sia uno studente, un professionista o un genitore alla ricerca del corso giusto per un bambino o un ragazzo.</p><p>Ogni corso personalizzato ti permette di scegliere liberamente giorno e orario delle lezioni, seguendo un percorso costruito sui tuoi obiettivi: dal supporto scolastico alla preparazione di esami, colloqui di lavoro o concorsi pubblici.</p><p>Il livello di apprendimento viene monitorato con periodici esami interni e lezioni di conversazione, per verificare i progressi passo dopo passo. Particolare attenzione è dedicata a conversazione e comprensione, senza tralasciare scrittura, lettura e grammatica — con un approccio sempre calato in scenari di vita reale.</p>"],
+                ],
+            ],
         ],
     ],
 
@@ -526,6 +534,33 @@ return [
                     'cambridge_highlight' => ['label' => 'Riquadro in evidenza', 'type' => 'html', 'default' => "ℹ️ <strong>In sintesi:</strong> siamo sede d'esami ufficiale <strong>solo per Trinity College London</strong> (n° 8241): gli esami Trinity si sostengono direttamente da noi. Per tutte le altre certificazioni siamo centro di preparazione."],
                 ],
             ],
+            'altre_lingue' => [
+                'label' => 'Altre certificazioni internazionali (Francese, Spagnolo, Italiano, Tedesco)',
+                'fields' => [
+                    'altre_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Preparazione alle <em>certificazioni internazionali</em>"],
+                    'altre_intro' => ['label' => 'Introduzione', 'type' => 'html', 'default' => "Oltre a Trinity e Cambridge, prepariamo i nostri studenti per le principali certificazioni internazionali riconosciute dal framework CEFR (A1–C2), utili per università, concorsi pubblici e carriera."],
+                    'delf_badge' => ['label' => 'Card Francese — badge', 'type' => 'text', 'default' => "Francese"],
+                    'delf_title' => ['label' => 'Card Francese — titolo', 'type' => 'text', 'default' => "DELF / DALF"],
+                    'delf_text' => ['label' => 'Card Francese — testo', 'type' => 'textarea', 'default' => "Diplomi rilasciati dal Ministero dell'Istruzione francese, riconosciuti a livello internazionale. Preparazione per tutti i livelli, dal DELF A1 al DALF C2."],
+                    'dele_badge' => ['label' => 'Card Spagnolo — badge', 'type' => 'text', 'default' => "Spagnolo"],
+                    'dele_title' => ['label' => 'Card Spagnolo — titolo', 'type' => 'text', 'default' => "D.E.L.E. — Instituto Cervantes"],
+                    'dele_text' => ['label' => 'Card Spagnolo — testo', 'type' => 'textarea', 'default' => "Diploma di Español come Lingua Straniera, certificazione ufficiale del Ministero dell'Educazione spagnolo, valida per università e ambito lavorativo."],
+                    'cils_badge' => ['label' => 'Card Italiano — badge', 'type' => 'text', 'default' => "Italiano per stranieri"],
+                    'cils_title' => ['label' => 'Card Italiano — titolo', 'type' => 'text', 'default' => "CILS / CELI"],
+                    'cils_text' => ['label' => 'Card Italiano — testo', 'type' => 'textarea', 'default' => "Certificazioni di Italiano come Lingua Straniera rilasciate dalle Università per Stranieri di Siena e Perugia, richieste per permesso di soggiorno, cittadinanza e università."],
+                    'goethe_badge' => ['label' => 'Card Tedesco — badge', 'type' => 'text', 'default' => "Tedesco"],
+                    'goethe_title' => ['label' => 'Card Tedesco — titolo', 'type' => 'text', 'default' => "Goethe-Institut (KDS / GDS)"],
+                    'goethe_text' => ['label' => 'Card Tedesco — testo', 'type' => 'textarea', 'default' => "Certificazioni ufficiali della lingua tedesca del Goethe-Institut, riconosciute da università e datori di lavoro in tutta l'area germanofona."],
+                ],
+            ],
+            'ielts' => [
+                'label' => 'Corsi IELTS',
+                'fields' => [
+                    'ielts_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Corsi intensivi <em>IELTS</em>"],
+                    'ielts_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Corsi mirati alla preparazione dell'esame IELTS (International English Language Testing System), disponibili in presenza o in videoconferenza, in formula individuale o in piccoli gruppi da 3–4 studenti."],
+                    'ielts_prezzi' => ['label' => 'Riquadro prezzi', 'type' => 'html', 'default' => "📚 <strong>Intensivo 1 settimana</strong> — 15 ore — € 280<br>📚 <strong>Corso 3 settimane</strong> — 18 ore — € 325<br>📚 <strong>Corso 4 settimane</strong> — 24 ore — € 430<br><small>Prezzi indicativi: contattaci per il programma aggiornato e le date del prossimo corso.</small>"],
+                ],
+            ],
             'uses' => [
                 'label' => 'A cosa servono',
                 'fields' => [
@@ -543,6 +578,73 @@ return [
                 'fields' => [
                     'cta_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Iscriviti a uno dei nostri corsi di preparazione<br>agli esami ISE B1 · B2 · C1 — Trinity College London"],
                     'cta_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Diventa parte di A&amp;A per migliorare la tua carriera. Segreteria: <a href=\"tel:+39065743734\" style=\"color:var(--gold);font-weight:700;\">06 574 3734</a>"],
+                    'cta_button' => ['label' => 'Bottone', 'type' => 'text', 'default' => "CONTATTACI →"],
+                ],
+            ],
+        ],
+    ],
+
+    /* ═══════════════════ VACANZE STUDIO ═══════════════════ */
+    'vacanze-studio' => [
+        'label' => 'Vacanze Studio',
+        'sections' => [
+            'seo' => [
+                'label' => 'SEO (motori di ricerca)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Vacanze Studio — Summer Camp e Corsi all'Estero | A&A Language Center"],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Vacanze studio A&A Language Center: Summer Camp \"La Casella\" in Toscana/Umbria per bambini e ragazzi, corsi Junior in Inghilterra e Malta, programmi Adulti all'estero."],
+                    'meta_keywords' => ['label' => 'Meta keywords', 'type' => 'textarea', 'default' => "vacanze studio Roma, summer camp inglese ragazzi, corsi junior inghilterra, corsi estero adulti inglese, vacanza studio Toscana Umbria"],
+                ],
+            ],
+            'hero' => [
+                'label' => 'Testata',
+                'fields' => [
+                    'hero_eyebrow' => ['label' => 'Etichetta', 'type' => 'text', 'default' => "English in Action"],
+                    'hero_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Vacanze Studio"],
+                    'hero_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Impara le lingue divertendoti: Summer Camp immersivo in Italia per bambini e ragazzi, e programmi di studio all'estero per ogni età, dai Junior agli Adulti."],
+                ],
+            ],
+            'casella' => [
+                'label' => 'La Casella Summer Camp',
+                'fields' => [
+                    'casella_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "La Casella <em>Summer Camp</em>"],
+                    'casella_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>English in Action: il nostro Summer Camp in collaborazione con \"La Casella\", antico feudo di campagna tra Toscana e Umbria. Il modo migliore per imparare l'Inglese divertendosi, immersi in una natura incontaminata.</p><p>Il campus è pensato per bambini e ragazzi dagli 11 ai 17 anni: un programma \"tutto incluso\" che unisce lezioni di lingua, sport e vita di gruppo, con la supervisione costante di insegnanti qualificati.</p>"],
+                    'casella_dates_note' => ['label' => 'Riquadro date e prezzi (aggiorna ogni stagione)', 'type' => 'html', 'default' => "📅 <strong>Date e prezzi per l'estate in corso in fase di aggiornamento.</strong> A titolo indicativo, l'ultima edizione prevedeva turni da 1 e 2 settimane a partire da € 890 (+ € 90 quota di iscrizione). <a href=\"/contattaci\" style=\"color:var(--navy);text-decoration:underline;\">Contattaci</a> per le date e i prezzi aggiornati."],
+                    'casella_features' => ['label' => 'Cosa è incluso (una voce per riga)', 'type' => 'lines', 'default' => "24 ore da 45 minuti di lezione a settimana\nMassimo 15 studenti per classe\nOltre 100 ore totali di immersione linguistica\nPensione completa, camere condivise con bagno privato\nSport e attività: tennis, nuoto, avviamento all'equitazione, yoga\nPreparazione all'esame Trinity College London inclusa nel programma\nEsame Trinity ufficiale disponibile su richiesta (costo extra)\nLezioni di equitazione e passeggiate a cavallo (extra, corso FITETREC disponibile)"],
+                ],
+            ],
+            'estero' => [
+                'label' => 'Programmi all\'estero',
+                'fields' => [
+                    'estero_title' => ['label' => 'Titolo sezione', 'type' => 'html', 'default' => "Programmi <em>all'estero</em>"],
+                    'junior_title' => ['label' => 'Card Junior — titolo', 'type' => 'text', 'default' => "Junior all'estero"],
+                    'junior_text' => ['label' => 'Card Junior — testo', 'type' => 'richtext', 'default' => "<p>Corsi Junior in Inghilterra (Bath, Canterbury, Folkestone, Rochester, Ashford) e a Malta, realizzati con i nostri partner internazionali Concorde International e AM Language Studio. Immersione totale nella lingua, famiglia ospitante o college, e tante attività.</p>"],
+                    'adulti_title' => ['label' => 'Card Adulti — titolo', 'type' => 'text', 'default' => "Adulti all'estero"],
+                    'adulti_text' => ['label' => 'Card Adulti — testo', 'type' => 'richtext', 'default' => "<p>Programmi di General English per adulti in Inghilterra, Malta e Spagna, a partire dal livello A2, con soggiorni da una settimana in su. Ideali per chi vuole fare un'immersione linguistica concentrata in poco tempo.</p>"],
+                ],
+            ],
+            'prep' => [
+                'label' => 'Preparazione online',
+                'fields' => [
+                    'prep_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Preparati <em>online</em> prima di partire"],
+                    'prep_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Per arrivare pronti al campus o al soggiorno all'estero, offriamo un corso di preparazione online di 10 ore settimanali al prezzo di € 152 a persona."],
+                ],
+            ],
+            'booking' => [
+                'label' => 'Prenotazione e contatti',
+                'fields' => [
+                    'booking_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Come prenotare"],
+                    'booking_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "La prenotazione si conferma con una caparra di € 200 tramite bonifico bancario. Per l'IBAN aggiornato e i dettagli di pagamento contatta la segreteria."],
+                    'booking_phone' => ['label' => 'Telefono', 'type' => 'html', 'default' => "<a href=\"tel:+39065743734\">06 5743734</a> · <a href=\"tel:+393463836175\">346 3836175</a>"],
+                    'booking_email' => ['label' => 'Email', 'type' => 'html', 'default' => "<a href=\"mailto:info@aealanguagecenter.it\">info@aealanguagecenter.it</a>"],
+                    'booking_orari' => ['label' => 'Orari', 'type' => 'text', 'default' => "Lunedì–Venerdì 10:00–19:00, Sabato 9:00–13:00"],
+                ],
+            ],
+            'cta' => [
+                'label' => 'Invito finale (CTA)',
+                'fields' => [
+                    'cta_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Prenota il posto per la prossima Vacanza Studio"],
+                    'cta_text' => ['label' => 'Testo', 'type' => 'html', 'default' => "Contattaci per ricevere il programma dettagliato, le date aggiornate e i prezzi della stagione in corso."],
                     'cta_button' => ['label' => 'Bottone', 'type' => 'text', 'default' => "CONTATTACI →"],
                 ],
             ],

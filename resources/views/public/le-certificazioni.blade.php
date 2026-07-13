@@ -159,6 +159,47 @@
     </div>
 </section>
 
+{{-- ALTRE LINGUE: DELF/DALF, DELE, CILS, GOETHE + IELTS --}}
+<section class="cert-sec">
+    <div class="c cert-narrow">
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'altre_title') !!}</h2>
+        <p>{!! \App\Models\PageContent::html('le-certificazioni', 'altre_intro') !!}</p>
+        <div class="cert-cards">
+            <div class="cert-card">
+                <span class="badge">{{ \App\Models\PageContent::text('le-certificazioni', 'delf_badge') }}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'delf_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'delf_text') !!}</p>
+            </div>
+            <div class="cert-card">
+                <span class="badge">{{ \App\Models\PageContent::text('le-certificazioni', 'dele_badge') }}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'dele_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'dele_text') !!}</p>
+            </div>
+            <div class="cert-card">
+                <span class="badge">{{ \App\Models\PageContent::text('le-certificazioni', 'cils_badge') }}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'cils_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'cils_text') !!}</p>
+            </div>
+            <div class="cert-card">
+                <span class="badge">{{ \App\Models\PageContent::text('le-certificazioni', 'goethe_badge') }}</span>
+                <h3>{{ \App\Models\PageContent::text('le-certificazioni', 'goethe_title') }}</h3>
+                <p>{!! \App\Models\PageContent::html('le-certificazioni', 'goethe_text') !!}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- CORSI IELTS --}}
+<section class="cert-sec alt">
+    <div class="c cert-narrow">
+        <h2>{!! \App\Models\PageContent::html('le-certificazioni', 'ielts_title') !!}</h2>
+        <p>{!! \App\Models\PageContent::html('le-certificazioni', 'ielts_text') !!}</p>
+        <div class="cert-highlight">
+            {!! \App\Models\PageContent::html('le-certificazioni', 'ielts_prezzi') !!}
+        </div>
+    </div>
+</section>
+
 {{-- A COSA SERVONO --}}
 <section class="cert-sec">
     <div class="c">

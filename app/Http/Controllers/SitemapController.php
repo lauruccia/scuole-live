@@ -90,6 +90,8 @@ class SitemapController extends Controller
             ['loc' => route('contattaci'),      'changefreq' => 'monthly', 'priority' => 0.7, 'lastmod' => $today],
             ['loc' => route('lavora-con-noi'),  'changefreq' => 'monthly', 'priority' => 0.5, 'lastmod' => $today],
             ['loc' => route('le-certificazioni'), 'changefreq' => 'monthly', 'priority' => 0.8, 'lastmod' => $today],
+            ['loc' => route('vacanze-studio'),  'changefreq' => 'monthly', 'priority' => 0.7, 'lastmod' => $today],
+            ['loc' => route('insegnanti.index'),'changefreq' => 'monthly', 'priority' => 0.6, 'lastmod' => $today],
             ['loc' => route('news.index'),      'changefreq' => 'weekly',  'priority' => 0.7, 'lastmod' => $today],
             ['loc' => route('privacy'),         'changefreq' => 'yearly',  'priority' => 0.3, 'lastmod' => $today],
         ];
@@ -168,6 +170,24 @@ class SitemapController extends Controller
             report($e);
         }
 
-        return array_merge($static, $landings, $testPages, $courseUrls, $newsUrls);
+        // Profili insegnanti pubblicati
+        $teacherUrls = [];
+        try {
+            $teachers = \App\Models\TeacherProfile::published()->get(['slug', 'updated_at']);
+
+            foreach ($teachers as $t) {
+                $teacherUrls[] = [
+                    'loc'        => route('insegnanti.show', $t->slug),
+                    'changefreq' => 'yearly',
+                    'priority'   => 0.5,
+                    'lastmod'    => optional($t->updated_at)->toIso8601String() ?? $today,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Tabella non ancora migrata o DB non disponibile: non rompiamo la sitemap.
+            report($e);
+        }
+
+        return array_merge($static, $landings, $testPages, $courseUrls, $newsUrls, $teacherUrls);
     }
 }
