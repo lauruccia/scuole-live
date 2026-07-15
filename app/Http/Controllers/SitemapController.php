@@ -98,7 +98,7 @@ class SitemapController extends Controller
 
         // Landing SEO dedicate (registrate solo se le route esistono)
         $landings = [];
-        foreach (['landing.inglese', 'landing.italiano-stranieri', 'landing.aziendali'] as $name) {
+        foreach (['landing.inglese', 'landing.italiano-stranieri', 'landing.aziendali', 'landing.ragazzi', 'landing.adulti'] as $name) {
             if (\Route::has($name)) {
                 $landings[] = [
                     'loc'        => route($name),

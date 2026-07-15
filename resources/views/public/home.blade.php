@@ -825,13 +825,13 @@
                 <p>{{ \App\Models\PageContent::text('home', 'eta1_text') }}</p>
                 <span class="eta-more">Scopri i corsi →</span>
             </a>
-            <a href="{{ route('checkout.catalogo') }}" class="eta-card">
+            <a href="{{ route('landing.ragazzi') }}" class="eta-card">
                 <div class="eta-icon">🎒</div>
                 <h3>{{ \App\Models\PageContent::text('home', 'eta2_title') }}</h3>
                 <p>{{ \App\Models\PageContent::text('home', 'eta2_text') }}</p>
                 <span class="eta-more">Scopri i corsi →</span>
             </a>
-            <a href="{{ route('checkout.catalogo') }}" class="eta-card">
+            <a href="{{ route('landing.adulti') }}" class="eta-card">
                 <div class="eta-icon">💼</div>
                 <h3>{{ \App\Models\PageContent::text('home', 'eta3_title') }}</h3>
                 <p>{{ \App\Models\PageContent::text('home', 'eta3_text') }}</p>

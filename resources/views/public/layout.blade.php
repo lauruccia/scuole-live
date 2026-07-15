@@ -820,6 +820,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <li><a href="{{ route('landing.inglese') }}">Corsi di Inglese a Roma</a></li>
                     <li><a href="{{ route('landing.italiano-stranieri') }}">Italiano per Stranieri</a></li>
                     <li><a href="{{ route('landing.aziendali') }}">Corsi Aziendali a Roma</a></li>
+                    <li><a href="{{ route('landing.ragazzi') }}">Corsi per Ragazzi</a></li>
+                    <li><a href="{{ route('landing.adulti') }}">Corsi per Adulti</a></li>
                     <li><a href="{{ route('test.livello') }}">Test di Livello Gratuito</a></li>
                     <li><a href="{{ route('servizi') }}">Servizi</a></li>
                     <li><a href="{{ route('le-certificazioni') }}">Le Certificazioni Trinity</a></li>

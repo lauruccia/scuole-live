@@ -43,8 +43,9 @@ Route::permanentRedirect('/teachers/insegnante-di-lingua-araba', '/insegnanti/in
 
 // ─── Catalogo corsi (pagine WP "tipologia corso") ─────────────────────────────
 Route::permanentRedirect('/i-corsi', '/corsi');
-Route::permanentRedirect('/corsi-per-adulti', '/corsi');
-Route::permanentRedirect('/corsi-per-ragazzi', '/corsi');
+// /corsi-per-adulti e /corsi-per-ragazzi: ricreate come pagine dedicate il
+// 2026-07-15 (routes/web.php → landing.adulti / landing.ragazzi), NON più
+// redirect. /corsi-per-bambini resta un redirect: non richiesta dalla cliente.
 Route::permanentRedirect('/corsi-per-bambini', '/corsi');
 Route::permanentRedirect('/corsipersonalizzati-one-to-one', '/corsi');
 Route::permanentRedirect('/corsi-in-presenza', '/corsi');

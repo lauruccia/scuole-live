@@ -45,6 +45,10 @@ Route::get('/news/{slug}', [PublicController::class, 'newsShow'])->name('news.sh
 Route::get('/corsi-inglese-roma', [PublicController::class, 'landingInglese'])->name('landing.inglese');
 Route::get('/corsi-italiano-stranieri-roma', [PublicController::class, 'landingItalianoStranieri'])->name('landing.italiano-stranieri');
 Route::get('/corsi-aziendali-roma', [PublicController::class, 'landingAziendali'])->name('landing.aziendali');
+// Pagine per segmento d'età, richieste dalla cliente il 2026-07-15: prima erano
+// solo redirect 301 verso /corsi (vedi routes/redirects.php), ora pagine dedicate.
+Route::get('/corsi-per-ragazzi', [PublicController::class, 'landingRagazzi'])->name('landing.ragazzi');
+Route::get('/corsi-per-adulti', [PublicController::class, 'landingAdulti'])->name('landing.adulti');
 
 // ─── Test di livello online (stessi slug del vecchio sito WP — SEO) ──────────
 // Domande in config/level_tests.php; testi editabili da "Contenuti sito".

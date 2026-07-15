@@ -992,6 +992,130 @@ return [
         ],
     ],
 
+    /* ═══════════ LANDING: CORSI PER RAGAZZI ═══════════ */
+    'landing-ragazzi' => [
+        'label' => 'Landing — Corsi per Ragazzi',
+        'sections' => [
+            'seo' => [
+                'label' => 'SEO (motori di ricerca)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Corsi di Lingue per Ragazzi a Roma — Scuole Medie e Superiori | A&A"],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Corsi di lingue per ragazzi (11-19 anni) a Roma San Paolo: recupero debiti formativi, potenziamento scolastico, preparazione certificazioni Trinity e Cambridge valide come credito formativo. Mini gruppi 3-4 studenti."],
+                ],
+            ],
+            'hero' => [
+                'label' => 'Testata',
+                'fields' => [
+                    'hero_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Corsi di Lingue per <em>Ragazzi</em> a Roma"],
+                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'text', 'default' => "Scuola secondaria di primo e secondo grado: recupero debiti formativi, potenziamento e preparazione alle certificazioni internazionali. Mini gruppi omogenei per età e livello, dagli 11 ai 19 anni."],
+                ],
+            ],
+            'intro' => [
+                'label' => 'Introduzione',
+                'fields' => [
+                    'intro_text' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "A&A Language Center segue ogni anno decine di studenti delle scuole medie e superiori con percorsi pensati per l'età scolare: massima attenzione alle competenze comunicative (lettura, scrittura, comprensione, conversazione), supporto ai debiti formativi con corsi di recupero estivi e invernali, e preparazione mirata alle certificazioni internazionali valide come credito formativo."],
+                ],
+            ],
+            'perche' => [
+                'label' => 'Perché scegliere A&A (3 card)',
+                'fields' => [
+                    'perche1_title' => ['label' => 'Card 1 — titolo', 'type' => 'text', 'default' => "Recupero debiti formativi"],
+                    'perche1_text' => ['label' => 'Card 1 — testo', 'type' => 'textarea', 'default' => "Corsi di recupero intensivi estivi e invernali, calibrati sul programma scolastico del ragazzo, per colmare le lacune prima della verifica o dell'esame di riparazione."],
+                    'perche2_title' => ['label' => 'Card 2 — titolo', 'type' => 'text', 'default' => "Certificazioni per credito formativo"],
+                    'perche2_text' => ['label' => 'Card 2 — testo', 'type' => 'textarea', 'default' => "Prepariamo agli esami Trinity College London (GESE, ISE) e Cambridge (KET, PET, FCE), riconosciuti dal Ministero e validi come credito formativo scolastico."],
+                    'perche3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Mini gruppi per età e livello"],
+                    'perche3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Gruppi omogenei di 3-4 studenti, suddivisi per fascia d'età e livello di partenza, con docenti qualificati abituati a lavorare con adolescenti."],
+                ],
+            ],
+            'faq' => [
+                'label' => 'Domande frequenti (FAQ)',
+                'fields' => [
+                    'faq_title' => ['label' => 'Titolo FAQ', 'type' => 'text', 'default' => "Domande frequenti sui corsi per ragazzi"],
+                    'faq_subtitle' => ['label' => 'Sottotitolo FAQ', 'type' => 'text', 'default' => "Le risposte ai dubbi più comuni dei genitori che valutano un corso di lingua per un figlio alle medie o alle superiori."],
+                    'faq_items' => ['label' => 'Domande e risposte', 'type' => 'faq', 'default' => [
+                        ['q' => "Quanto costa un corso di lingua per ragazzi?", 'a' => "<p>I prezzi variano in base alla lingua, alla modalità (mini gruppo o individuale) e al numero di ore. Puoi consultare il <a href=\"/corsi\">catalogo corsi</a> per i pacchetti attivi con prezzo trasparente, oppure <a href=\"/contattaci\">contattaci</a> per un consiglio personalizzato.</p>"],
+                        ['q' => "Che lingue posso far studiare a mio figlio?", 'a' => "<p>Inglese, francese, spagnolo, tedesco, portoghese, russo, arabo e italiano per stranieri. La maggior parte dei ragazzi segue inglese in preparazione Trinity o Cambridge, ma organizziamo corsi anche per le altre lingue su richiesta.</p>"],
+                        ['q' => "Fate corsi di recupero debiti formativi?", 'a' => "<p>Sì. Organizziamo corsi di recupero intensivi nel periodo estivo (giugno-settembre, prima degli esami di riparazione) e invernale, calibrati sul programma scolastico specifico del ragazzo.</p>"],
+                        ['q' => "Le certificazioni Trinity e Cambridge valgono davvero come credito scolastico?", 'a' => "<p>Sì, sono riconosciute dal Ministero dell'Istruzione e possono contribuire al credito formativo in sede di scrutinio, oltre a essere valide per l'accesso a percorsi universitari internazionali. Siamo Sede d'Esame ufficiale Trinity College London n° 8241: <a href=\"/le-certificazioni\">scopri le certificazioni</a>.</p>"],
+                        ['q' => "Da che età si può iniziare?", 'a' => "<p>I corsi \"Ragazzi\" sono pensati per studenti delle medie e delle superiori, indicativamente dagli 11 ai 19 anni. Per bambini più piccoli abbiamo percorsi dedicati con metodologia ludica: <a href=\"/contattaci\">chiedi informazioni</a>.</p>"],
+                        ['q' => "I gruppi sono divisi per età?", 'a' => "<p>Sì, i mini gruppi (3-4 studenti) sono sempre omogenei per fascia d'età e livello di partenza, così ogni ragazzo lavora con compagni al suo stesso passo.</p>"],
+                        ['q' => "È possibile fare lezione online?", 'a' => "<p>Sì, offriamo anche corsi online con la stessa qualità delle lezioni in presenza, utile per chi ha impegni scolastici o extra-scolastici fitti nel pomeriggio.</p>"],
+                    ]],
+                ],
+            ],
+            'cta' => [
+                'label' => 'Invito finale (CTA)',
+                'fields' => [
+                    'cta_label' => ['label' => 'Etichetta', 'type' => 'text', 'default' => "Prossimo step"],
+                    'cta_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Prenota il test di livello gratuito"],
+                    'cta_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "In 30 minuti scopriamo il livello di partenza di tuo figlio e costruiamo insieme il percorso più adatto, che si tratti di recupero, potenziamento o preparazione certificazione."],
+                ],
+            ],
+        ],
+    ],
+
+    /* ═══════════ LANDING: CORSI PER ADULTI ═══════════ */
+    'landing-adulti' => [
+        'label' => 'Landing — Corsi per Adulti',
+        'sections' => [
+            'seo' => [
+                'label' => 'SEO (motori di ricerca)',
+                'fields' => [
+                    'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Corsi di Lingue per Adulti a Roma — Individuali e Flessibili | A&A"],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Corsi di lingue per adulti a Roma San Paolo: percorsi personalizzati per lavoro, università, viaggi o crescita personale. Orari flessibili, anche online. Test di livello gratuito."],
+                ],
+            ],
+            'hero' => [
+                'label' => 'Testata',
+                'fields' => [
+                    'hero_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Corsi di Lingue per <em>Adulti</em> a Roma"],
+                    'hero_subtitle' => ['label' => 'Sottotitolo', 'type' => 'text', 'default' => "Percorsi su misura per lavoro, università, viaggi o crescita personale. Scegli tu giorno e ora della lezione, in presenza o online, con docenti madrelingua e/o bilingue."],
+                ],
+            ],
+            'intro' => [
+                'label' => 'Introduzione',
+                'fields' => [
+                    'intro_text' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Da quanto tempo pensi di iniziare a studiare una lingua straniera? A&A Language Center costruisce corsi su misura per adulti che vogliono avanzare in carriera, prepararsi per l'università, viaggiare con più sicurezza o semplicemente togliersi una soddisfazione personale — con la flessibilità di orario che la vita da adulti richiede."],
+                ],
+            ],
+            'perche' => [
+                'label' => 'Perché scegliere A&A (3 card)',
+                'fields' => [
+                    'perche1_title' => ['label' => 'Card 1 — titolo', 'type' => 'text', 'default' => "Percorso su misura"],
+                    'perche1_text' => ['label' => 'Card 1 — testo', 'type' => 'textarea', 'default' => "Dopo il test di livello gratuito costruiamo insieme il percorso più efficace verso il tuo obiettivo: lavoro, università, viaggio o certificazione."],
+                    'perche2_title' => ['label' => 'Card 2 — titolo', 'type' => 'text', 'default' => "Orari flessibili"],
+                    'perche2_text' => ['label' => 'Card 2 — testo', 'type' => 'textarea', 'default' => "Scegli tu giorno e ora della lezione (minimo 55 minuti), in individuale o mini gruppo, in presenza o online — anche al telefono per allenare lo speaking."],
+                    'perche3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Certificazioni riconosciute"],
+                    'perche3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Preparazione a IELTS, TOEFL, Cambridge, Trinity, DELF/DALF, DELE, Goethe e CILS, con certificati validi per lavoro, università e concorsi pubblici."],
+                ],
+            ],
+            'faq' => [
+                'label' => 'Domande frequenti (FAQ)',
+                'fields' => [
+                    'faq_title' => ['label' => 'Titolo FAQ', 'type' => 'text', 'default' => "Domande frequenti sui corsi per adulti"],
+                    'faq_subtitle' => ['label' => 'Sottotitolo FAQ', 'type' => 'text', 'default' => "Le risposte ai dubbi più comuni di chi valuta di iniziare (o riprendere) lo studio di una lingua da adulto."],
+                    'faq_items' => ['label' => 'Domande e risposte', 'type' => 'faq', 'default' => [
+                        ['q' => "Quanto costa un corso di lingua per adulti?", 'a' => "<p>I prezzi variano in base alla lingua, alla modalità (individuale, mini gruppo, online) e al numero di ore. Puoi consultare il <a href=\"/corsi\">catalogo corsi</a> per i pacchetti attivi con prezzo trasparente.</p>"],
+                        ['q' => "Che lingue posso studiare?", 'a' => "<p>Inglese, francese, spagnolo, tedesco, portoghese, russo, arabo e italiano per stranieri, a tutti i livelli CEFR (A1-C2).</p>"],
+                        ['q' => "Sono anni che non studio una lingua, posso ripartire da zero?", 'a' => "<p>Certo. Il test di livello gratuito (scritto + colloquio orale con un docente) individua esattamente il tuo punto di partenza, anche se sono passati molti anni dall'ultima lezione.</p>"],
+                        ['q' => "Posso seguire le lezioni online?", 'a' => "<p>Sì, con la stessa qualità delle lezioni in presenza. Utile se hai poco tempo libero o non riesci a raggiungere facilmente la sede di Roma San Paolo.</p>"],
+                        ['q' => "Offrite corsi intensivi per chi ha poco tempo?", 'a' => "<p>Sì, oltre ai corsi standard organizziamo corsi intensivi e ultra-intensivi per esigenze rapide: trasferimenti all'estero, colloqui di lavoro, esami imminenti.</p>"],
+                        ['q' => "Le certificazioni sono valide per concorsi pubblici e crediti universitari?", 'a' => "<p>Sì. Le certificazioni Trinity, Cambridge, IELTS, TOEFL e le altre che prepariamo sono riconosciute a livello internazionale e valide per concorsi pubblici e crediti universitari. Siamo Sede d'Esame ufficiale Trinity College London n° 8241.</p>"],
+                        ['q' => "Il test di livello è davvero gratuito?", 'a' => "<p>Sì, senza impegno: una parte scritta e un breve colloquio orale con un docente qualificato. Al termine ricevi una valutazione CEFR e una proposta di percorso. <a href=\"/iscriviti\">Prenotalo qui</a>.</p>"],
+                    ]],
+                ],
+            ],
+            'cta' => [
+                'label' => 'Invito finale (CTA)',
+                'fields' => [
+                    'cta_label' => ['label' => 'Etichetta', 'type' => 'text', 'default' => "Prossimo step"],
+                    'cta_title' => ['label' => 'Titolo', 'type' => 'text', 'default' => "Inizia il tuo percorso da adulto"],
+                    'cta_text' => ['label' => 'Testo', 'type' => 'textarea', 'default' => "Prenota un test di livello gratuito. In 30 minuti scopri il tuo livello CEFR e il percorso più adatto a te, con gli orari che preferisci."],
+                ],
+            ],
+        ],
+    ],
+
     /* ═══════════ TEST DI LIVELLO (hub + 4 pagine quiz) ═══════════ */
     // Le domande dei quiz NON sono qui: vivono in config/level_tests.php
     // (contenuto tecnico, con le risposte corrette — non editabile dal pannello).

@@ -297,6 +297,16 @@ class PublicController extends Controller
         return view('public.landing.aziendali');
     }
 
+    public function landingRagazzi()
+    {
+        return view('public.landing.ragazzi');
+    }
+
+    public function landingAdulti()
+    {
+        return view('public.landing.adulti');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | Test di livello online (SEO — stessi slug del vecchio sito WP)
