@@ -240,7 +240,7 @@
 .cert-logo-item.cert-logo-trinity img { height: 88px; max-width: 240px; }
 /* Cambridge: il file ufficiale ha un formato molto orizzontale, che a parità di
    altezza risulta visivamente più grande degli altri loghi rispetto a Trinity */
-.cert-logo-item.cert-logo-cambridge img { height: 82px; max-width: 200px; }
+.cert-logo-item.cert-logo-cambridge img { height: 72px; max-width: 175px; }
 
 /* ── WHY / FEATURES ──────────────────────────────── */
 .why-section {
