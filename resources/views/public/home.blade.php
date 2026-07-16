@@ -211,31 +211,31 @@
     background: #fff;
     border-top: 1px solid #e8eef8;
     border-bottom: 1px solid #e8eef8;
-    padding: 28px 0;
+    padding: 36px 0;
 }
 .cert-strip-label {
-    text-align: center; font-size: .65rem; font-weight: 700;
+    text-align: center; font-size: .68rem; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
-    color: #9aadcb; margin-bottom: 20px;
+    color: #9aadcb; margin-bottom: 26px;
 }
 .cert-logos {
-    display: flex; gap: 24px;
+    display: flex; gap: 36px;
     justify-content: center; align-items: center; flex-wrap: wrap;
 }
 .cert-logo-item {
     display: flex; align-items: center; justify-content: center;
-    opacity: .72; transition: opacity .2s, transform .2s;
-    padding: 4px 8px;
+    opacity: .8; transition: opacity .2s, transform .2s;
+    padding: 6px 10px;
 }
 .cert-logo-item:hover { opacity: 1; transform: translateY(-2px); }
 .cert-logo-item img {
-    height: 40px; width: auto; max-width: 130px;
+    height: 58px; width: auto; max-width: 180px;
     object-fit: contain; display: block;
 }
 /* Trinity REC: logo ufficiale, richiede min. 65px di altezza su schermo e più spazio di rispetto
    attorno (linee guida brand Trinity College London) — dimensioni maggiorate rispetto agli altri loghi */
-.cert-logo-item.cert-logo-trinity { padding: 8px 20px; }
-.cert-logo-item.cert-logo-trinity img { height: 68px; max-width: 190px; }
+.cert-logo-item.cert-logo-trinity { padding: 10px 24px; }
+.cert-logo-item.cert-logo-trinity img { height: 88px; max-width: 240px; }
 
 /* ── WHY / FEATURES ──────────────────────────────── */
 .why-section {
