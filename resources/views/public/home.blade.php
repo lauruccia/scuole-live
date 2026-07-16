@@ -211,29 +211,30 @@
     background: #fff;
     border-top: 1px solid #e8eef8;
     border-bottom: 1px solid #e8eef8;
-    padding: 36px 0;
+    padding: 40px 0;
 }
 .cert-strip-label {
-    text-align: center; font-size: .68rem; font-weight: 700;
+    text-align: center; font-size: .7rem; font-weight: 700;
     letter-spacing: .14em; text-transform: uppercase;
-    color: #9aadcb; margin-bottom: 26px;
+    color: #9aadcb; margin-bottom: 28px;
 }
 .cert-logos {
-    display: flex; gap: 36px;
+    display: flex; gap: 34px;
     justify-content: center; align-items: center; flex-wrap: wrap;
 }
 .cert-logo-item {
     display: flex; align-items: center; justify-content: center;
-    opacity: .8; transition: opacity .2s, transform .2s;
+    opacity: .85; transition: opacity .2s, transform .2s;
     padding: 6px 10px;
 }
 .cert-logo-item:hover { opacity: 1; transform: translateY(-2px); }
 .cert-logo-item img {
-    height: 58px; width: auto; max-width: 180px;
+    height: 78px; width: auto; max-width: 220px;
     object-fit: contain; display: block;
 }
 /* Trinity REC: logo ufficiale, richiede min. 65px di altezza su schermo e più spazio di rispetto
-   attorno (linee guida brand Trinity College London) — dimensioni maggiorate rispetto agli altri loghi */
+   attorno (linee guida brand Trinity College London) — dimensioni maggiorate rispetto agli altri loghi,
+   ma proporzionate: gli altri loghi sono ora vicini per non risultare eccessivamente piccoli al confronto */
 .cert-logo-item.cert-logo-trinity { padding: 10px 24px; }
 .cert-logo-item.cert-logo-trinity img { height: 88px; max-width: 240px; }
 
@@ -690,25 +691,19 @@
                 <img src="{{ asset('images/cert-trinity.png') }}" alt="Trinity College London — Registered Exam Centre 8241" loading="lazy">
             </a>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-toefl.png') }}" alt="TOEFL" loading="lazy">
+                <img src="{{ asset('images/cert-cambridge.svg') }}" alt="Cambridge Assessment English" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-delf.png') }}" alt="DELF DALF – France Éducation International" loading="lazy">
+                <img src="{{ asset('images/cert-ielts.svg') }}" alt="IELTS" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-ielts.png') }}" alt="IELTS" loading="lazy">
+                <img src="{{ asset('images/cert-delf.svg') }}" alt="DELF DALF – France Éducation International" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-goethe.png') }}" alt="Goethe-Institut" loading="lazy">
+                <img src="{{ asset('images/cert-dele.svg') }}" alt="DELE – Instituto Cervantes" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-dele.png') }}" alt="DELE – Instituto Cervantes" loading="lazy">
-            </div>
-            <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-cambridge.png') }}" alt="Cambridge Assessment English" loading="lazy">
-            </div>
-            <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-cils.png') }}" alt="CILS – Università per Stranieri di Siena" loading="lazy">
+                <img src="{{ asset('images/cert-plida.svg') }}" alt="PLIDA – Dante Alighieri" loading="lazy">
             </div>
         </div>
     </div>
@@ -783,7 +778,7 @@
                 'Tedesco'                => ['flag'=>'🇩🇪','cert'=>'Goethe Institut','img'=>'https://images.unsplash.com/photo-1560969184-10fe8719e047?auto=format&fit=crop&w=400&q=80'],
                 'Arabo'                  => ['flag'=>'🇸🇦','cert'=>'Certificazioni','img'=>'https://images.unsplash.com/photo-1466442929976-97f336a657be?auto=format&fit=crop&w=400&q=80'],
                 'Russo'                  => ['flag'=>'🇷🇺','cert'=>'Certificazioni','img'=>'https://images.unsplash.com/photo-1513326738677-b964603b136d?auto=format&fit=crop&w=400&q=80'],
-                'Italiano per stranieri' => ['flag'=>'🇮🇹','cert'=>'CILS','img'=>'https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=400&q=80'],
+                'Italiano per stranieri' => ['flag'=>'🇮🇹','cert'=>'PLIDA · CILS','img'=>'https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=400&q=80'],
                 'Portoghese'             => ['flag'=>'🇵🇹','cert'=>'CELP','img'=>'https://images.unsplash.com/photo-1555881400-74d7acaacd8b?auto=format&fit=crop&w=400&q=80'],
                 'Cinese'                 => ['flag'=>'🇨🇳','cert'=>'HSK','img'=>'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=400&q=80'],
             ];
