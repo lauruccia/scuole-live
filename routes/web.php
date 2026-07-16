@@ -182,3 +182,17 @@ Route::post('/unsubscribe/{token}', [\App\Http\Controllers\UnsubscribeController
 |──────────────────────────────────────────────────────────────────────────────
 */
 require __DIR__ . '/redirects.php';
+
+/*
+|──────────────────────────────────────────────────────────────────────────────
+| Pagine personalizzate (page-builder pannello "Pagine personalizzate")
+|──────────────────────────────────────────────────────────────────────────────
+| DEVE restare l'ULTIMA route GET a un segmento del file: fa da fallback per
+| qualsiasi slug root-level non già intercettato da una route sopra (incluso
+| tutto redirects.php). App\Models\CustomPage::reservedSlugs() calcola
+| dinamicamente le route "vere" del sito e impedisce dal pannello di creare
+| una pagina che le sovrascriverebbe.
+*/
+Route::get('/{slug}', [PublicController::class, 'customPageShow'])
+    ->where('slug', '[a-z0-9-]+')
+    ->name('page.show');

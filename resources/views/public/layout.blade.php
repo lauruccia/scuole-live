@@ -748,6 +748,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <a href="{{ route('news.index') }}" class="nav-link {{ request()->routeIs('news.*') ? 'active' : '' }}">News</a>
                 <a href="{{ route('lavora-con-noi') }}" class="nav-link {{ request()->routeIs('lavora-con-noi') ? 'active' : '' }}">Lavora con Noi</a>
                 <a href="{{ route('contattaci') }}" class="nav-link {{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
+                @foreach(\App\Models\CustomPage::menuItems() as $cp)
+                    <a href="{{ route('page.show', $cp->slug) }}" class="nav-link {{ request()->routeIs('page.show') && request()->route('slug') === $cp->slug ? 'active' : '' }}">{{ $cp->menu_label ?: $cp->title }}</a>
+                @endforeach
                 <a href="{{ route('iscrizione') }}" class="btn-nav-cta">Iscriviti ↗</a>
             </div>
 
@@ -768,6 +771,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <a href="{{ route('news.index') }}" class="{{ request()->routeIs('news.*') ? 'active' : '' }}">📰 News ed Eventi</a>
         <a href="{{ route('lavora-con-noi') }}" class="{{ request()->routeIs('lavora-con-noi') ? 'active' : '' }}">Lavora con Noi</a>
         <a href="{{ route('contattaci') }}" class="{{ request()->routeIs('contattaci') ? 'active' : '' }}">Contatti</a>
+        @foreach(\App\Models\CustomPage::menuItems() as $cp)
+            <a href="{{ route('page.show', $cp->slug) }}" class="{{ request()->routeIs('page.show') && request()->route('slug') === $cp->slug ? 'active' : '' }}">{{ $cp->menu_label ?: $cp->title }}</a>
+        @endforeach
         <a href="{{ route('iscrizione') }}" class="mobile-cta">✨ Iscriviti ora →</a>
     </nav>
 </header>
@@ -829,6 +835,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <li><a href="{{ route('insegnanti.index') }}">I Nostri Insegnanti</a></li>
                     <li><a href="{{ route('news.index') }}">News ed Eventi</a></li>
                     <li><a href="{{ route('lavora-con-noi') }}">Lavora con Noi</a></li>
+                    @foreach(\App\Models\CustomPage::footerItems() as $cp)
+                        <li><a href="{{ route('page.show', $cp->slug) }}">{{ $cp->footer_label ?: $cp->title }}</a></li>
+                    @endforeach
                 </ul>
             </div>
 

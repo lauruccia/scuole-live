@@ -188,6 +188,24 @@ class SitemapController extends Controller
             report($e);
         }
 
-        return array_merge($static, $landings, $testPages, $courseUrls, $newsUrls, $teacherUrls);
+        // Pagine personalizzate pubblicate (page-builder pannello)
+        $customPageUrls = [];
+        try {
+            $pages = \App\Models\CustomPage::published()->get(['slug', 'updated_at']);
+
+            foreach ($pages as $p) {
+                $customPageUrls[] = [
+                    'loc'        => route('page.show', $p->slug),
+                    'changefreq' => 'monthly',
+                    'priority'   => 0.6,
+                    'lastmod'    => optional($p->updated_at)->toIso8601String() ?? $today,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // Tabella non ancora migrata o DB non disponibile: non rompiamo la sitemap.
+            report($e);
+        }
+
+        return array_merge($static, $landings, $testPages, $courseUrls, $newsUrls, $teacherUrls, $customPageUrls);
     }
 }

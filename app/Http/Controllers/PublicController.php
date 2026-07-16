@@ -332,4 +332,22 @@ class PublicController extends Controller
 
         return view('public.test.quiz', compact('lingua', 'test'));
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagine personalizzate (page-builder pannello "Pagine personalizzate")
+    |--------------------------------------------------------------------------
+    | Fallback per qualunque slug root-level non intercettato da una route
+    | sopra (vedi routes/web.php: la route /{slug} che chiama questo metodo
+    | è registrata per ULTIMA, dopo redirects.php, apposta per avere la
+    | priorità più bassa e non rompere nessuna pagina reale del sito).
+    */
+    public function customPageShow(string $slug)
+    {
+        $page = \App\Models\CustomPage::published()
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return view('public.custom-page', compact('page'));
+    }
 }

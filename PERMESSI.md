@@ -1,6 +1,6 @@
 # ScuoleLive — Audit ruoli e permessi
 
-> Aggiornato 13/07/2026 (aggiunto TeacherProfileResource — gruppo "Sito web")
+> Aggiornato 16/07/2026 (aggiunto CustomPageResource "Pagine personalizzate" — gruppo "Sito web")
 
 ---
 
@@ -42,6 +42,7 @@ I ruoli sono case-sensitive su Spatie Permission.
 | News ed eventi (NewsPostResource) | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Contenuti sito (ContenutiSito) | ✅ | ✅ | ✅ | ❌ | ❌ |
 | Insegnanti sito pubblico (TeacherProfileResource) — da non confondere con "Docenti" (HR) | ✅ | ✅ | ✅ | ❌ | ❌ |
+| Pagine personalizzate (CustomPageResource) — crea pagine nuove da zero, URL a scelta | ✅ | ✅ | ✅ | ❌ | ❌ |
 | StudentUnsubscribeResource | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **UserResource (Users)** | ✅ tutti | ✅ no Superadmin* | ✅ no Superadmin* | ❌ | ❌ |
 | Stampa contratto / PDF | ✅ | ✅ | ✅ | ❌ | propri |
