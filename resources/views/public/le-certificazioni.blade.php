@@ -99,7 +99,7 @@
         <h1>{{ \App\Models\PageContent::text('le-certificazioni', 'hero_title') }}</h1>
         <p>{!! \App\Models\PageContent::html('le-certificazioni', 'hero_text') !!}</p>
         <div class="cert-hero-logo">
-            <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London — Sede Esami n° 8241">
+            <img src="{{ asset('images/cert-trinity.png') }}" alt="Trinity College London — Registered Exam Centre 8241">
         </div>
     </div>
 </section>

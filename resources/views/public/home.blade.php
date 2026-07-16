@@ -184,12 +184,12 @@
     position: absolute;
     right: 5%;
     bottom: 10%;
-    display: flex; align-items: center; gap: 16px;
+    display: flex; align-items: center; gap: 22px;
     background: rgba(255,255,255,.96);
     border-radius: 14px;
     border-left: 5px solid var(--gold);
-    padding: 18px 24px;
-    max-width: 400px;
+    padding: 18px 26px;
+    max-width: 420px;
     backdrop-filter: blur(8px);
     box-shadow: 0 14px 44px rgba(0,0,0,.35);
     transition: transform .2s, box-shadow .2s;
@@ -198,7 +198,8 @@
     transform: translateY(-4px);
     box-shadow: 0 20px 56px rgba(0,0,0,.45);
 }
-.hero-trinity-badge img { height: 52px; width: auto; flex-shrink: 0; }
+/* Logo REC Trinity: min. 65px di altezza su schermo (linee guida brand Trinity College London) */
+.hero-trinity-badge img { height: 68px; width: auto; flex-shrink: 0; }
 .htb-text strong {
     display: block; font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: .95rem; font-weight: 800; color: #0d1b2e; line-height: 1.25;
@@ -231,6 +232,10 @@
     height: 40px; width: auto; max-width: 130px;
     object-fit: contain; display: block;
 }
+/* Trinity REC: logo ufficiale, richiede min. 65px di altezza su schermo e più spazio di rispetto
+   attorno (linee guida brand Trinity College London) — dimensioni maggiorate rispetto agli altri loghi */
+.cert-logo-item.cert-logo-trinity { padding: 8px 20px; }
+.cert-logo-item.cert-logo-trinity img { height: 68px; max-width: 190px; }
 
 /* ── WHY / FEATURES ──────────────────────────────── */
 .why-section {
@@ -666,8 +671,8 @@
     <div class="hero-right">
         {{-- Unico badge in evidenza: Trinity College London (cliccabile).
              Le altre card sono state rimosse perché coprivano foto e logo. --}}
-        <a href="{{ route('le-certificazioni') }}" class="hero-trinity-badge" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Sede esami n° 8241">
-            <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London">
+        <a href="{{ route('le-certificazioni') }}" class="hero-trinity-badge" title="Scopri le certificazioni Trinity College London" aria-label="Le certificazioni Trinity College London — Registered Exam Centre 8241">
+            <img src="{{ asset('images/cert-trinity.png') }}" alt="Trinity College London — Registered Exam Centre 8241">
             <span class="htb-text">
                 <strong>{{ \App\Models\PageContent::text('home', 'trinity_badge_title') }}</strong>
                 <span>{!! \App\Models\PageContent::html('home', 'trinity_badge_sub') !!}</span>
@@ -681,8 +686,8 @@
     <p class="cert-strip-label">{{ \App\Models\PageContent::text('home', 'cert_strip_label') }}</p>
     <div class="c">
         <div class="cert-logos">
-            <a href="{{ route('le-certificazioni') }}" class="cert-logo-item" title="Le certificazioni Trinity College London — Sede esami n° 8241" aria-label="Scopri le certificazioni Trinity College London">
-                <img src="{{ asset('images/cert-trinity.svg') }}" alt="Trinity College London" loading="lazy">
+            <a href="{{ route('le-certificazioni') }}" class="cert-logo-item cert-logo-trinity" title="Le certificazioni Trinity College London — Registered Exam Centre 8241" aria-label="Scopri le certificazioni Trinity College London">
+                <img src="{{ asset('images/cert-trinity.png') }}" alt="Trinity College London — Registered Exam Centre 8241" loading="lazy">
             </a>
             <div class="cert-logo-item">
                 <img src="{{ asset('images/cert-cambridge.svg') }}" alt="Cambridge Assessment English" loading="lazy">
