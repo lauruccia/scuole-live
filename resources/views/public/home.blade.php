@@ -238,6 +238,9 @@
    ma proporzionate: gli altri loghi sono ora vicini per non risultare eccessivamente piccoli al confronto */
 .cert-logo-item.cert-logo-trinity { padding: 6px 14px; }
 .cert-logo-item.cert-logo-trinity img { height: 88px; max-width: 240px; }
+/* Cambridge: il file ufficiale ha un formato molto orizzontale, che a parità di
+   altezza risulta visivamente più grande degli altri loghi rispetto a Trinity */
+.cert-logo-item.cert-logo-cambridge img { height: 82px; max-width: 200px; }
 
 /* ── WHY / FEATURES ──────────────────────────────── */
 .why-section {
@@ -706,7 +709,7 @@
             <div class="cert-logo-item">
                 <img src="{{ asset('images/cert-dele.png') }}" alt="DELE – Instituto Cervantes" loading="lazy">
             </div>
-            <div class="cert-logo-item">
+            <div class="cert-logo-item cert-logo-cambridge">
                 <img src="{{ asset('images/cert-cambridge-v2.png') }}" alt="Cambridge Assessment English" loading="lazy">
             </div>
             <div class="cert-logo-item">
