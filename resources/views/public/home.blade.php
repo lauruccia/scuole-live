@@ -229,7 +229,7 @@
 }
 .cert-logo-item:hover { opacity: 1; transform: translateY(-2px); }
 .cert-logo-item img {
-    height: 78px; width: auto; max-width: 220px;
+    height: 100px; width: auto; max-width: 260px;
     object-fit: contain; display: block;
 }
 /* Trinity REC: logo ufficiale, richiede min. 65px di altezza su schermo e più spazio di rispetto
