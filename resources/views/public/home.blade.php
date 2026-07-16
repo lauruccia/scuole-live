@@ -694,10 +694,10 @@
                 <img src="{{ asset('images/cert-toefl.png') }}" alt="TOEFL" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-delf.png') }}" alt="DELF DALF – France Éducation International" loading="lazy">
+                <img src="{{ asset('images/cert-delf-v2.png') }}" alt="DELF DALF – France Éducation International" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-ielts.png') }}" alt="IELTS" loading="lazy">
+                <img src="{{ asset('images/cert-ielts-v2.png') }}" alt="IELTS" loading="lazy">
             </div>
             <div class="cert-logo-item">
                 <img src="{{ asset('images/cert-goethe.png') }}" alt="Goethe-Institut" loading="lazy">
@@ -706,7 +706,7 @@
                 <img src="{{ asset('images/cert-dele.png') }}" alt="DELE – Instituto Cervantes" loading="lazy">
             </div>
             <div class="cert-logo-item">
-                <img src="{{ asset('images/cert-cambridge.png') }}" alt="Cambridge Assessment English" loading="lazy">
+                <img src="{{ asset('images/cert-cambridge-v2.png') }}" alt="Cambridge Assessment English" loading="lazy">
             </div>
             <div class="cert-logo-item">
                 <img src="{{ asset('images/cert-cils.png') }}" alt="CILS – Università per Stranieri di Siena" loading="lazy">
