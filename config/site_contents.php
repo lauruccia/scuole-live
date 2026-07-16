@@ -268,7 +268,7 @@ return [
                     'pillar1_title' => ['label' => 'Pilastro 1 — titolo', 'type' => 'text', 'default' => "Esperienza"],
                     'pillar1_text' => ['label' => 'Pilastro 1 — testo', 'type' => 'textarea', 'default' => "A&A Language Center opera dal 2002. In vent'anni abbiamo formato migliaia di studenti di ogni età e livello, costruendo un'esperienza didattica solida, collaudata e in continua evoluzione."],
                     'pillar2_title' => ['label' => 'Pilastro 2 — titolo', 'type' => 'text', 'default' => "Eccellenza"],
-                    'pillar2_text' => ['label' => 'Pilastro 2 — testo', 'type' => 'textarea', 'default' => "Sede d'esami GESE e ISE n° 8241 del Trinity College London. Prepariamo per IELTS, TOEFL, Cambridge, DELE, CILS, DELF/DALF, Zertifikat Deutsch, TRKI–TORFL e molte altre certificazioni."],
+                    'pillar2_text' => ['label' => 'Pilastro 2 — testo', 'type' => 'textarea', 'default' => "Sede d'esami GESE e ISE n° 8241 del Trinity College London. Prepariamo per IELTS, TOEFL, Cambridge, DELE, CILS, DELF/DALF e Zertifikat Deutsch."],
                     'pillar3_title' => ['label' => 'Pilastro 3 — titolo', 'type' => 'text', 'default' => "Docenti di Qualità"],
                     'pillar3_text' => ['label' => 'Pilastro 3 — testo', 'type' => 'textarea', 'default' => "I nostri docenti provengono da ogni parte del mondo, portando un prezioso arricchimento culturale. Tutti certificati e con esperienza pluriennale, garantiscono un apprendimento autentico ed efficace."],
                     'pillar4_title' => ['label' => 'Pilastro 4 — titolo', 'type' => 'text', 'default' => "Corsi Personalizzati"],
@@ -375,7 +375,7 @@ return [
                     'service4_text' => ['label' => 'Servizio 4 — testo', 'type' => 'textarea', 'default' => "Prima di iniziare qualsiasi corso, offriamo un Entrance Test scritto e orale completamente gratuito per determinare il tuo livello di partenza secondo il framework CEFR (A1–C2)."],
                     'service4_tag' => ['label' => 'Servizio 4 — etichetta', 'type' => 'text', 'default' => "Gratuito · Senza impegno"],
                     'service5_title' => ['label' => 'Servizio 5 — titolo', 'type' => 'text', 'default' => "Preparazione Certificazioni"],
-                    'service5_text' => ['label' => 'Servizio 5 — testo', 'type' => 'textarea', 'default' => "Corsi intensivi mirati alla preparazione degli esami per le principali certificazioni internazionali: Trinity, Cambridge, IELTS, TOEFL, DELF/DALF, Goethe Institut, PLIDA, DELE e altre."],
+                    'service5_text' => ['label' => 'Servizio 5 — testo', 'type' => 'textarea', 'default' => "Corsi intensivi mirati alla preparazione degli esami per le principali certificazioni internazionali: Trinity, Cambridge, IELTS, TOEFL, DELF/DALF, Goethe Institut, CILS, DELE e altre."],
                     'service5_tag' => ['label' => 'Servizio 5 — etichetta', 'type' => 'text', 'default' => "Trinity · Cambridge · IELTS · DELF"],
                     'service6_title' => ['label' => 'Servizio 6 — titolo', 'type' => 'text', 'default' => "Corsi per Docenti"],
                     'service6_text' => ['label' => 'Servizio 6 — testo', 'type' => 'textarea', 'default' => "A&A Language Center è accreditata MIUR come ente di formazione. Offriamo corsi di lingue dedicati ai docenti, per la formazione personale e la preparazione di certificazioni linguistiche valide ai fini concorsuali."],
@@ -406,7 +406,7 @@ return [
                     'target3_title' => ['label' => 'Card 3 — titolo', 'type' => 'text', 'default' => "Professionisti"],
                     'target3_text' => ['label' => 'Card 3 — testo', 'type' => 'textarea', 'default' => "Business English, presentazioni, negoziazioni e comunicazione formale in lingua straniera."],
                     'target4_title' => ['label' => 'Card 4 — titolo', 'type' => 'text', 'default' => "Stranieri in Italia"],
-                    'target4_text' => ['label' => 'Card 4 — testo', 'type' => 'textarea', 'default' => "Corsi di Italiano per stranieri con percorsi di integrazione e certificazioni PLIDA."],
+                    'target4_text' => ['label' => 'Card 4 — testo', 'type' => 'textarea', 'default' => "Corsi di Italiano per stranieri con percorsi di integrazione e certificazioni CILS."],
                 ],
             ],
             'orari' => [
@@ -530,7 +530,7 @@ return [
                 'label' => 'Cambridge e altre certificazioni',
                 'fields' => [
                     'cambridge_title' => ['label' => 'Titolo', 'type' => 'html', 'default' => "Cambridge <em>Preparation Centre</em> e le altre certificazioni"],
-                    'cambridge_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>A&amp;A Language Center è <strong>Preparation Centre di Cambridge English</strong>: prepariamo i nostri studenti agli esami Cambridge (KET, PET, First, Advanced, Proficiency) con percorsi mirati tenuti da docenti qualificati.</p><p>Prepariamo inoltre a tutte le principali certificazioni internazionali — <strong>IELTS, TOEFL, DELE (Instituto Cervantes), DELF/DALF (France Éducation International), Goethe-Zertifikat, PLIDA, CILS/CELI, TRKI–TORFL, CAPLE</strong> — i cui esami si sostengono presso i rispettivi enti certificatori ufficiali.</p>"],
+                    'cambridge_text' => ['label' => 'Testo', 'type' => 'richtext', 'default' => "<p>A&amp;A Language Center è <strong>Preparation Centre di Cambridge English</strong>: prepariamo i nostri studenti agli esami Cambridge (KET, PET, First, Advanced, Proficiency) con percorsi mirati tenuti da docenti qualificati.</p><p>Prepariamo inoltre a tutte le principali certificazioni internazionali — <strong>IELTS, TOEFL, DELE (Instituto Cervantes), DELF/DALF (France Éducation International), Goethe-Zertifikat, CILS</strong> — i cui esami si sostengono presso i rispettivi enti certificatori ufficiali.</p>"],
                     'cambridge_highlight' => ['label' => 'Riquadro in evidenza', 'type' => 'html', 'default' => "ℹ️ <strong>In sintesi:</strong> siamo sede d'esami ufficiale <strong>solo per Trinity College London</strong> (n° 8241): gli esami Trinity si sostengono direttamente da noi. Per tutte le altre certificazioni siamo centro di preparazione."],
                 ],
             ],
@@ -546,8 +546,8 @@ return [
                     'dele_title' => ['label' => 'Card Spagnolo — titolo', 'type' => 'text', 'default' => "D.E.L.E. — Instituto Cervantes"],
                     'dele_text' => ['label' => 'Card Spagnolo — testo', 'type' => 'textarea', 'default' => "Diploma di Español come Lingua Straniera, certificazione ufficiale del Ministero dell'Educazione spagnolo, valida per università e ambito lavorativo."],
                     'cils_badge' => ['label' => 'Card Italiano — badge', 'type' => 'text', 'default' => "Italiano per stranieri"],
-                    'cils_title' => ['label' => 'Card Italiano — titolo', 'type' => 'text', 'default' => "CILS / CELI"],
-                    'cils_text' => ['label' => 'Card Italiano — testo', 'type' => 'textarea', 'default' => "Certificazioni di Italiano come Lingua Straniera rilasciate dalle Università per Stranieri di Siena e Perugia, richieste per permesso di soggiorno, cittadinanza e università."],
+                    'cils_title' => ['label' => 'Card Italiano — titolo', 'type' => 'text', 'default' => "CILS"],
+                    'cils_text' => ['label' => 'Card Italiano — testo', 'type' => 'textarea', 'default' => "Certificazione di Italiano come Lingua Straniera rilasciata dall'Università per Stranieri di Siena, richiesta per permesso di soggiorno, cittadinanza e università."],
                     'goethe_badge' => ['label' => 'Card Tedesco — badge', 'type' => 'text', 'default' => "Tedesco"],
                     'goethe_title' => ['label' => 'Card Tedesco — titolo', 'type' => 'text', 'default' => "Goethe-Institut (KDS / GDS)"],
                     'goethe_text' => ['label' => 'Card Tedesco — testo', 'type' => 'textarea', 'default' => "Certificazioni ufficiali della lingua tedesca del Goethe-Institut, riconosciute da università e datori di lavoro in tutta l'area germanofona."],
@@ -918,7 +918,7 @@ return [
                 'label' => 'SEO (motori di ricerca)',
                 'fields' => [
                     'meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Italiano per Stranieri a Roma — Italian Courses in Rome | A&A"],
-                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Corsi di italiano per stranieri a Roma: tutti i livelli, preparazione CILS e PLIDA. Italian courses in Rome for foreigners with mother-tongue Italian teachers. Free placement test."],
+                    'meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Corsi di italiano per stranieri a Roma: tutti i livelli, preparazione CILS. Italian courses in Rome for foreigners with mother-tongue Italian teachers. Free placement test."],
                 ],
             ],
             'faq' => [
@@ -1038,8 +1038,8 @@ return [
                 'label' => 'Test di Italiano (per stranieri)',
                 'fields' => [
                     'it_meta_title' => ['label' => 'Titolo pagina (tag title)', 'type' => 'text', 'default' => "Test di Italiano Online — Free Italian Level Test | A&A Roma"],
-                    'it_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di italiano per stranieri online gratuito: 20 domande per scoprire il tuo livello CEFR. Free online Italian placement test — then book a free interview at our school in Rome (CILS, PLIDA)."],
-                    'it_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di italiano: scopri il tuo livello in pochi minuti! Welcome to your Italian level test: answer 20 multiple-choice questions and get an instant CEFR estimate. Al termine puoi fissare un colloquio conoscitivo gratuito con un nostro docente madrelingua — anche in preparazione a CILS e PLIDA."],
+                    'it_meta_description' => ['label' => 'Meta description', 'type' => 'textarea', 'default' => "Test di italiano per stranieri online gratuito: 20 domande per scoprire il tuo livello CEFR. Free online Italian placement test — then book a free interview at our school in Rome (CILS)."],
+                    'it_intro' => ['label' => 'Testo introduttivo', 'type' => 'textarea', 'default' => "Benvenuto al tuo test di italiano: scopri il tuo livello in pochi minuti! Welcome to your Italian level test: answer 20 multiple-choice questions and get an instant CEFR estimate. Al termine puoi fissare un colloquio conoscitivo gratuito con un nostro docente madrelingua — anche in preparazione a CILS."],
                 ],
             ],
             'cta' => [

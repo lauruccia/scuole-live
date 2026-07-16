@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 90">
+  <!-- Simple university crest mark (top right) -->
+  <g transform="translate(206,6)">
+    <path d="M24,0 L48,11 L24,22 L0,11 Z" fill="#7A1F2B"/>
+    <rect x="22" y="22" width="4" height="20" fill="#7A1F2B"/>
+    <circle cx="24" cy="46" r="5" fill="none" stroke="#7A1F2B" stroke-width="2"/>
+  </g>
+  <!-- CILS main text -->
+  <text x="10" y="58" font-family="Georgia,'Times New Roman',serif" font-size="44" font-weight="bold" fill="#1a1a1a">CILS</text>
+  <!-- Tagline -->
+  <text x="10" y="78" font-family="Georgia,'Times New Roman',serif" font-size="10" fill="#333" font-style="italic">Università per Stranieri di Siena</text>
+</svg>

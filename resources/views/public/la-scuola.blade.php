@@ -263,16 +263,13 @@
         </div>
         <div class="cert-grid">
             <a href="{{ route('le-certificazioni') }}" class="cert-tag gold" title="Scopri le certificazioni Trinity College London">★ Trinity College London — Sede n° 8241</a>
-            <span class="cert-tag">IELTS</span>
             <span class="cert-tag">TOEFL</span>
-            <span class="cert-tag">Cambridge</span>
             <span class="cert-tag">Alliance Française (DELF/DALF)</span>
-            <span class="cert-tag">Instituto Cervantes (DELE)</span>
-            <span class="cert-tag">CILS / CELI</span>
+            <span class="cert-tag">IELTS</span>
             <span class="cert-tag">Goethe Institut</span>
-            <span class="cert-tag">TRKI–TORFL</span>
-            <span class="cert-tag">CAPLE</span>
-            <span class="cert-tag">PLIDA</span>
+            <span class="cert-tag">Instituto Cervantes (DELE)</span>
+            <span class="cert-tag">Cambridge</span>
+            <span class="cert-tag">CILS</span>
         </div>
         <p class="cert-validity">{!! \App\Models\PageContent::html('la-scuola', 'cert_validity') !!}</p>
     </div>
