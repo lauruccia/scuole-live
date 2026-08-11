@@ -55,7 +55,7 @@
     },
     "offers": {
         "@@type": "Offer",
-        "price": @json(number_format((float)$course->total_price, 2, '.', '')),
+        "price": "{{ number_format((float)$course->total_price, 2, '.', '') }}",
         "priceCurrency": "EUR",
         "availability": "https://schema.org/InStock",
         "url": "{{ route('checkout.show', $course->id) }}",
