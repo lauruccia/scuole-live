@@ -7,7 +7,6 @@ use App\Models\EmailTemplate;
 use App\Services\EmailTemplateService;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -100,26 +99,21 @@ class EmailTemplateResource extends Resource
                     ]),
 
                     Section::make('Corpo del messaggio')
-                        ->description('Scrivi il testo dell\'email. Usa {{variabile}} per inserire valori dinamici (es. {{nome}}, {{data_lezione}}). La firma viene aggiunta automaticamente.')
+                        ->description('Scrivi il testo dell\'email in HTML. Usa {{variabile}} per inserire valori dinamici (es. {{nome}}, {{data_lezione}}). La firma viene aggiunta automaticamente.')
                         ->schema([
-                            RichEditor::make('body_html')
+                            // Textarea HTML (non RichEditor): l'editor visuale Trix salvava come
+                            // testo escapato il codice incollato (&lt;p&gt;…) e rimuoveva tabelle
+                            // e stili inline, rompendo i box "Dettagli" delle email.
+                            Textarea::make('body_html')
                                 ->label('')
                                 ->required()
-                                ->toolbarButtons([
-                                    'bold',
-                                    'italic',
-                                    'underline',
-                                    'strike',
-                                    'link',
-                                    'orderedList',
-                                    'bulletList',
-                                    'blockquote',
-                                    'h2',
-                                    'h3',
-                                    'undo',
-                                    'redo',
+                                ->rows(22)
+                                ->autosize()
+                                ->extraInputAttributes([
+                                    'spellcheck' => 'false',
+                                    'style'      => 'font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; line-height: 1.55; min-height: 340px;',
                                 ])
-                                ->extraAttributes(['style' => 'min-height: 340px;'])
+                                ->helperText('Codice HTML: usa <p>…</p> per i paragrafi, <strong>…</strong> per il grassetto. Salva e usa "Anteprima" nella lista per verificare il risultato.')
                                 ->columnSpanFull(),
                         ]),
 
