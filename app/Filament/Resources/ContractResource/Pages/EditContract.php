@@ -11,6 +11,7 @@ use App\Models\Installment;
 use App\Models\Student;
 use App\Services\FullLessonService;
 use App\Services\LessonGeneratorService;
+use App\Services\SlotConflictService;
 use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Notifications\Notification;
@@ -23,6 +24,63 @@ use Illuminate\Support\Str;
 class EditContract extends EditRecord
 {
     protected static string $resource = ContractResource::class;
+
+    /**
+     * true dopo «Crea lezioni» nel modale dei conflitti: il salvataggio che segue
+     * non ripete il controllo. Torna false a fine salvataggio.
+     */
+    public bool $slotConflictsConfirmed = false;
+
+    /** Cache per-richiesta dei conflitti mostrati nei modali Completa/Rigenera lezioni. */
+    protected ?array $slotConflictMessagesCache = null;
+
+    /**
+     * Messaggi dei conflitti degli slot attivi del contratto (docente/studente già impegnati).
+     *
+     * @return array<int, string>
+     */
+    protected function currentSlotConflictMessages(): array
+    {
+        if ($this->slotConflictMessagesCache !== null) {
+            return $this->slotConflictMessagesCache;
+        }
+
+        try {
+            $service = app(SlotConflictService::class);
+            $contract = $this->record->fresh();
+
+            return $this->slotConflictMessagesCache = $contract
+                ? $service->messages($service->forContract($contract))
+                : [];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->slotConflictMessagesCache = [];
+        }
+    }
+
+    /**
+     * Modale aperto dal salvataggio del contratto quando uno slot attivo è in conflitto.
+     * «Crea lezioni» salva e genera come prima; «Modifica» chiude il modale senza salvare.
+     */
+    public function confirmSlotConflictsAction(): Actions\Action
+    {
+        return Actions\Action::make('confirmSlotConflicts')
+            ->modalHeading('Docente o studente già impegnato')
+            ->modalIcon('heroicon-o-exclamation-triangle')
+            ->modalIconColor('warning')
+            ->modalDescription(fn (array $arguments) => SlotConflictService::toHtml(
+                $arguments['messages'] ?? [],
+                'Salvando il contratto le lezioni vengono rigenerate dagli slot attivi, ma:'
+            ))
+            ->modalSubmitActionLabel('Crea lezioni')
+            ->modalCancelActionLabel('Modifica')
+            ->color('warning')
+            ->action(function (): void {
+                $this->slotConflictsConfirmed = true;
+                $this->save();
+            });
+    }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
@@ -136,6 +194,25 @@ class EditContract extends EditRecord
         }
         // ────────────────────────────────────────────────────────────────────
 
+        // 4) Conflitti di orario degli slot attivi (docente/studente già impegnati)
+        if (! $this->slotConflictsConfirmed) {
+            $service   = app(SlotConflictService::class);
+            $conflicts = $service->forContract(
+                $this->record,
+                $data['starts_at'] ?? null,
+                $data['ends_at'] ?? null
+            );
+
+            if (! empty($conflicts)) {
+                $this->mountAction('confirmSlotConflicts', [
+                    'messages' => $service->messages($conflicts),
+                ]);
+
+                $this->halt();
+            }
+        }
+        // ────────────────────────────────────────────────────────────────────
+
         $data['billing_is_student'] = (int) ($data['billing_is_student'] ?? ($data['billing_is_beneficiary'] ?? 0));
         unset($data['billing_is_beneficiary']);
 
@@ -159,8 +236,17 @@ class EditContract extends EditRecord
                 ->color('success')
                 ->visible(fn (): bool => $this->canManageLessons())
                 ->requiresConfirmation()
-                ->modalHeading('Genera / completa lezioni')
-                ->modalDescription('Genera le lezioni in base agli slot attivi, senza cancellare quelle future già presenti (se non confliggono).')
+                ->modalHeading(fn (): string => $this->currentSlotConflictMessages()
+                    ? 'Docente o studente già impegnato'
+                    : 'Genera / completa lezioni')
+                ->modalDescription(fn () => $this->currentSlotConflictMessages()
+                    ? SlotConflictService::toHtml(
+                        $this->currentSlotConflictMessages(),
+                        'Le lezioni vengono generate dagli slot attivi senza cancellare quelle future già presenti, ma:'
+                    )
+                    : 'Genera le lezioni in base agli slot attivi, senza cancellare quelle future già presenti (se non confliggono).')
+                ->modalSubmitActionLabel(fn (): string => $this->currentSlotConflictMessages() ? 'Crea lezioni' : 'Conferma')
+                ->modalCancelActionLabel(fn (): string => $this->currentSlotConflictMessages() ? 'Modifica' : 'Annulla')
                 ->action(function (): void {
                     $ok = $this->runLocked('generateLessonsSafe', function (): int {
                         /** @var Contract $contract */
@@ -184,8 +270,17 @@ class EditContract extends EditRecord
                 ->color('danger')
                 ->visible(fn (): bool => $this->canManageLessons())
                 ->requiresConfirmation()
-                ->modalHeading('Rigenera lezioni (cancella future)')
-                ->modalDescription('Elimina le lezioni future NON svolte e le rigenera in base agli slot attivi.')
+                ->modalHeading(fn (): string => $this->currentSlotConflictMessages()
+                    ? 'Docente o studente già impegnato'
+                    : 'Rigenera lezioni (cancella future)')
+                ->modalDescription(fn () => $this->currentSlotConflictMessages()
+                    ? SlotConflictService::toHtml(
+                        $this->currentSlotConflictMessages(),
+                        'Le lezioni future non svolte vengono eliminate e rigenerate dagli slot attivi, ma:'
+                    )
+                    : 'Elimina le lezioni future NON svolte e le rigenera in base agli slot attivi.')
+                ->modalSubmitActionLabel(fn (): string => $this->currentSlotConflictMessages() ? 'Crea lezioni' : 'Conferma')
+                ->modalCancelActionLabel(fn (): string => $this->currentSlotConflictMessages() ? 'Modifica' : 'Annulla')
                 ->action(function (): void {
                     $ok = $this->runLocked('regenerateLessonsForce', function (): int {
                         /** @var Contract $contract */
@@ -629,6 +724,8 @@ class EditContract extends EditRecord
             }
         }
         // ────────────────────────────────────────────────────────────────────
+
+        $this->slotConflictsConfirmed = false;
     }
 
 }

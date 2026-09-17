@@ -6,6 +6,7 @@ use App\Models\ContractLessonSlot;
 use App\Models\ContractStudent;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\SlotConflictService;
 use Filament\Forms;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -20,6 +21,68 @@ use Illuminate\Validation\ValidationException;
 class LessonSlotsRelationManager extends RelationManager
 {
     protected static string $relationship = 'lessonSlots';
+
+    /**
+     * true dopo che l'operatore ha scelto «Crea lezioni» nel modale dei conflitti:
+     * il salvataggio successivo dello slot non ripete il controllo.
+     */
+    public bool $slotConflictsConfirmed = false;
+
+    /**
+     * Se docente o studente sono già impegnati nello stesso giorno/orario, apre il
+     * modale «Crea lezioni / Modifica» sopra il form dello slot e ferma il salvataggio.
+     */
+    protected function guardSlotConflicts(Tables\Actions\Action $action, array $data, ?int $excludeSlotId = null): void
+    {
+        if ($this->slotConflictsConfirmed) {
+            return;
+        }
+
+        // Prima il blocco sugli slot identici, così non si chiede conferma per uno slot che verrebbe comunque rifiutato.
+        $this->guardDuplicateSlot($data, $excludeSlotId);
+
+        if (array_key_exists('is_active', $data) && ! $data['is_active']) {
+            return;
+        }
+
+        $contract = $this->getOwnerRecord();
+
+        if (! $contract) {
+            return;
+        }
+
+        $service   = app(SlotConflictService::class);
+        $conflicts = $service->forSlotData($contract, $data, $excludeSlotId);
+
+        if (empty($conflicts)) {
+            return;
+        }
+
+        $this->mountTableAction('confirmSlotConflicts', null, [
+            'messages' => $service->messages($conflicts),
+        ]);
+
+        $action->halt();
+    }
+
+    protected function slotConflictConfirmAction(): Tables\Actions\Action
+    {
+        return Tables\Actions\Action::make('confirmSlotConflicts')
+            ->modalHeading('Docente o studente già impegnato')
+            ->modalIcon('heroicon-o-exclamation-triangle')
+            ->modalIconColor('warning')
+            ->modalDescription(fn (array $arguments) => SlotConflictService::toHtml($arguments['messages'] ?? []))
+            ->modalSubmitActionLabel('Crea lezioni')
+            ->modalCancelActionLabel('Modifica')
+            ->color('warning')
+            ->action(function (): void {
+                $this->slotConflictsConfirmed = true;
+
+                // Chiude il modale dei conflitti e salva lo slot rimasto aperto sotto.
+                $this->unmountTableAction(shouldCancelParentActions: false);
+                $this->callMountedTableAction();
+            });
+    }
 
     protected function getContractStudentIds(?int $includeStudentId = null): array
     {
@@ -362,6 +425,12 @@ class LessonSlotsRelationManager extends RelationManager
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
+                    ->registerModalActions([$this->slotConflictConfirmAction()])
+                    ->beforeFormFilled(fn () => $this->slotConflictsConfirmed = false)
+                    ->before(function (Tables\Actions\CreateAction $action, array $data): void {
+                        $this->guardSlotConflicts($action, $data);
+                    })
+                    ->after(fn () => $this->slotConflictsConfirmed = false)
                     ->mutateFormDataUsing(function (array $data): array {
                         $contract = $this->getOwnerRecord();
 
@@ -379,6 +448,12 @@ class LessonSlotsRelationManager extends RelationManager
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
+                    ->registerModalActions([$this->slotConflictConfirmAction()])
+                    ->beforeFormFilled(fn () => $this->slotConflictsConfirmed = false)
+                    ->before(function (Tables\Actions\EditAction $action, array $data, Model $record): void {
+                        $this->guardSlotConflicts($action, $data, (int) $record->id);
+                    })
+                    ->after(fn () => $this->slotConflictsConfirmed = false)
                     ->mutateFormDataUsing(function (array $data, Model $record): array {
                         $data['duration_minutes'] = $this->normalizeDurationMinutes($data['duration_minutes'] ?? null);
 
