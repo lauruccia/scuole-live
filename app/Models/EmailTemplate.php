@@ -59,6 +59,7 @@ class EmailTemplate extends Model
 
     public const TRIGGER_EVENTS = [
         'student.created'              => 'Studente creato',
+        'student.credentials_resend'   => 'Reinvio credenziali studente',
         'lesson.cancelled.recoverable' => 'Lezione annullata (con recupero)',
         'lesson.cancelled.consumed'    => 'Lezione annullata (ore scalate)',
         'lesson.cancelled.permanent'   => 'Lezione annullata (definitivo)',

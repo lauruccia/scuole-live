@@ -7,6 +7,8 @@ use App\Filament\Resources\StudentResource\Pages;
 use App\Filament\Resources\StudentResource\RelationManagers\ContractsRelationManager;
 use App\Filament\Resources\StudentResource\RelationManagers\LessonsRelationManager;
 use App\Models\Student;
+use App\Services\CredentialsService;
+use Filament\Notifications\Notification;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
@@ -108,6 +110,16 @@ class StudentResource extends Resource
                     ->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
+                Tables\Actions\Action::make('send_credentials')
+                    ->label('Invia credenziali')
+                    ->icon('heroicon-o-key')
+                    ->color('gray')
+                    ->visible(fn (Student $record): bool => static::canSendCredentials($record))
+                    ->requiresConfirmation()
+                    ->modalHeading('Invia nuove credenziali')
+                    ->modalDescription(fn (Student $record): string => 'Verrà generata una nuova password temporanea per ' . $record->full_name . ' e inviata via email. La password attuale non sarà più valida e al primo accesso verrà chiesto di sceglierne una nuova.')
+                    ->modalSubmitActionLabel('Genera e invia')
+                    ->action(fn (Student $record) => static::sendCredentials($record)),
                 Tables\Actions\EditAction::make()->label('Modifica'),
             ])
             ->filters([
@@ -153,6 +165,41 @@ class StudentResource extends Resource
                     Tables\Actions\DeleteBulkAction::make()->label('Elimina'),
                 ]),
             ]);
+    }
+
+    /** Solo Superadmin, Amministrazione e Segreteria (con permesso di modifica) possono reinviare le credenziali. */
+    public static function canSendCredentials(?Student $record = null): bool
+    {
+        $u = Auth::user();
+
+        if (! $u || ! $u->hasAnyRole(['Superadmin', 'superadmin', 'super_admin', 'Amministrazione', 'Segreteria'])) {
+            return false;
+        }
+
+        return $record ? static::canEdit($record) : true;
+    }
+
+    public static function sendCredentials(Student $record): void
+    {
+        abort_unless(static::canSendCredentials($record), 403);
+
+        try {
+            $to = app(CredentialsService::class)->resendToStudent($record);
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Credenziali non inviate')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title('Credenziali inviate')
+            ->body('Nuova password temporanea inviata a ' . $to . '.')
+            ->success()
+            ->send();
     }
 
     public static function getRelations(): array
