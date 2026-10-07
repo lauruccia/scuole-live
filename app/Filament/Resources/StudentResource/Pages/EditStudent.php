@@ -17,6 +17,17 @@ class EditStudent extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('send_credentials')
+                ->label('Invia credenziali')
+                ->icon('heroicon-o-key')
+                ->color('gray')
+                ->visible(fn (): bool => StudentResource::canSendCredentials($this->getRecord()))
+                ->requiresConfirmation()
+                ->modalHeading('Invia nuove credenziali')
+                ->modalDescription(fn (): string => 'Verrà generata una nuova password temporanea per ' . $this->getRecord()->full_name . ' e inviata via email. La password attuale non sarà più valida e al primo accesso verrà chiesto di sceglierne una nuova.')
+                ->modalSubmitActionLabel('Genera e invia')
+                ->action(fn () => StudentResource::sendCredentials($this->getRecord())),
+
             Actions\DeleteAction::make(),
 
             // ── GDPR: Anonimizza studente ─────────────────────────────────
