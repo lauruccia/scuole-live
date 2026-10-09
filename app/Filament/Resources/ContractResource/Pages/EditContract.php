@@ -117,6 +117,20 @@ class EditContract extends EditRecord
         // ── Validazione beneficiari ──────────────────────────────────────────
         $beneficiaries = $data['beneficiaries'] ?? [];
 
+        // 0) Stesso studente inserito più volte nello stesso contratto
+        $dupStudents = \App\Filament\Resources\ContractResource::duplicateBeneficiaryStudents($beneficiaries);
+
+        if (! empty($dupStudents)) {
+            Notification::make()
+                ->title('Studente inserito più volte')
+                ->body('Lo stesso studente compare più volte tra i beneficiari: ' . implode(', ', $dupStudents) . '. Rimuovi i duplicati prima di salvare, altrimenti ore e lezioni vengono assegnate in modo errato.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $this->halt();
+        }
+
         // 1) Email duplicate tra beneficiari
         $benefEmails = array_filter(
             array_map(fn ($b) => strtolower(trim((string) ($b['beneficiary_email'] ?? ''))), $beneficiaries)

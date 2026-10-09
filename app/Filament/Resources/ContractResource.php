@@ -953,6 +953,25 @@ Select::make('student_id')
             return;
         }
 
+        // Stesso studente già presente in un'altra riga dello stesso contratto → blocca e avvisa
+        $occurrences = collect($get('../../beneficiaries') ?? [])
+            ->filter(fn ($row) => (int) ($row['student_id'] ?? 0) === (int) $s->id)
+            ->count();
+
+        if ($occurrences > 1) {
+            \Filament\Notifications\Notification::make()
+                ->title('Studente già inserito')
+                ->body(trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? '')) . ' è già presente tra i beneficiari di questo contratto. Lo stesso studente non può essere aggiunto due volte.')
+                ->danger()
+                ->persistent()
+                ->send();
+
+            $set('student_id', null);
+            $set('auto_match_label', null);
+
+            return;
+        }
+
         static::fillBeneficiaryFormFromStudent($s, $set);
 
         $set('auto_birth_province', $s->birth_province ?? null);
@@ -1523,6 +1542,23 @@ Select::make('student_id')
                     ->sortable()
                     ->toggleable(),
 
+                Tables\Columns\ToggleColumn::make('completed_flag')
+                    ->label('Completato')
+                    ->tooltip('Segna il contratto come completato / riaprilo')
+                    ->getStateUsing(fn (Contract $record) => $record->status === 'completed')
+                    ->updateStateUsing(function (Contract $record, bool $state) {
+                        $state ? $record->markCompleted('manual') : $record->reopen();
+
+                        Notification::make()
+                            ->title($state ? 'Contratto completato' : 'Contratto riaperto')
+                            ->success()
+                            ->send();
+
+                        return $state;
+                    })
+                    ->visible(fn () => Auth::user()?->hasAnyRole(['superadmin', 'admin', 'Amministrazione', 'Segreteria']) ?? false)
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('hours_purchased')->label('Ore acq.')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('hours_consumed')->label('Fruite')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('hours_remaining_badge')
@@ -1731,6 +1767,19 @@ Select::make('student_id')
                                 )
                                 ->success()
                                 ->send();
+                        }),
+
+                    Tables\Actions\Action::make('reopen_contract')
+                        ->label('Riapri contratto')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->visible(fn (Contract $record) => $record->status === 'completed'
+                            && (Auth::user()?->hasAnyRole(['superadmin', 'admin', 'Amministrazione', 'Segreteria']) ?? false))
+                        ->requiresConfirmation()
+                        ->modalDescription('Il contratto torna "Attivo" e gli slot settimanali vengono riattivati. Non verrà richiuso in automatico.')
+                        ->action(function (Contract $record) {
+                            $record->reopen();
+                            Notification::make()->title('Contratto riaperto')->success()->send();
                         }),
 
                     Tables\Actions\Action::make('download_pdf')
@@ -1953,6 +2002,29 @@ Select::make('student_id')
         $set('auto_birth_province', $student->birth_province ?? null);
         $set('auto_match_label', 'Trovato in anagrafica: ' . trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')));
     }
+
+/**
+ * Nomi degli studenti presenti più volte (stesso student_id) tra i beneficiari di un contratto.
+ */
+public static function duplicateBeneficiaryStudents(array $beneficiaries): array
+{
+    $ids = collect($beneficiaries)
+        ->map(fn ($b) => (int) ($b['student_id'] ?? 0))
+        ->filter()
+        ->countBy()
+        ->filter(fn ($c) => $c > 1)
+        ->keys();
+
+    if ($ids->isEmpty()) {
+        return [];
+    }
+
+    return Student::query()
+        ->whereIn('id', $ids->all())
+        ->get()
+        ->map(fn (Student $s) => trim(($s->last_name ?? '') . ' ' . ($s->first_name ?? '')))
+        ->all();
+}
 
 protected static function fillBeneficiaryFormFromStudent(Student $student, Set $set): void
 {
