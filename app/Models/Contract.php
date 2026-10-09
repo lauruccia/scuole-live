@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
@@ -89,6 +90,9 @@ class Contract extends Model
         'notes',
         'academic_year',
         'status',
+        'completed_at',
+        'completion_source',
+        'auto_complete_disabled',
 
         // Nuovo sistema
         'company_id',
@@ -103,6 +107,7 @@ class Contract extends Model
         'signed_at',
         'signed_ip',
         'signed_user_agent',
+        'invoice_exported_at',
     ];
 
     protected $casts = [
@@ -129,6 +134,10 @@ class Contract extends Model
         'signature_otp_expires_at'     => 'datetime',
         'signature_otp_attempts'       => 'integer',
         'signed_at'                    => 'datetime',
+        'invoice_exported_at'          => 'datetime',
+
+        'completed_at'                 => 'datetime',
+        'auto_complete_disabled'       => 'boolean',
     ];
 
     protected $appends = [
@@ -482,6 +491,65 @@ class Contract extends Model
     }
 
     /* -----------------------------------------------------------------
+     |  COMPLETAMENTO / RIAPERTURA
+     | ----------------------------------------------------------------- */
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    /**
+     * Le lezioni del contratto sono tutte finite?
+     * Vero se: ore residue = 0, nessuna lezione futura non annullata,
+     * nessuna lezione annullata ancora da recuperare.
+     */
+    public function isFinished(): bool
+    {
+        if ((float) $this->hours_purchased <= 0) {
+            return false;
+        }
+
+        if ((float) $this->hours_consumed < (float) $this->hours_purchased) {
+            return false;
+        }
+
+        $pending = Lesson::query()
+            ->where('contract_id', $this->id)
+            ->whereNull('deleted_at')
+            ->where(function ($q) {
+                $q->where(fn ($f) => $f->whereNull('cancelled_at')->where('ends_at', '>', now()))
+                  ->orWhere(fn ($r) => $r->whereNotNull('cancelled_at')->where('is_recoverable', true)->whereNull('completed_at'));
+            })
+            ->exists();
+
+        return ! $pending;
+    }
+
+    /** Chiude il contratto ($source: 'auto' | 'manual'). Gli slot si disattivano nel hook saved(). */
+    public function markCompleted(string $source = 'manual'): void
+    {
+        $this->update([
+            'status'                 => 'completed',
+            'completed_at'           => now(),
+            'completion_source'      => $source,
+            'auto_complete_disabled' => false,
+        ]);
+    }
+
+    /** Riapre il contratto (errore o altro). Gli slot si riattivano nel hook saved(). */
+    public function reopen(): void
+    {
+        $this->update([
+            'status'                 => 'active',
+            'completed_at'           => null,
+            'completion_source'      => null,
+            // evita che il job notturno lo richiuda subito
+            'auto_complete_disabled' => true,
+        ]);
+    }
+
+    /* -----------------------------------------------------------------
      |  AUTO SYNC (AFTER COMMIT)
      | ----------------------------------------------------------------- */
 
@@ -540,6 +608,18 @@ class Contract extends Model
                     throw new \InvalidArgumentException(
                         'La data di fine corso non può essere precedente alla data di inizio.'
                     );
+                }
+            }
+
+            // Tracciamento completamento anche quando lo stato cambia dal form di modifica
+            if ($contract->isDirty('status')) {
+                if ($contract->status === 'completed') {
+                    $contract->completed_at      ??= now();
+                    $contract->completion_source ??= 'manual';
+                } elseif ($contract->getOriginal('status') === 'completed') {
+                    $contract->completed_at           = null;
+                    $contract->completion_source      = null;
+                    $contract->auto_complete_disabled = true;
                 }
             }
 
