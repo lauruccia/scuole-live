@@ -1479,10 +1479,12 @@ Select::make('student_id')
                     ->getStateUsing(fn (Contract $record) => ($record->billing_type ?? 'private') === 'company' ? 'Azienda' : 'Privato')
                     ->badge()
                     ->color(fn (string $state) => $state === 'Azienda' ? 'warning' : 'info')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('intestatario')
                     ->label('Intestatario')
+                    ->wrap()
                     ->getStateUsing(function (Contract $record): string {
                         if (($record->billing_type ?? 'private') === 'company') {
                             return (string) ($record->company_name ?: '—');
@@ -1514,7 +1516,7 @@ Select::make('student_id')
                             ->orderBy('contracts.id', 'desc');
                     }),
 
-                Tables\Columns\TextColumn::make('course.name')->label('Corso')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('course.name')->label('Corso')->sortable()->searchable()->wrap(),
 
                 Tables\Columns\TextColumn::make('academic_year')
                     ->label('Anno')
@@ -1533,10 +1535,10 @@ Select::make('student_id')
                         'info'    => 'paused',
                     ])
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'active'    => '🟢 Attivo',
-                        'completed' => '✅ Completato',
-                        'suspended' => '⏸️ Sospeso',
-                        'paused'    => '⏳ In pausa',
+                        'active'    => 'Attivo',
+                        'completed' => 'Completato',
+                        'suspended' => 'Sospeso',
+                        'paused'    => 'In pausa',
                         default     => $state,
                     })
                     ->sortable()
@@ -1576,7 +1578,7 @@ Select::make('student_id')
                         if ($purchased > 0 && $rem / $purchased < 0.20) return 'warning';
                         return 'success';
                     }),
-                Tables\Columns\TextColumn::make('created_at')->label('Data')->dateTime('d/m/Y H:i')->sortable(),
+                Tables\Columns\TextColumn::make('created_at')->label('Data')->dateTime('d/m/Y')->sortable(),
 
                 Tables\Columns\IconColumn::make('signed_at')
                     ->label('Firmato')

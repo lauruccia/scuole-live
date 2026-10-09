@@ -67,6 +67,15 @@ Schedule::command('lessons:fix-future-counts')
     ->onOneServer()
     ->runInBackground();
 
+// ── Contratti: completamento automatico ────────────────────────────────────
+// Chiude i contratti attivi con tutte le lezioni finite (riapribili a mano).
+Schedule::command('contracts:auto-complete')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Rome')
+    ->withoutOverlapping(10)
+    ->onOneServer()
+    ->runInBackground();
+
 // ── Backup database (giornaliero) ────────────────────────────────────────────
 // spatie/laravel-backup: dump del solo DB ogni notte alle 02:00
 Schedule::command('backup:run --only-db')
