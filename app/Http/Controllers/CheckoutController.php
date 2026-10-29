@@ -378,15 +378,16 @@ class CheckoutController extends Controller
             'billing_last_name'  => 'required_if:billing_type,private|nullable|string|max:100',
             'billing_email'      => 'required|email|max:200',
             'billing_phone'      => 'nullable|string|max:30',
-            'billing_address'    => 'nullable|string|max:200',
-            'billing_city'       => 'nullable|string|max:100',
-            'billing_zip'        => 'nullable|string|max:10',
+            // Dati obbligatori per la fatturazione
+            'billing_address'    => 'required|string|max:200',
+            'billing_city'       => 'required|string|max:100',
+            'billing_zip'        => ['required', 'regex:/^\d{5}$/'],
             'billing_country'    => 'nullable|string|max:5',
             // CF italiano validato con checksum (rule custom)
-            'billing_tax_code'   => ['nullable', 'string', 'max:20', new \App\Rules\CodiceFiscale],
+            'billing_tax_code'   => ['required_if:billing_type,private', 'nullable', 'string', 'max:20', new \App\Rules\CodiceFiscale],
             'company_name'       => 'required_if:billing_type,company|nullable|string|max:200',
             // P.IVA italiana 11 cifre con checksum mod-10
-            'vat_number'         => ['nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
+            'vat_number'         => ['required_if:billing_type,company', 'nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
             // Validazione dinamica: solo i metodi abilitati dall'admin sono accettati.
             'payment_method'     => ['required', Rule::in($enabledPaymentMethods)],
             'privacy'            => 'accepted',
@@ -398,6 +399,7 @@ class CheckoutController extends Controller
             'max'                     => 'Il campo :attribute è troppo lungo (massimo :max caratteri).',
             'string'                  => 'Il campo :attribute non è valido.',
             'in'                      => 'Il valore del campo :attribute non è valido.',
+            'billing_zip.regex'       => 'Il CAP deve essere di 5 cifre.',
             'privacy.accepted'        => 'Per procedere devi accettare l\'informativa sulla privacy.',
             'payment_method.required' => 'Seleziona un metodo di pagamento.',
             'payment_method.in'       => 'Il metodo di pagamento selezionato non e\' attualmente disponibile.',
