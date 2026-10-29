@@ -236,7 +236,7 @@ class PaymentService
             // 2. Crea (o trova) lo student
             $student = $this->findOrCreateStudent($purchase);
 
-            // 3. Crea il contratto in stato pending
+            // 3. Crea il contratto (stato active, come quelli creati a mano)
             $contract = $this->createContractFromPurchase($purchase, $student);
 
             // 4. Collega acquisto al contratto
@@ -274,8 +274,8 @@ class PaymentService
     /**
      * Crea un nuovo Contract dal CoursePurchase confermato.
      *
-     * Il contratto nasce in stato "pending": l'amministrazione lo completerà
-     * con slot orari, docente e date prima di passarlo a "active".
+     * Il contratto nasce in stato "active" (come quelli creati a mano): l'amministrazione
+     * lo completa poi con slot orari, docente e date.
      */
     private function createContractFromPurchase(CoursePurchase $purchase, Student $student): Contract
     {
@@ -283,7 +283,7 @@ class PaymentService
 
         $contract = Contract::create([
             'course_id'           => $purchase->course_id,
-            'status'              => 'pending',
+            'status'              => 'active',
             'course_price'        => $purchase->amount,
             'billing_type'        => $purchase->billing_type,
             'billing_first_name'  => $purchase->billing_first_name,
