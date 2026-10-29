@@ -191,6 +191,11 @@
     .field-grid.cols-1 { grid-template-columns: 1fr; }
     @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
     .field-full { grid-column: 1 / -1; }
+    .choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    @media (max-width: 640px) { .choice-grid { grid-template-columns: 1fr; } }
+    .choice-grid select { width: 100%; text-overflow: ellipsis; }
+    .choice-grid select:disabled { background: #f3f6fb; color: #94a3b8; cursor: not-allowed; }
+    .choice-hint { font-size: 12px; color: var(--muted); margin-top: 12px; }
 
     .field { display: flex; flex-direction: column; gap: 5px; }
     .field label { font-size: 12px; font-weight: 800; color: #1e2d42; letter-spacing: .02em; }
@@ -292,7 +297,7 @@
     {{-- ── SIDEBAR RIEPILOGO ──────────────────────────────── --}}
     <div class="sidebar" style="order:2;">
         <div class="sidebar-photo" id="sb-photo">
-            <img id="sb-photo-img" src="{{ $course->image_url }}" alt="{{ isset($configurator) ? 'Corso di lingua' : $course->name }}">
+            <img id="sb-photo-img" src="{{ isset($configurator) ? (new \App\Models\Course)->image_url : $course->image_url }}" data-default="{{ (new \App\Models\Course)->image_url }}" alt="{{ isset($configurator) ? 'Corso di lingua' : $course->name }}">
         </div>
         <div class="sidebar-header">
             <div class="course-title">{{ (isset($configurator) ? 'Corso di lingua' : $course->name) }}</div>
@@ -403,7 +408,7 @@
                     </div>
                     @error('privacy')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
 
-                    <button form="checkoutForm" type="submit" class="btn-submit" id="btnSubmit">
+                    <button form="checkoutForm" type="submit" class="btn-submit" id="btnSubmit" {{ isset($configurator) ? 'disabled' : '' }}>
                         <span id="btnText">🔒 Procedi al pagamento</span>
                         <span id="btnSpinner" style="display:none;">⏳ Attendi…</span>
                     </button>
@@ -438,10 +443,11 @@
                 </div>
                 <div class="form-body">
                     <input type="hidden" name="course_id" id="course_id" value="{{ $selectedCourseId }}">
-                    <div class="field-grid">
-                        <div class="field field-full">
+                    <div class="choice-grid">
+                        <div class="field">
                             <label for="sel-language">Lingua</label>
                             <select name="language" id="sel-language">
+                                <option value="">Scegli la lingua</option>
                                 @foreach($languages as $lang)
                                     <option value="{{ $lang }}" {{ $selectedLanguage === $lang ? 'selected' : '' }}>{{ $lang }}</option>
                                 @endforeach
@@ -456,6 +462,7 @@
                             <select id="sel-type"></select>
                         </div>
                     </div>
+                    <p class="choice-hint" id="choice-hint">Scegli lingua, ore e tipo di lezione per continuare.</p>
                     <noscript><p style="color:#991b1b;font-size:13px;margin-top:10px;">Abilita JavaScript per scegliere ore e tipologia.</p></noscript>
                     @error('course_id')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
                     @error('language')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
@@ -576,23 +583,22 @@ function setBillingType(type, el) {
     const selLang  = document.getElementById('sel-language');
     const selHours = document.getElementById('sel-hours');
     const selType  = document.getElementById('sel-type');
+    const btn      = document.getElementById('btnSubmit');
+    const hint     = document.getElementById('choice-hint');
+    const photo    = document.getElementById('sb-photo-img');
     const eur = n => '€ ' + Number(n).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
 
-    let current = VARIANTS.find(v => v.id === parseInt(hidden.value, 10)) || VARIANTS[0];
+    // Stato: nessuna scelta preselezionata (salvo ripristino dopo un errore di validazione)
+    const restored = VARIANTS.find(v => v.id === parseInt(hidden.value, 10)) || null;
+    let hours   = restored ? restored.hours : null;
+    let typeKey = restored ? restored.key : '';
 
-    // Corso più vicino alla scelta precedente, rispettando il vincolo appena cambiato
-    function pick(hours, key) {
-        const type = (key || '').split('|')[0];
-        return VARIANTS.find(v => v.hours === hours && v.key === key)
-            || VARIANTS.find(v => v.hours === hours && v.type === type)
-            || VARIANTS.find(v => v.hours === hours)
-            || VARIANTS.find(v => v.type === type)
-            || VARIANTS[0];
-    }
-
-    function fill(select, options, selected) {
+    function fill(select, placeholder, options, selected) {
         select.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = ''; ph.textContent = placeholder;
+        select.appendChild(ph);
         options.forEach(o => {
             const opt = document.createElement('option');
             opt.value = o.value;
@@ -603,34 +609,45 @@ function setBillingType(type, el) {
     }
 
     function render() {
-        const sameHours = VARIANTS.filter(v => v.hours === current.hours);
+        const forHours = hours === null ? [] : VARIANTS.filter(v => v.hours === hours);
+        if (typeKey && !forHours.some(v => v.key === typeKey)) typeKey = '';
+        const current = forHours.find(v => v.key === typeKey) || null;
 
-        fill(selHours,
+        fill(selHours, 'Scegli le ore',
             uniq(VARIANTS.map(v => v.hours)).sort((a, b) => a - b).map(h => {
                 const v = VARIANTS.find(x => x.hours === h);
-                return {value: h, label: v.hoursLabel + ' ore'};
-            }), current.hours);
-        // Una voce per tipologia, senza prezzo: il prezzo è nel riepilogo.
-        fill(selType,
-            uniq(sameHours.map(v => v.key)).map(k => ({value: k, label: k})), current.key);
+                return {value: h, label: v.hoursLabel + (v.hoursLabel === '1' ? ' ora' : ' ore')};
+            }), hours === null ? '' : hours);
+        fill(selType, 'Scegli il tipo di lezione',
+            uniq(forHours.map(v => v.key)).map(k => ({value: k, label: k})), typeKey);
+        selType.disabled = hours === null;
 
-        hidden.value = current.id;
-        const photo = document.getElementById('sb-photo-img');
-        if (current.image && photo.getAttribute('src') !== current.image) photo.src = current.image;
-        document.getElementById('sb-lang').textContent  = selLang.value;
-        document.getElementById('sb-hours').textContent = current.hoursLabel;
-        document.getElementById('sb-type').textContent  = current.type;
-        document.getElementById('sb-total').textContent = eur(current.total);
+        hidden.value = current ? current.id : '';
 
-        document.getElementById('sb-enroll-row').style.display = current.enrollment > 0 ? '' : 'none';
-        document.getElementById('sb-price-row').style.display  = current.price > 0 ? '' : 'none';
-        document.getElementById('sb-enroll').textContent = eur(current.enrollment);
-        document.getElementById('sb-price').textContent  = eur(current.price);
+        const dash = '—';
+        document.getElementById('sb-lang').textContent  = selLang.value || dash;
+        document.getElementById('sb-hours').textContent = current ? current.hoursLabel : dash;
+        document.getElementById('sb-type').textContent  = current ? current.type : dash;
+        document.getElementById('sb-total').textContent = current ? eur(current.total) : dash;
+
+        document.getElementById('sb-enroll-row').style.display = current && current.enrollment > 0 ? '' : 'none';
+        document.getElementById('sb-price-row').style.display  = current && current.price > 0 ? '' : 'none';
+        if (current) {
+            document.getElementById('sb-enroll').textContent = eur(current.enrollment);
+            document.getElementById('sb-price').textContent  = eur(current.price);
+        }
+
+        const src = (current && current.image) ? current.image : photo.dataset.default;
+        if (photo.getAttribute('src') !== src) photo.src = src;
+
+        const ready = !!(selLang.value && current);
+        btn.disabled = !ready;
+        hint.style.display = ready ? 'none' : '';
     }
 
     selLang.addEventListener('change', render);
-    selHours.addEventListener('change', () => { current = pick(parseFloat(selHours.value), current.key); render(); });
-    selType.addEventListener('change', () => { current = pick(current.hours, selType.value); render(); });
+    selHours.addEventListener('change', () => { hours = selHours.value === '' ? null : parseFloat(selHours.value); render(); });
+    selType.addEventListener('change', () => { typeKey = selType.value; render(); });
 
     render();
 })();

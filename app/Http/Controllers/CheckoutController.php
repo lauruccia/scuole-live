@@ -166,8 +166,9 @@ class CheckoutController extends Controller
         })->values();
 
         $configurator     = true;
-        $selectedCourseId = (int) old('course_id', $course->id);
-        $selectedLanguage = old('language', $languages[0]);
+        // Nessuna preselezione: solo il ripristino dopo un errore di validazione.
+        $selectedCourseId = old('course_id');
+        $selectedLanguage = old('language', '');
 
         return view('checkout.show', compact(
             'course', 'prefill', 'enabledPaymentMethods',
