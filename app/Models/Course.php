@@ -7,6 +7,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Course extends Model
 {
+    /**
+     * URL della foto del corso: la sua, altrimenti la foto predefinita impostata
+     * dal backend (Corsi → Foto predefinita), altrimenti l'immagine di default del sito.
+     */
+    public function getImageUrlAttribute(): string
+    {
+        $path = filled($this->image_path) ? $this->image_path : SchoolSetting::get('course_default_image');
+
+        return filled($path) ? \Illuminate\Support\Facades\Storage::url($path) : asset('images/corso-default.svg');
+    }
+
     protected $fillable = [
         'name',
         'is_active',

@@ -4,7 +4,10 @@ namespace App\Filament\Resources\CourseResource\Pages;
 
 use App\Filament\Resources\CourseResource;
 use App\Models\Course;
+use App\Models\SchoolSetting;
 use Filament\Actions;
+use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -16,6 +19,30 @@ class ListCourses extends ListRecords
     {
         return [
             Actions\CreateAction::make()->label('Nuovo corso'),
+
+            Actions\Action::make('default_image')
+                ->label('Foto predefinita')
+                ->icon('heroicon-o-photo')
+                ->color('gray')
+                ->modalHeading('Foto predefinita dei corsi')
+                ->modalDescription('Usata nella pagina di acquisto e nel catalogo per i corsi che non hanno una foto propria. Se la lasci vuota si usa l\'immagine standard del sito.')
+                ->modalSubmitActionLabel('Salva')
+                ->fillForm(fn (): array => ['course_default_image' => SchoolSetting::get('course_default_image') ?: null])
+                ->form([
+                    Forms\Components\FileUpload::make('course_default_image')
+                        ->label('Foto')
+                        ->helperText('Formato consigliato 16:9, massimo 4 MB.')
+                        ->image()
+                        ->imageEditor()
+                        ->disk('public')
+                        ->directory('courses/default')
+                        ->maxSize(4096),
+                ])
+                ->action(function (array $data): void {
+                    SchoolSetting::set('course_default_image', $data['course_default_image'] ?: null);
+
+                    Notification::make()->title('Foto predefinita salvata')->success()->send();
+                }),
 
             Actions\Action::make('export_csv')
                 ->label('Esporta CSV')

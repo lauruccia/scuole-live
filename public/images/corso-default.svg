@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-label="A&amp;A Language Center">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#001733"/>
+      <stop offset="1" stop-color="#0057d9"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="3">
+    <circle cx="640" cy="360" r="190"/>
+    <ellipse cx="640" cy="360" rx="95" ry="190"/>
+    <path d="M450 360h380M490 270h300M490 450h300"/>
+    <path d="M640 170v380"/>
+  </g>
+  <text x="640" y="635" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700" fill="#ffffff" fill-opacity=".85">A&amp;A Language Center</text>
+</svg>

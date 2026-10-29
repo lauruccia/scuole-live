@@ -161,6 +161,7 @@ class CheckoutController extends Controller
                 'enrollment' => (float) $c->enrollment_fee,
                 'price'      => (float) $c->course_price,
                 'total'      => (float) $c->total_price,
+                'image'      => $c->image_url,
             ];
         })->values();
 
