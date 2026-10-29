@@ -697,7 +697,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dash = '—';
         document.getElementById('sb-lang').textContent  = selLang.value || dash;
-        document.getElementById('sb-hours').textContent = current ? current.hoursLabel : dash;
+        document.getElementById('sb-hours').textContent = current
+            ? current.hoursLabel + (current.hoursFull > 0 && current.hoursFull < current.hours
+                ? ' (' + String(current.hours - current.hoursFull).replace('.', ',') + ' personalizzate + ' + String(current.hoursFull).replace('.', ',') + ' FULL)'
+                : '')
+            : dash;
         document.getElementById('sb-type').textContent  = current ? current.type : dash;
         document.getElementById('sb-total').textContent = current ? eur(current.total) : dash;
 
