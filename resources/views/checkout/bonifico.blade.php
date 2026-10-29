@@ -16,7 +16,7 @@
     :root { --blue:#0057d9; --blue-dark:#001b3f; --blue-deep:#001126; --border:#dbe7f4; --muted:#526173; --shadow:0 18px 50px rgba(0,37,91,.16); }
 
     /* Navbar gestita dal layout. .c ristretto a 760px per la pagina bonifico. */
-    .c { width: min(760px, calc(100% - 40px)); margin: 0 auto; }
+    main .c { width: min(760px, calc(100% - 40px)); margin: 0 auto; }
 
     .page-wrap { padding: 50px 0 80px; }
 

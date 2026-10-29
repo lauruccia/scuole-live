@@ -10,7 +10,7 @@
 
     /* Navbar gestita dal layout. NB: .c qui è ristretto (680px) per pagina di
        conferma — diverso dai 1140px del layout, ma intenzionale. */
-    .c { width: min(680px, calc(100% - 40px)); margin: 0 auto; }
+    main .c { width: min(680px, calc(100% - 40px)); margin: 0 auto; }
     .page-wrap { padding: 60px 0 80px; text-align: center; }
 
     .success-circle {
