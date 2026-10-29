@@ -101,6 +101,13 @@ class ContractResource extends Resource
             'Lezioni personalizzate + FULL' => 'Lezioni personalizzate + FULL',
             'Full immersion (piccoli gruppi)' => 'Full immersion (piccoli gruppi)',
             'Test/Examination' => 'Test/Examination',
+            // Tipologie dei Corsi (copiate sul contratto dagli acquisti online)
+            'Lezioni di gruppo' => 'Lezioni di gruppo',
+            'Lezioni di gruppo (2 persone)' => 'Lezioni di gruppo (2 persone)',
+            'Lezioni di gruppo (4 persone)' => 'Lezioni di gruppo (4 persone)',
+            'Lezioni online' => 'Lezioni online',
+            'Corso intensivo' => 'Corso intensivo',
+            'Esami e certificazioni' => 'Esami e certificazioni',
         ];
     }
 

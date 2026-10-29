@@ -96,31 +96,117 @@ class CheckoutController extends Controller
                 ->with('danger', 'Al momento non e\' possibile completare il pagamento online. Contatta la segreteria.');
         }
 
-        $data = $request->validate([
-            'billing_type'       => 'required|in:private,company',
-            'billing_first_name' => 'required_if:billing_type,private|nullable|string|max:100',
-            'billing_last_name'  => 'required_if:billing_type,private|nullable|string|max:100',
-            'billing_email'      => 'required|email|max:200',
-            'billing_phone'      => 'nullable|string|max:30',
-            'billing_address'    => 'nullable|string|max:200',
-            'billing_city'       => 'nullable|string|max:100',
-            'billing_zip'        => 'nullable|string|max:10',
-            'billing_country'    => 'nullable|string|max:5',
-            // CF italiano validato con checksum (rule custom)
-            'billing_tax_code'   => ['nullable', 'string', 'max:20', new \App\Rules\CodiceFiscale],
-            'company_name'       => 'required_if:billing_type,company|nullable|string|max:200',
-            // P.IVA italiana 11 cifre con checksum mod-10
-            'vat_number'         => ['nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
-            // Validazione dinamica: solo i metodi abilitati dall'admin sono accettati.
-            'payment_method'     => ['required', Rule::in($enabledPaymentMethods)],
-            'privacy'            => 'accepted',
-        ], [
-            'payment_method.in' => 'Il metodo di pagamento selezionato non e\' attualmente disponibile.',
-        ]);
+        $data = $this->validateCheckout($request, $enabledPaymentMethods);
 
         $purchase = CoursePurchase::create([
             ...$data,
             'course_id'      => $course->id,
+            'user_id'        => Auth::id(),
+            'amount'         => $course->total_price,
+            'payment_status' => 'pending',
+        ]);
+
+        return match($data['payment_method']) {
+            'stripe'   => $this->payments->redirectStripe($purchase, $course),
+            'paypal'   => $this->payments->redirectPaypal($purchase, $course),
+            'bonifico' => redirect()->route('checkout.bonifico', $purchase),
+        };
+    }
+
+    // ── Pagina "Corso di lingua": lingua (libera) + ore/tipologia scelte tra i Corsi pubblici ──
+    // Nessuna tabella dedicata: le scelte sono i Corsi attivi e pubblici del backend.
+
+    private function languageOptions(): array
+    {
+        return array_values(\App\Filament\Resources\ContractResource::subjectOptions());
+    }
+
+    private function configuratorCourses()
+    {
+        return Course::where('is_active', true)->where('is_public', true)
+            ->where('hours_purchased', '>', 0)
+            ->orderBy('hours_purchased')->orderBy('name')
+            ->get();
+    }
+
+    public function showConfigurator()
+    {
+        $courses   = $this->configuratorCourses();
+        $languages = $this->languageOptions();
+        abort_if($courses->isEmpty() || empty($languages), 404);
+
+        // Preselezione: Corso più economico
+        $course = $courses->sortBy(fn ($c) => $c->total_price)->first();
+
+        $prefill = [];
+        if ($user = Auth::user()) {
+            $prefill = [
+                'billing_first_name' => $user->first_name ?? '',
+                'billing_last_name'  => $user->last_name ?? '',
+                'billing_email'      => $user->email,
+            ];
+        }
+
+        $enabledPaymentMethods = SchoolSetting::paymentEnabledMethods();
+
+        // Il prezzo mostrato è informativo: quello vero viene riletto dal Corso in storeConfigurator().
+        $variantsJson = $courses->map(function ($c) {
+            $ore = (float) $c->hours_purchased;
+
+            return [
+                'id'         => $c->id,
+                'hours'      => $ore,
+                'hoursLabel' => rtrim(rtrim(number_format($ore, 2, ',', ''), '0'), ','),
+                'type'       => trim((string) $c->lesson_type) !== '' ? $c->lesson_type : $c->name,
+                'enrollment' => (float) $c->enrollment_fee,
+                'price'      => (float) $c->course_price,
+                'total'      => (float) $c->total_price,
+            ];
+        })->values();
+
+        $configurator     = true;
+        $selectedCourseId = (int) old('course_id', $course->id);
+        $selectedLanguage = old('language', $languages[0]);
+
+        return view('checkout.show', compact(
+            'course', 'prefill', 'enabledPaymentMethods',
+            'configurator', 'variantsJson', 'languages', 'selectedCourseId', 'selectedLanguage'
+        ));
+    }
+
+    public function storeConfigurator(Request $request)
+    {
+        $enabledPaymentMethods = SchoolSetting::paymentEnabledMethods();
+
+        if (empty($enabledPaymentMethods)) {
+            return redirect()->route('checkout.acquista')
+                ->with('danger', 'Al momento non e\' possibile completare il pagamento online. Contatta la segreteria.');
+        }
+
+        $choice = $request->validate([
+            'course_id' => 'required|integer',
+            'language'  => ['required', Rule::in($this->languageOptions())],
+        ], [
+            'course_id.required' => 'Seleziona ore e tipologia di lezioni.',
+            'language.required'  => 'Seleziona la lingua.',
+            'language.in'        => 'La lingua selezionata non e\' disponibile.',
+        ]);
+
+        // Il client non decide mai prezzo né corso: il Corso deve essere attivo, pubblico e con ore.
+        $course = $this->configuratorCourses()->firstWhere('id', (int) $choice['course_id']);
+
+        if (! $course) {
+            return redirect()->route('checkout.acquista')
+                ->withInput()
+                ->withErrors(['course_id' => 'La combinazione scelta non e\' piu\' disponibile. Riprova.']);
+        }
+
+        $data = $this->validateCheckout($request, $enabledPaymentMethods);
+
+        $purchase = CoursePurchase::create([
+            ...$data,
+            'course_id'      => $course->id,
+            'language'       => $choice['language'],
             'user_id'        => Auth::id(),
             'amount'         => $course->total_price,
             'payment_status' => 'pending',
@@ -276,5 +362,57 @@ class CheckoutController extends Controller
     public function errore(CoursePurchase $purchase)
     {
         return view('checkout.errore', compact('purchase'));
+    }
+
+    /**
+     * Validazione condivisa dei dati di fatturazione + metodo di pagamento
+     * (checkout corso singolo e checkout prodotto variabile).
+     */
+    private function validateCheckout(Request $request, array $enabledPaymentMethods): array
+    {
+        return $request->validate([
+            'billing_type'       => 'required|in:private,company',
+            'billing_first_name' => 'required_if:billing_type,private|nullable|string|max:100',
+            'billing_last_name'  => 'required_if:billing_type,private|nullable|string|max:100',
+            'billing_email'      => 'required|email|max:200',
+            'billing_phone'      => 'nullable|string|max:30',
+            'billing_address'    => 'nullable|string|max:200',
+            'billing_city'       => 'nullable|string|max:100',
+            'billing_zip'        => 'nullable|string|max:10',
+            'billing_country'    => 'nullable|string|max:5',
+            // CF italiano validato con checksum (rule custom)
+            'billing_tax_code'   => ['nullable', 'string', 'max:20', new \App\Rules\CodiceFiscale],
+            'company_name'       => 'required_if:billing_type,company|nullable|string|max:200',
+            // P.IVA italiana 11 cifre con checksum mod-10
+            'vat_number'         => ['nullable', 'string', 'max:20', new \App\Rules\PartitaIva],
+            // Validazione dinamica: solo i metodi abilitati dall'admin sono accettati.
+            'payment_method'     => ['required', Rule::in($enabledPaymentMethods)],
+            'privacy'            => 'accepted',
+        ], [
+            // Messaggi in italiano (l'app non ha la cartella lang/it)
+            'required'                => 'Il campo :attribute è obbligatorio.',
+            'required_if'             => 'Il campo :attribute è obbligatorio.',
+            'email'                   => 'Inserisci un indirizzo email valido.',
+            'max'                     => 'Il campo :attribute è troppo lungo (massimo :max caratteri).',
+            'string'                  => 'Il campo :attribute non è valido.',
+            'in'                      => 'Il valore del campo :attribute non è valido.',
+            'privacy.accepted'        => 'Per procedere devi accettare l\'informativa sulla privacy.',
+            'payment_method.required' => 'Seleziona un metodo di pagamento.',
+            'payment_method.in'       => 'Il metodo di pagamento selezionato non e\' attualmente disponibile.',
+        ], [
+            'billing_type'       => 'tipo di fatturazione',
+            'billing_first_name' => 'nome',
+            'billing_last_name'  => 'cognome',
+            'billing_email'      => 'email',
+            'billing_phone'      => 'telefono',
+            'billing_address'    => 'indirizzo',
+            'billing_city'       => 'città',
+            'billing_zip'        => 'CAP',
+            'billing_country'    => 'nazione',
+            'billing_tax_code'   => 'codice fiscale',
+            'company_name'       => 'ragione sociale',
+            'vat_number'         => 'partita IVA',
+            'payment_method'     => 'metodo di pagamento',
+        ]);
     }
 }

@@ -42,6 +42,8 @@ class CourseResource extends Resource
                         'Lezioni personalizzate'        => 'Lezioni personalizzate',
                         'Lezioni personalizzate + FULL' => 'Lezioni personalizzate + FULL',
                         'Lezioni di gruppo'             => 'Lezioni di gruppo',
+                        'Lezioni di gruppo (2 persone)' => 'Lezioni di gruppo (2 persone)',
+                        'Lezioni di gruppo (4 persone)' => 'Lezioni di gruppo (4 persone)',
                         'Lezioni online'                => 'Lezioni online',
                         'Corso intensivo'               => 'Corso intensivo',
                         'Esami e certificazioni'        => 'Esami e certificazioni',
