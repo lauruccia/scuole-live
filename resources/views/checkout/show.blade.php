@@ -119,7 +119,7 @@
         position: sticky;
         top: 24px;
     }
-    .sidebar-photo img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+    .sidebar-photo img { display: block; width: 100%; aspect-ratio: 16 / 5; object-fit: cover; }
     .sidebar-header {
         background: linear-gradient(110deg, #001733, #003d94);
         color: #fff;
@@ -191,6 +191,18 @@
     .field-grid.cols-1 { grid-template-columns: 1fr; }
     @media (max-width: 480px) { .field-grid { grid-template-columns: 1fr; } }
     .field-full { grid-column: 1 / -1; }
+    .bill-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 14px; margin-top: 16px; }
+    .bill-grid .s1 { grid-column: span 1; } .bill-grid .s2 { grid-column: span 2; } .bill-grid .s3 { grid-column: span 3; }
+    .bill-grid.is-company .f-email, .bill-grid.is-company .f-phone { grid-column: span 3; }
+    .bill-grid.is-company .only-private { display: none; }
+    .bill-grid:not(.is-company) .only-company { display: none; }
+    @media (max-width: 640px) {
+        .bill-grid .s1, .bill-grid .s2, .bill-grid .s3, .bill-grid.is-company .f-email, .bill-grid.is-company .f-phone { grid-column: 1 / -1; }
+        .bill-grid .m4 { grid-column: span 4; } .bill-grid .m2 { grid-column: span 2; }
+    }
+    .req { color: #dc2626; font-weight: 800; }
+    .req-note { font-size: 12px; color: var(--muted); margin: 14px 0 0; }
+    .sidebar-photo img { max-height: 96px; }
     .choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
     @media (max-width: 640px) { .choice-grid { grid-template-columns: 1fr; } }
     .choice-grid select { width: 100%; text-overflow: ellipsis; }
@@ -408,10 +420,11 @@
                     </div>
                     @error('privacy')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
 
-                    <button form="checkoutForm" type="submit" class="btn-submit" id="btnSubmit" {{ isset($configurator) ? 'disabled' : '' }}>
+                    <button form="checkoutForm" type="submit" class="btn-submit" id="btnSubmit" disabled>
                         <span id="btnText">🔒 Procedi al pagamento</span>
                         <span id="btnSpinner" style="display:none;">⏳ Attendi…</span>
                     </button>
+                    <p class="secure-note" id="fill-hint" style="color:#b45309;margin-bottom:0;">Compila tutti i campi obbligatori (*) e accetta la privacy per procedere.</p>
                     <p class="secure-note">🛡 Connessione cifrata SSL — i tuoi dati sono al sicuro</p>
         </div>
         <div class="sidebar-trust">
@@ -486,76 +499,81 @@
                     </div>
                     <input type="hidden" name="billing_type" id="billing_type" value="{{ old('billing_type', 'private') }}">
 
-                    {{-- Privato --}}
-                    <div id="fields-private" class="{{ old('billing_type') === 'company' ? 'hidden' : '' }}" style="{{ old('billing_type') === 'company' ? 'display:none' : '' }}">
-                        <div class="field-grid">
-                            <div class="field">
-                                <label>Nome *</label>
-                                <input type="text" name="billing_first_name"
-                                    value="{{ old('billing_first_name', $prefill['billing_first_name'] ?? '') }}"
-                                    class="{{ $errors->has('billing_first_name') ? 'err' : '' }}" autocomplete="given-name">
-                                @error('billing_first_name')<div class="err-msg">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="field">
-                                <label>Cognome *</label>
-                                <input type="text" name="billing_last_name"
-                                    value="{{ old('billing_last_name', $prefill['billing_last_name'] ?? '') }}"
-                                    class="{{ $errors->has('billing_last_name') ? 'err' : '' }}" autocomplete="family-name">
-                                @error('billing_last_name')<div class="err-msg">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="field">
-                                <label>Codice fiscale</label>
-                                <input type="text" name="billing_tax_code" value="{{ old('billing_tax_code') }}"
-                                    placeholder="RSSMRA80A01H501U" style="text-transform:uppercase;">
-                            </div>
-                        </div>
-                    </div>
+                    @php $isCompany = old('billing_type') === 'company'; @endphp
+                    <div class="bill-grid {{ $isCompany ? 'is-company' : '' }}" id="bill-grid">
 
-                    {{-- Azienda --}}
-                    <div id="fields-company" style="{{ old('billing_type') !== 'company' ? 'display:none' : '' }}">
-                        <div class="field-grid">
-                            <div class="field field-full">
-                                <label>Ragione sociale *</label>
-                                <input type="text" name="company_name" value="{{ old('company_name') }}"
-                                    class="{{ $errors->has('company_name') ? 'err' : '' }}">
-                                @error('company_name')<div class="err-msg">{{ $message }}</div>@enderror
-                            </div>
-                            <div class="field">
-                                <label>Partita IVA</label>
-                                <input type="text" name="vat_number" value="{{ old('vat_number') }}">
-                            </div>
+                        {{-- Solo privato --}}
+                        <div class="field only-private s3">
+                            <label>Nome <b class="req">*</b></label>
+                            <input type="text" name="billing_first_name" data-req="private"
+                                value="{{ old('billing_first_name', $prefill['billing_first_name'] ?? '') }}"
+                                class="{{ $errors->has('billing_first_name') ? 'err' : '' }}" autocomplete="given-name">
+                            @error('billing_first_name')<div class="err-msg">{{ $message }}</div>@enderror
                         </div>
-                    </div>
+                        <div class="field only-private s3">
+                            <label>Cognome <b class="req">*</b></label>
+                            <input type="text" name="billing_last_name" data-req="private"
+                                value="{{ old('billing_last_name', $prefill['billing_last_name'] ?? '') }}"
+                                class="{{ $errors->has('billing_last_name') ? 'err' : '' }}" autocomplete="family-name">
+                            @error('billing_last_name')<div class="err-msg">{{ $message }}</div>@enderror
+                        </div>
 
-                    {{-- Campi comuni --}}
-                    <div class="field-grid" style="margin-top:16px;">
-                        <div class="field field-full">
-                            <label>Email *</label>
-                            <input type="email" name="billing_email"
+                        {{-- Solo azienda --}}
+                        <div class="field only-company s3">
+                            <label>Ragione sociale <b class="req">*</b></label>
+                            <input type="text" name="company_name" data-req="company" value="{{ old('company_name') }}"
+                                class="{{ $errors->has('company_name') ? 'err' : '' }}">
+                            @error('company_name')<div class="err-msg">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="field only-company s3">
+                            <label>Partita IVA <b class="req">*</b></label>
+                            <input type="text" name="vat_number" data-req="company" value="{{ old('vat_number') }}"
+                                class="{{ $errors->has('vat_number') ? 'err' : '' }}">
+                            @error('vat_number')<div class="err-msg">{{ $message }}</div>@enderror
+                        </div>
+
+                        {{-- Comuni --}}
+                        <div class="field only-private s2">
+                            <label>Codice fiscale <b class="req">*</b></label>
+                            <input type="text" name="billing_tax_code" data-req="private" value="{{ old('billing_tax_code') }}"
+                                placeholder="RSSMRA80A01H501U" style="text-transform:uppercase;"
+                                class="{{ $errors->has('billing_tax_code') ? 'err' : '' }}">
+                            @error('billing_tax_code')<div class="err-msg">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="field f-email s2">
+                            <label>Email <b class="req">*</b></label>
+                            <input type="email" name="billing_email" data-req="all"
                                 value="{{ old('billing_email', $prefill['billing_email'] ?? '') }}"
                                 class="{{ $errors->has('billing_email') ? 'err' : '' }}" autocomplete="email">
                             @error('billing_email')<div class="err-msg">{{ $message }}</div>@enderror
                         </div>
-                        <div class="field">
+                        <div class="field f-phone s2">
                             <label>Telefono</label>
                             <input type="tel" name="billing_phone" value="{{ old('billing_phone') }}"
                                 placeholder="+39 06 5743734" autocomplete="tel">
                         </div>
-                        <div class="field field-full">
-                            <label>Indirizzo</label>
-                            <input type="text" name="billing_address" value="{{ old('billing_address') }}"
-                                placeholder="Via Roma, 1" autocomplete="street-address">
+                        <div class="field s3 m6">
+                            <label>Indirizzo <b class="req">*</b></label>
+                            <input type="text" name="billing_address" data-req="all" value="{{ old('billing_address') }}"
+                                placeholder="Via Roma, 1" autocomplete="street-address"
+                                class="{{ $errors->has('billing_address') ? 'err' : '' }}">
+                            @error('billing_address')<div class="err-msg">{{ $message }}</div>@enderror
                         </div>
-                        <div class="field">
-                            <label>Città</label>
-                            <input type="text" name="billing_city" value="{{ old('billing_city') }}" autocomplete="address-level2">
+                        <div class="field s2 m4">
+                            <label>Città <b class="req">*</b></label>
+                            <input type="text" name="billing_city" data-req="all" value="{{ old('billing_city') }}" autocomplete="address-level2"
+                                class="{{ $errors->has('billing_city') ? 'err' : '' }}">
+                            @error('billing_city')<div class="err-msg">{{ $message }}</div>@enderror
                         </div>
-                        <div class="field">
-                            <label>CAP</label>
-                            <input type="text" name="billing_zip" value="{{ old('billing_zip') }}"
-                                placeholder="00145" maxlength="5" autocomplete="postal-code">
+                        <div class="field s1 m2">
+                            <label>CAP <b class="req">*</b></label>
+                            <input type="text" name="billing_zip" data-req="all" value="{{ old('billing_zip') }}"
+                                placeholder="00145" maxlength="5" inputmode="numeric" autocomplete="postal-code"
+                                class="{{ $errors->has('billing_zip') ? 'err' : '' }}">
+                            @error('billing_zip')<div class="err-msg">{{ $message }}</div>@enderror
                         </div>
                     </div>
+                    <p class="req-note"><b class="req">*</b> Campi obbligatori per la fatturazione</p>
                     <input type="hidden" name="billing_country" value="IT">
                 </div>
             </div>
@@ -570,9 +588,37 @@ function setBillingType(type, el) {
     document.getElementById('billing_type').value = type;
     document.querySelectorAll('.billing-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    document.getElementById('fields-private').style.display = type === 'private' ? '' : 'none';
-    document.getElementById('fields-company').style.display = type === 'company' ? '' : 'none';
+    document.getElementById('bill-grid').classList.toggle('is-company', type === 'company');
+    if (window.updateSubmit) window.updateSubmit();
 }
+
+// Pulsante di pagamento attivo solo con tutti i campi obbligatori compilati, privacy accettata
+// e (nella pagina "Corso di lingua") corso scelto. Il server ricontrolla tutto.
+window.courseReady = {{ isset($configurator) ? 'false' : 'true' }};
+window.updateSubmit = function () {
+    const form = document.getElementById('checkoutForm');
+    const btn  = document.getElementById('btnSubmit');
+    const type = document.getElementById('billing_type').value;
+    let ok = window.courseReady;
+    form.querySelectorAll('[data-req]').forEach(el => {
+        const r = el.dataset.req;
+        if (r !== 'all' && r !== type) return;
+        if (el.value.trim() === '' || (el.type === 'email' && !el.checkValidity())) ok = false;
+    });
+    const privacy = document.getElementById('privacy');
+    if (privacy && !privacy.checked) ok = false;
+    if (!document.querySelector('input[name=payment_method]:checked')) ok = false;
+    btn.disabled = !ok;
+    const hint = document.getElementById('fill-hint');
+    if (hint) hint.style.display = ok ? 'none' : '';
+};
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('checkoutForm');
+    form.addEventListener('input', window.updateSubmit);
+    form.addEventListener('change', window.updateSubmit);
+    document.querySelectorAll('input[form=checkoutForm]').forEach(el => el.addEventListener('change', window.updateSubmit));
+    window.updateSubmit();
+});
 @if(isset($configurator))
 (function () {
     // Il prezzo qui è solo informativo: l'importo reale viene riletto dal Corso collegato lato server.
@@ -641,8 +687,9 @@ function setBillingType(type, el) {
         if (photo.getAttribute('src') !== src) photo.src = src;
 
         const ready = !!(selLang.value && current);
-        btn.disabled = !ready;
+        window.courseReady = ready;
         hint.style.display = ready ? 'none' : '';
+        if (window.updateSubmit) window.updateSubmit();
     }
 
     selLang.addEventListener('change', render);
