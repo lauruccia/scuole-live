@@ -22,7 +22,7 @@ class PaymentService
     {
         \Stripe\Stripe::setApiKey(config('services.stripe.secret'));
 
-        $courseName = $course->name;
+        $courseName = $purchase->item_name;
         $lineItems  = [];
 
         // Quota iscrizione
@@ -80,7 +80,7 @@ class PaymentService
     public function redirectPaypal(CoursePurchase $purchase, Course $course)
     {
         $baseUrl    = config('services.paypal.base_url');
-        $courseName = mb_substr($course->name, 0, 127);
+        $courseName = mb_substr($purchase->item_name, 0, 127);
 
         $body = [
             'intent'         => 'CAPTURE',
@@ -279,6 +279,8 @@ class PaymentService
      */
     private function createContractFromPurchase(CoursePurchase $purchase, Student $student): Contract
     {
+        $languageData = $this->contractDataFromLanguage($purchase);
+
         $contract = Contract::create([
             'course_id'           => $purchase->course_id,
             'status'              => 'pending',
@@ -295,12 +297,42 @@ class PaymentService
             'billing_tax_code'    => $purchase->billing_tax_code,
             'company_name'        => $purchase->company_name,
             'vat_number'          => $purchase->vat_number,
+            ...$languageData,
         ]);
 
         // Aggancia lo studente come pivot
         $contract->students()->attach($student->id);
 
         return $contract;
+    }
+
+    /**
+     * Acquisto dalla pagina "Corso di lingua": la lingua scelta dall'acquirente e i dati del
+     * Corso backend (ore, tipologia, ore FULL, prezzo e quota iscrizione) finiscono nel contratto.
+     * Per gli acquisti di un corso singolo (senza lingua) ritorna [] e il comportamento resta quello storico.
+     *
+     * Il totale non cambia: course_price + enrollment_fee == importo pagato.
+     */
+    private function contractDataFromLanguage(CoursePurchase $purchase): array
+    {
+        $language = trim((string) $purchase->language);
+        $course   = $purchase->course;
+        if ($language === '' || ! $course) {
+            return [];
+        }
+
+        $lessonType = trim((string) $course->lesson_type) !== '' ? $course->lesson_type : null;
+        $isMix      = $lessonType === 'Lezioni personalizzate + FULL';
+
+        return [
+            'language_id'     => $language,
+            'languages'       => [$language],
+            'lesson_type'     => $lessonType,
+            'hours_purchased' => (float) $course->hours_purchased,
+            'hours_full'      => $isMix ? (float) $course->hours_full : 0,
+            'course_price'    => (float) $course->course_price,
+            'enrollment_fee'  => (float) $course->enrollment_fee,
+        ];
     }
 
     /**

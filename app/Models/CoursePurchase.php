@@ -44,6 +44,7 @@ class CoursePurchase extends Model
 
     protected $fillable = [
         'course_id',
+        'language',
         'user_id',
         'contract_id',
         'payment_method',
@@ -131,6 +132,17 @@ class CoursePurchase extends Model
             'cancelled' => 'Annullato',
             default     => $this->payment_status,
         };
+    }
+
+    /**
+     * Nome della voce acquistata, per Stripe/PayPal/email.
+     * Se l'acquirente ha scelto una lingua: "S4-6mesi — Inglese".
+     */
+    public function getItemNameAttribute(): string
+    {
+        $name = (string) ($this->course?->name ?? 'Corso');
+
+        return filled($this->language) ? $name . ' — ' . $this->language : $name;
     }
 
     /** Nome completo acquirente */

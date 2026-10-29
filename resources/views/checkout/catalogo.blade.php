@@ -121,6 +121,36 @@
             </div>
         @endif
 
+        @if(! request('ore') && ! request('tipo') && $courses->isNotEmpty())
+            @php
+                $minTot = $courses->map(fn ($c) => $c->total_price)->min();
+                $langs  = array_values(\App\Filament\Resources\ContractResource::subjectOptions());
+            @endphp
+            <div class="sec-title">
+                <h2>Componi il tuo corso</h2>
+                <p>Scegli lingua, ore e tipologia di lezioni: il prezzo si aggiorna in base alla tua scelta.</p>
+            </div>
+
+            <div class="courses-grid" style="margin-bottom:40px;">
+                <div class="course-card">
+                    <div class="course-thumb"><span>&#127758;</span></div>
+                    <div class="course-body">
+                        <div class="course-name">Corso di lingua</div>
+                        <div class="course-desc">Scegli lingua, ore e tipologia di lezioni.</div>
+                        <div class="course-meta">
+                            <span>&#127760; {{ implode(', ', $langs) }}</span>
+                        </div>
+                    </div>
+                    <div class="course-footer">
+                        <div class="price-block">
+                            <div class="price-main">da &#8364; {{ number_format((float) $minTot, 2, ',', '.') }}</div>
+                        </div>
+                        <a href="{{ route('checkout.acquista') }}" class="btn-enroll">Scegli &#8594;</a>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         @if($courses->isEmpty())
 
             <div class="empty-state">

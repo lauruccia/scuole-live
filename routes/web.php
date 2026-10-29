@@ -70,6 +70,12 @@ Route::get('/corsi/{course}', [CheckoutController::class, 'show'])->name('checko
 Route::post('/corsi/{course}/checkout', [CheckoutController::class, 'store'])
     ->middleware('throttle:3,1')
     ->name('checkout.store');
+
+// Prodotto variabile (lingua + ore + formato → corso backend → contratto)
+Route::get('/acquista', [CheckoutController::class, 'showConfigurator'])->name('checkout.acquista');
+Route::post('/acquista/checkout', [CheckoutController::class, 'storeConfigurator'])
+    ->middleware('throttle:3,1')
+    ->name('checkout.acquista.store');
 Route::get('/checkout/bonifico/{purchase}', [CheckoutController::class, 'bonifico'])->name('checkout.bonifico');
 Route::get('/checkout/stripe/return', [CheckoutController::class, 'stripeReturn'])->name('checkout.stripe.return');
 Route::get('/checkout/paypal/return', [CheckoutController::class, 'paypalReturn'])->name('checkout.paypal.return');

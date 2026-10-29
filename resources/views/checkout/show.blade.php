@@ -1,6 +1,6 @@
 @extends('public.layout')
 
-@section('title', $course->name . ' a Roma — Iscrizione | A&A Language Center')
+@section('title', (isset($configurator) ? 'Corso di lingua' : $course->name) . ' a Roma — Iscrizione | A&A Language Center')
 @section('description', \Illuminate\Support\Str::limit(strip_tags($course->short_description ?? $course->description ?? ('Corso di ' . ($course->language_id ?? 'lingue') . ' a Roma con docenti madrelingua. Iscriviti subito ad A&A Language Center.')), 158))
 @section('keywords', 'corso ' . strtolower($course->language_id ?? 'lingue') . ' Roma, ' . strtolower($course->name) . ', scuola di ' . strtolower($course->language_id ?? 'lingue') . ' Roma San Paolo, iscrizione corso ' . strtolower($course->language_id ?? 'lingue') . ' Roma, A&A Language Center')
 
@@ -12,7 +12,7 @@
     "itemListElement": [
         { "@@type": "ListItem", "position": 1, "name": "Home", "item": "{{ route('home') }}" },
         { "@@type": "ListItem", "position": 2, "name": "Corsi", "item": "{{ route('checkout.catalogo') }}" },
-        { "@@type": "ListItem", "position": 3, "name": @json($course->name), "item": "{{ route('checkout.show', $course->id) }}" }
+        { "@@type": "ListItem", "position": 3, "name": @json((isset($configurator) ? 'Corso di lingua' : $course->name)), "item": "{{ (isset($configurator) ? route('checkout.acquista') : route('checkout.show', $course->id)) }}" }
     ]
 }
 </script>
@@ -23,9 +23,9 @@
 {
     "@@context": "https://schema.org",
     "@@type": "Course",
-    "name": @json($course->name),
+    "name": @json((isset($configurator) ? 'Corso di lingua' : $course->name)),
     "description": @json(strip_tags($course->description ?? $course->short_description ?? 'Corso di ' . ($course->language_id ?? 'lingue') . ' a Roma con docenti madrelingua.')),
-    "url": "{{ route('checkout.show', $course->id) }}",
+    "url": "{{ (isset($configurator) ? route('checkout.acquista') : route('checkout.show', $course->id)) }}",
     "inLanguage": "it",
     "educationalLevel": @json($course->level ?? 'Tutti i livelli (A1–C2 CEFR)'),
     "teaches": @json($course->language_id ?? 'Lingua straniera'),
@@ -58,7 +58,7 @@
         "price": "{{ number_format((float)$course->total_price, 2, '.', '') }}",
         "priceCurrency": "EUR",
         "availability": "https://schema.org/InStock",
-        "url": "{{ route('checkout.show', $course->id) }}",
+        "url": "{{ (isset($configurator) ? route('checkout.acquista') : route('checkout.show', $course->id)) }}",
         "category": "language course",
         "validFrom": "{{ now()->toIso8601String() }}"
     }
@@ -262,7 +262,7 @@
     <div class="c">
         <a href="{{ route('checkout.catalogo') }}">Corsi</a>
         <span>/</span>
-        {{ $course->name }}
+        {{ (isset($configurator) ? 'Corso di lingua' : $course->name) }}
     </div>
 </div>
 
@@ -271,12 +271,24 @@
     {{-- ── SIDEBAR RIEPILOGO ──────────────────────────────── --}}
     <div class="sidebar" style="order:2;">
         <div class="sidebar-header">
-            <div class="course-title">{{ $course->name }}</div>
-            @if($course->level)
+            <div class="course-title">{{ (isset($configurator) ? 'Corso di lingua' : $course->name) }}</div>
+            @if(! isset($configurator) && $course->level)
                 <div style="font-size:12px;margin-top:4px;opacity:.75;">{{ $course->level }}</div>
             @endif
         </div>
         <div class="sidebar-body">
+            @if(isset($configurator))
+                <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Scegli lingua, ore e tipologia di lezioni.</div>
+                <div class="order-row"><span class="label">&#127760; Lingua</span><span class="val" id="sb-lang">—</span></div>
+                <div class="order-row"><span class="label">&#9201; Ore incluse</span><span class="val" id="sb-hours">—</span></div>
+                <div class="order-row"><span class="label">👤 Tipo</span><span class="val" id="sb-type">—</span></div>
+                <div class="order-row" id="sb-enroll-row" style="display:none;"><span class="label">Quota iscrizione</span><span class="val" id="sb-enroll"></span></div>
+                <div class="order-row" id="sb-price-row" style="display:none;"><span class="label">Quota corso</span><span class="val" id="sb-price"></span></div>
+                <div class="order-total">
+                    <span class="label">Totale</span>
+                    <span class="val" id="sb-total">—</span>
+                </div>
+            @else
             @if($course->short_description)
                 <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">{{ $course->short_description }}</div>
             @endif
@@ -296,6 +308,7 @@
                 <span class="label">Totale</span>
                 <span class="val">€ {{ number_format($course->total_price, 2, ',', '.') }}</span>
             </div>
+            @endif
         </div>
         <div class="sidebar-trust">
             🔒 Pagamento sicuro con crittografia SSL<br>
@@ -307,13 +320,47 @@
     {{-- ── FORM CHECKOUT ───────────────────────────────────── --}}
     <div style="order:1;">
 
-        <form method="POST" action="{{ route('checkout.store', $course) }}" id="checkoutForm">
+        <form method="POST" action="{{ isset($configurator) ? route('checkout.acquista.store') : route('checkout.store', $course) }}" id="checkoutForm">
             @csrf
 
             @if($errors->any())
             <div class="alert-errors">
                 <strong>Correggi questi errori per procedere:</strong>
                 <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+            </div>
+            @endif
+
+            {{-- ── Prodotto variabile: scelta lingua / ore / tipologia ─── --}}
+            @if(isset($configurator))
+            <div class="form-card">
+                <div class="form-card-header">
+                    <div class="step-num">&#9733;</div>
+                    <h2>Scegli il tuo corso</h2>
+                </div>
+                <div class="form-body">
+                    <input type="hidden" name="course_id" id="course_id" value="{{ $selectedCourseId }}">
+                    <div class="field-grid">
+                        <div class="field field-full">
+                            <label for="sel-language">Lingua</label>
+                            <select name="language" id="sel-language">
+                                @foreach($languages as $lang)
+                                    <option value="{{ $lang }}" {{ $selectedLanguage === $lang ? 'selected' : '' }}>{{ $lang }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label for="sel-hours">Ore di corso</label>
+                            <select id="sel-hours"></select>
+                        </div>
+                        <div class="field">
+                            <label for="sel-type">Tipologia di lezioni</label>
+                            <select id="sel-type"></select>
+                        </div>
+                    </div>
+                    <noscript><p style="color:#991b1b;font-size:13px;margin-top:10px;">Abilita JavaScript per scegliere ore e tipologia.</p></noscript>
+                    @error('course_id')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
+                    @error('language')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
+                </div>
             </div>
             @endif
 
@@ -502,6 +549,73 @@ function setBillingType(type, el) {
     document.getElementById('fields-private').style.display = type === 'private' ? '' : 'none';
     document.getElementById('fields-company').style.display = type === 'company' ? '' : 'none';
 }
+@if(isset($configurator))
+(function () {
+    // Il prezzo qui è solo informativo: l'importo reale viene riletto dal Corso collegato lato server.
+    // La lingua non cambia il prezzo: ore e tipologia decidono quale Corso si compra.
+    // Ordinati per prezzo: a parità di ore e tipologia si propone il Corso più economico.
+    const VARIANTS = @json($variantsJson).map(v => ({...v, key: v.type})).sort((a, b) => a.total - b.total);
+    const hidden   = document.getElementById('course_id');
+    const selLang  = document.getElementById('sel-language');
+    const selHours = document.getElementById('sel-hours');
+    const selType  = document.getElementById('sel-type');
+    const eur = n => '€ ' + Number(n).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
+
+    let current = VARIANTS.find(v => v.id === parseInt(hidden.value, 10)) || VARIANTS[0];
+
+    // Corso più vicino alla scelta precedente, rispettando il vincolo appena cambiato
+    function pick(hours, key) {
+        const type = (key || '').split('|')[0];
+        return VARIANTS.find(v => v.hours === hours && v.key === key)
+            || VARIANTS.find(v => v.hours === hours && v.type === type)
+            || VARIANTS.find(v => v.hours === hours)
+            || VARIANTS.find(v => v.type === type)
+            || VARIANTS[0];
+    }
+
+    function fill(select, options, selected) {
+        select.innerHTML = '';
+        options.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o.value;
+            opt.textContent = o.label;
+            if (String(o.value) === String(selected)) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function render() {
+        const sameHours = VARIANTS.filter(v => v.hours === current.hours);
+
+        fill(selHours,
+            uniq(VARIANTS.map(v => v.hours)).sort((a, b) => a - b).map(h => {
+                const v = VARIANTS.find(x => x.hours === h);
+                return {value: h, label: v.hoursLabel + ' ore'};
+            }), current.hours);
+        // Una voce per tipologia, senza prezzo: il prezzo è nel riepilogo.
+        fill(selType,
+            uniq(sameHours.map(v => v.key)).map(k => ({value: k, label: k})), current.key);
+
+        hidden.value = current.id;
+        document.getElementById('sb-lang').textContent  = selLang.value;
+        document.getElementById('sb-hours').textContent = current.hoursLabel;
+        document.getElementById('sb-type').textContent  = current.type;
+        document.getElementById('sb-total').textContent = eur(current.total);
+
+        document.getElementById('sb-enroll-row').style.display = current.enrollment > 0 ? '' : 'none';
+        document.getElementById('sb-price-row').style.display  = current.price > 0 ? '' : 'none';
+        document.getElementById('sb-enroll').textContent = eur(current.enrollment);
+        document.getElementById('sb-price').textContent  = eur(current.price);
+    }
+
+    selLang.addEventListener('change', render);
+    selHours.addEventListener('change', () => { current = pick(parseFloat(selHours.value), current.key); render(); });
+    selType.addEventListener('change', () => { current = pick(current.hours, selType.value); render(); });
+
+    render();
+})();
+@endif
 document.getElementById('checkoutForm').addEventListener('submit', function() {
     const btn = document.getElementById('btnSubmit');
     btn.disabled = true;
