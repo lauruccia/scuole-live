@@ -128,7 +128,7 @@
                     Se non la trovi, controlla la cartella spam.
                 </div>
 
-                <a href="{{ route('checkout.catalogo') }}" class="btn-back">← Torna ai corsi</a>
+                <a href="{{ route('checkout.acquista') }}" class="btn-back">← Torna ai corsi</a>
 
             </div>
         </div>

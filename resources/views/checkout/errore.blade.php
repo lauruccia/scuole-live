@@ -74,7 +74,7 @@
 
         <div class="btn-actions">
             <a href="{{ route('checkout.show', $purchase->course) }}" class="btn-retry">↺ Riprova il pagamento</a>
-            <a href="{{ route('checkout.catalogo') }}" class="btn-outline">← Torna ai corsi</a>
+            <a href="{{ route('checkout.acquista') }}" class="btn-outline">← Torna ai corsi</a>
         </div>
     </div>
 </div>
