@@ -266,6 +266,29 @@
     .sidebar-pay .btn-submit:hover { background: linear-gradient(110deg, #0045b3, #002f73); }
     .sidebar-pay .btn-submit:disabled { background: #94a3b8; }
 
+    /* ── Barra laterale compatta ── */
+    .checkout-wrap { grid-template-columns: 1fr 300px; gap: 22px; }
+    .sidebar { top: 16px; }
+    .sidebar-header { padding: 10px 16px; }
+    .sidebar-header .course-title { font-size: 15px; margin-top: 0; }
+    .sidebar-body { padding: 8px 16px 12px; }
+    .sidebar .order-row { padding: 5px 0; font-size: 12.5px; }
+    .sidebar .order-total { padding: 9px 14px; margin-top: 8px; }
+    .sidebar .order-total .label { font-size: 13px; }
+    .sidebar .order-total .val { font-size: 19px; }
+    .sidebar-pay { padding: 12px 16px 14px; }
+    .sidebar-pay .pay-title { margin-bottom: 8px; font-size: 11px; }
+    .sidebar-pay .pay-options { gap: 6px; }
+    .sidebar-pay .pay-opt { padding: 8px 12px; gap: 10px; border-width: 1.5px; }
+    .sidebar-pay .pay-label small { display: none; }
+    .sidebar-pay .pay-label strong { font-size: 12.5px; }
+    .sidebar-pay .pay-icon { font-size: 1.1rem; }
+    .sidebar-pay .privacy-check { margin-top: 10px; font-size: 11.5px; line-height: 1.4; }
+    .sidebar-pay .btn-submit { margin-top: 10px; padding: 11px; font-size: 14px; }
+    .sidebar-pay .secure-note { margin: 6px 0 0; font-size: 10.5px; }
+    .sidebar-trust { padding: 8px 16px; font-size: 11px; line-height: 1.5; }
+    .sidebar-photo img { max-height: 70px; }
+
     /* ── Submit ── */
     .btn-submit {
         width: 100%; padding: 14px;
@@ -319,7 +342,6 @@
         </div>
         <div class="sidebar-body">
             @if(isset($configurator))
-                <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">Scegli lingua, ore e tipologia di lezioni.</div>
                 <div class="order-row"><span class="label">&#127760; Lingua</span><span class="val" id="sb-lang">—</span></div>
                 <div class="order-row"><span class="label">&#9201; Ore incluse</span><span class="val" id="sb-hours">—</span></div>
                 <div class="order-row"><span class="label">👤 Tipo</span><span class="val" id="sb-type">—</span></div>
