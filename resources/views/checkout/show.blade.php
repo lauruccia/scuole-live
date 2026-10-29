@@ -119,6 +119,7 @@
         position: sticky;
         top: 24px;
     }
+    .sidebar-photo img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
     .sidebar-header {
         background: linear-gradient(110deg, #001733, #003d94);
         color: #fff;
@@ -290,6 +291,9 @@
 
     {{-- ── SIDEBAR RIEPILOGO ──────────────────────────────── --}}
     <div class="sidebar" style="order:2;">
+        <div class="sidebar-photo" id="sb-photo">
+            <img id="sb-photo-img" src="{{ $course->image_url }}" alt="{{ isset($configurator) ? 'Corso di lingua' : $course->name }}">
+        </div>
         <div class="sidebar-header">
             <div class="course-title">{{ (isset($configurator) ? 'Corso di lingua' : $course->name) }}</div>
             @if(! isset($configurator) && $course->level)
@@ -611,6 +615,8 @@ function setBillingType(type, el) {
             uniq(sameHours.map(v => v.key)).map(k => ({value: k, label: k})), current.key);
 
         hidden.value = current.id;
+        const photo = document.getElementById('sb-photo-img');
+        if (current.image && photo.getAttribute('src') !== current.image) photo.src = current.image;
         document.getElementById('sb-lang').textContent  = selLang.value;
         document.getElementById('sb-hours').textContent = current.hoursLabel;
         document.getElementById('sb-type').textContent  = current.type;

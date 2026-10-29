@@ -36,6 +36,17 @@ class CourseResource extends Resource
                 Forms\Components\Textarea::make('description')
                     ->label('Descrizione')->rows(3)->nullable()->columnSpanFull(),
 
+                Forms\Components\FileUpload::make('image_path')
+                    ->label('Foto del corso')
+                    ->helperText('Mostrata nella pagina di acquisto e nel catalogo. Formato consigliato 16:9, massimo 4 MB.')
+                    ->image()
+                    ->imageEditor()
+                    ->disk('public')
+                    ->directory('courses')
+                    ->maxSize(4096)
+                    ->nullable()
+                    ->columnSpanFull(),
+
                 Forms\Components\Select::make('lesson_type')
                     ->label('Tipologia lezione')
                     ->options([

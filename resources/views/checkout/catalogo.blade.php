@@ -133,7 +133,7 @@
 
             <div class="courses-grid" style="margin-bottom:40px;">
                 <div class="course-card">
-                    <div class="course-thumb"><span>&#127758;</span></div>
+                    <div class="course-thumb"><img src="{{ (new \App\Models\Course)->image_url }}" alt="Corso di lingua" loading="lazy"></div>
                     <div class="course-body">
                         <div class="course-name">Corso di lingua</div>
                         <div class="course-desc">Scegli lingua, ore e tipologia di lezioni.</div>
@@ -197,11 +197,7 @@
                     <div class="course-card">
 
                         <div class="course-thumb">
-                            @if(!empty($course->image_path))
-                                <img src="{{ Storage::url($course->image_path) }}" alt="{{ $course->name }}">
-                            @else
-                                <span>&#127758;</span>
-                            @endif
+                            <img src="{{ $course->image_url }}" alt="{{ $course->name }}" loading="lazy">
                         </div>
 
                         <div class="course-body">
