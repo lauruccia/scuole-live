@@ -742,7 +742,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="nav-links">
                 <a href="{{ route('home') }}" class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
                 <a href="{{ route('la-scuola') }}" class="nav-link {{ request()->routeIs('la-scuola') ? 'active' : '' }}">La Scuola</a>
-                <a href="{{ route('checkout.catalogo') }}" class="nav-link {{ request()->routeIs('checkout.catalogo') ? 'active' : '' }}">Corsi</a>
+                <a href="{{ route('checkout.acquista') }}" class="nav-link {{ request()->routeIs('checkout.catalogo', 'checkout.acquista') ? 'active' : '' }}">Corsi</a>
                 <a href="{{ route('per-le-aziende') }}" class="nav-link {{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
                 <a href="{{ route('servizi') }}" class="nav-link {{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
                 <a href="{{ route('news.index') }}" class="nav-link {{ request()->routeIs('news.*') ? 'active' : '' }}">News</a>
@@ -765,7 +765,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <nav class="nav-mobile" id="navMobile" aria-label="Menu mobile">
         <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">🏠 Home</a>
         <a href="{{ route('la-scuola') }}" class="{{ request()->routeIs('la-scuola') ? 'active' : '' }}">La Scuola</a>
-        <a href="{{ route('checkout.catalogo') }}" class="{{ request()->routeIs('checkout.catalogo') ? 'active' : '' }}">Corsi</a>
+        <a href="{{ route('checkout.acquista') }}" class="{{ request()->routeIs('checkout.catalogo', 'checkout.acquista') ? 'active' : '' }}">Corsi</a>
         <a href="{{ route('per-le-aziende') }}" class="{{ request()->routeIs('per-le-aziende') ? 'active' : '' }}">Per le Aziende</a>
         <a href="{{ route('servizi') }}" class="{{ request()->routeIs('servizi') ? 'active' : '' }}">Servizi</a>
         <a href="{{ route('news.index') }}" class="{{ request()->routeIs('news.*') ? 'active' : '' }}">📰 News ed Eventi</a>
@@ -822,7 +822,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <ul>
                     <li><a href="{{ route('home') }}">Home</a></li>
                     <li><a href="{{ route('la-scuola') }}">La Scuola</a></li>
-                    <li><a href="{{ route('checkout.catalogo') }}">Tutti i Corsi</a></li>
+                    <li><a href="{{ route('checkout.acquista') }}">Tutti i Corsi</a></li>
                     <li><a href="{{ route('landing.inglese') }}">Corsi di Inglese a Roma</a></li>
                     <li><a href="{{ route('landing.italiano-stranieri') }}">Italiano per Stranieri</a></li>
                     <li><a href="{{ route('landing.aziendali') }}">Corsi Aziendali a Roma</a></li>
@@ -846,7 +846,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <h4>Accesso</h4>
                 <ul>
                     <li><a href="{{ route('iscrizione') }}">Iscriviti / Test Gratuito</a></li>
-                    <li><a href="{{ route('checkout.catalogo') }}">Acquista Online</a></li>
+                    <li><a href="{{ route('checkout.acquista') }}">Acquista Online</a></li>
                     <li><a href="{{ route('contattaci') }}">Contattaci</a></li>
                     <li><a href="{{ route('privacy') }}">Privacy Policy</a></li>
                 </ul>
