@@ -157,6 +157,7 @@ class CheckoutController extends Controller
                 'id'         => $c->id,
                 'hours'      => $ore,
                 'hoursLabel' => rtrim(rtrim(number_format($ore, 2, ',', ''), '0'), ','),
+                'hoursFull'  => (float) $c->hours_full,
                 'type'       => trim((string) $c->lesson_type) !== '' ? $c->lesson_type : $c->name,
                 'enrollment' => (float) $c->enrollment_fee,
                 'price'      => (float) $c->course_price,
