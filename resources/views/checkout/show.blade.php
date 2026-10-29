@@ -267,7 +267,7 @@
     .sidebar-pay .btn-submit:disabled { background: #94a3b8; }
 
     /* ── Barra laterale compatta ── */
-    .checkout-wrap { grid-template-columns: 1fr 300px; gap: 22px; }
+    .checkout-wrap { max-width: 1180px; grid-template-columns: 1fr 380px; gap: 22px; }
     .sidebar { top: 16px; }
     .sidebar-header { padding: 10px 16px; }
     .sidebar-header .course-title { font-size: 15px; margin-top: 0; }
@@ -287,6 +287,9 @@
     .sidebar-pay .btn-submit { margin-top: 10px; padding: 11px; font-size: 14px; }
     .sidebar-pay .secure-note { margin: 6px 0 0; font-size: 10.5px; }
     .sidebar-trust { padding: 8px 16px; font-size: 11px; line-height: 1.5; }
+    .sidebar-pay .pay-label strong { white-space: nowrap; }
+    .sidebar-trust { white-space: nowrap; }
+    @media (max-width: 760px) { .sidebar-trust { white-space: normal; } }
     .sidebar-photo img { max-height: 70px; }
 
     /* ── Submit ── */
@@ -413,7 +416,7 @@
                                 {{ $defaultMethod === 'paypal' ? 'checked' : '' }}>
                             <span class="pay-icon" style="font-size:1.3rem;font-weight:900;color:#003087;">Pay<span style="color:#009cde;">Pal</span></span>
                             <div class="pay-label">
-                                <strong>PayPal</strong>
+                                <strong style="display:none;">PayPal</strong>
                                 <small>Paga con il tuo conto PayPal in totale sicurezza</small>
                             </div>
                         </label>
