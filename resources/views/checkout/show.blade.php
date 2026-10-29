@@ -228,6 +228,26 @@
     .privacy-check input { margin-top: 2px; accent-color: var(--blue); }
     .privacy-check a { color: var(--blue); }
 
+
+    /* ── Pagamento nella barra laterale ── */
+    .sidebar-pay { padding: 20px 22px 22px; border-top: 1px solid var(--border); background: linear-gradient(180deg, #f8fbff, #fff); }
+    .sidebar-pay .pay-title {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+        color: var(--blue-dark); margin-bottom: 14px;
+    }
+    .sidebar-pay .pay-options { gap: 10px; }
+    .sidebar-pay .pay-opt { padding: 12px 14px; gap: 12px; border-radius: 12px; background: #fff; }
+    .sidebar-pay .pay-opt:hover { border-color: #93c5fd; }
+    .sidebar-pay .pay-opt:has(input:checked) { border-color: var(--blue); background: #eff6ff; box-shadow: 0 6px 18px rgba(0,87,217,.12); }
+    .sidebar-pay .pay-icon { font-size: 1.35rem; }
+    .sidebar-pay .pay-label strong { font-size: 13px; }
+    .sidebar-pay .pay-label small { font-size: 11px; line-height: 1.35; display: block; }
+    .sidebar-pay .privacy-check { font-size: 12px; margin-top: 16px; }
+    .sidebar-pay .btn-submit { background: linear-gradient(110deg, #0057d9, #003d94); margin-top: 16px; }
+    .sidebar-pay .btn-submit:hover { background: linear-gradient(110deg, #0045b3, #002f73); }
+    .sidebar-pay .btn-submit:disabled { background: #94a3b8; }
+
     /* ── Submit ── */
     .btn-submit {
         width: 100%; padding: 14px;
@@ -309,6 +329,81 @@
                 <span class="val">€ {{ number_format($course->total_price, 2, ',', '.') }}</span>
             </div>
             @endif
+        </div>
+        <div class="sidebar-pay">
+            <div class="pay-title"><span>🔒</span> Scegli come pagare</div>
+
+                    @php
+                        // Lista metodi pagamento abilitata dall'admin (Impostazioni > Metodi di pagamento).
+                        // Se la variabile non e' presente (legacy / cache obsoleta) fallback a tutti e 3.
+                        $enabledMethods = $enabledPaymentMethods ?? ['stripe', 'paypal', 'bonifico'];
+                        // Default selezione:
+                        //  - se l'utente aveva gia' scelto (old) e quel metodo e' ancora abilitato → mantiene
+                        //  - altrimenti primo metodo abilitato → fallback a bonifico
+                        $oldMethod     = old('payment_method');
+                        $defaultMethod = ($oldMethod && in_array($oldMethod, $enabledMethods, true))
+                            ? $oldMethod
+                            : ($enabledMethods[0] ?? 'bonifico');
+                    @endphp
+
+                    @if (empty($enabledMethods))
+                        <div class="alert alert-warning" style="padding:16px;border-radius:8px;background:#fff7e6;border:1px solid #ffd591;color:#874d00;">
+                            ⚠️ Al momento non &egrave; possibile completare il pagamento online.
+                            Per iscriverti al corso contatta la segreteria.
+                        </div>
+                    @else
+                    <div class="pay-options">
+                        @if (in_array('stripe', $enabledMethods, true))
+                        <label class="pay-opt">
+                            <input form="checkoutForm" type="radio" name="payment_method" value="stripe"
+                                {{ $defaultMethod === 'stripe' ? 'checked' : '' }}>
+                            <span class="pay-icon">💳</span>
+                            <div class="pay-label">
+                                <strong>Carta di credito / debito</strong>
+                                <small>Visa, Mastercard, American Express — pagamento immediato e sicuro</small>
+                            </div>
+                        </label>
+                        @endif
+                        @if (in_array('paypal', $enabledMethods, true))
+                        <label class="pay-opt">
+                            <input form="checkoutForm" type="radio" name="payment_method" value="paypal"
+                                {{ $defaultMethod === 'paypal' ? 'checked' : '' }}>
+                            <span class="pay-icon" style="font-size:1.3rem;font-weight:900;color:#003087;">Pay<span style="color:#009cde;">Pal</span></span>
+                            <div class="pay-label">
+                                <strong>PayPal</strong>
+                                <small>Paga con il tuo conto PayPal in totale sicurezza</small>
+                            </div>
+                        </label>
+                        @endif
+                        @if (in_array('bonifico', $enabledMethods, true))
+                        <label class="pay-opt">
+                            <input form="checkoutForm" type="radio" name="payment_method" value="bonifico"
+                                {{ $defaultMethod === 'bonifico' ? 'checked' : '' }}>
+                            <span class="pay-icon">🏦</span>
+                            <div class="pay-label">
+                                <strong>Bonifico bancario</strong>
+                                <small>Riceverai IBAN e causale via email — attivazione dopo conferma</small>
+                            </div>
+                        </label>
+                        @endif
+                    </div>
+                    @endif
+
+                    <div class="privacy-check">
+                        <input form="checkoutForm" type="checkbox" name="privacy" id="privacy" {{ old('privacy') ? 'checked' : '' }}>
+                        <label for="privacy">
+                            Ho letto e accetto la
+                            <a href="{{ route('privacy') }}" target="_blank">Informativa sulla Privacy</a>
+                            e acconsento al trattamento dei miei dati personali per finalità contrattuali.
+                        </label>
+                    </div>
+                    @error('privacy')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
+
+                    <button form="checkoutForm" type="submit" class="btn-submit" id="btnSubmit">
+                        <span id="btnText">🔒 Procedi al pagamento</span>
+                        <span id="btnSpinner" style="display:none;">⏳ Attendi…</span>
+                    </button>
+                    <p class="secure-note">🛡 Connessione cifrata SSL — i tuoi dati sono al sicuro</p>
         </div>
         <div class="sidebar-trust">
             🔒 Pagamento sicuro con crittografia SSL<br>
@@ -451,88 +546,6 @@
                         </div>
                     </div>
                     <input type="hidden" name="billing_country" value="IT">
-                </div>
-            </div>
-
-            {{-- ── STEP 2: Metodo pagamento ─── --}}
-            <div class="form-card">
-                <div class="form-card-header">
-                    <div class="step-num">2</div>
-                    <h2>Scegli il metodo di pagamento</h2>
-                </div>
-                <div class="form-body">
-
-                    @php
-                        // Lista metodi pagamento abilitata dall'admin (Impostazioni > Metodi di pagamento).
-                        // Se la variabile non e' presente (legacy / cache obsoleta) fallback a tutti e 3.
-                        $enabledMethods = $enabledPaymentMethods ?? ['stripe', 'paypal', 'bonifico'];
-                        // Default selezione:
-                        //  - se l'utente aveva gia' scelto (old) e quel metodo e' ancora abilitato → mantiene
-                        //  - altrimenti primo metodo abilitato → fallback a bonifico
-                        $oldMethod     = old('payment_method');
-                        $defaultMethod = ($oldMethod && in_array($oldMethod, $enabledMethods, true))
-                            ? $oldMethod
-                            : ($enabledMethods[0] ?? 'bonifico');
-                    @endphp
-
-                    @if (empty($enabledMethods))
-                        <div class="alert alert-warning" style="padding:16px;border-radius:8px;background:#fff7e6;border:1px solid #ffd591;color:#874d00;">
-                            ⚠️ Al momento non &egrave; possibile completare il pagamento online.
-                            Per iscriverti al corso contatta la segreteria.
-                        </div>
-                    @else
-                    <div class="pay-options">
-                        @if (in_array('stripe', $enabledMethods, true))
-                        <label class="pay-opt">
-                            <input type="radio" name="payment_method" value="stripe"
-                                {{ $defaultMethod === 'stripe' ? 'checked' : '' }}>
-                            <span class="pay-icon">💳</span>
-                            <div class="pay-label">
-                                <strong>Carta di credito / debito</strong>
-                                <small>Visa, Mastercard, American Express — pagamento immediato e sicuro</small>
-                            </div>
-                        </label>
-                        @endif
-                        @if (in_array('paypal', $enabledMethods, true))
-                        <label class="pay-opt">
-                            <input type="radio" name="payment_method" value="paypal"
-                                {{ $defaultMethod === 'paypal' ? 'checked' : '' }}>
-                            <span class="pay-icon" style="font-size:1.3rem;font-weight:900;color:#003087;">Pay<span style="color:#009cde;">Pal</span></span>
-                            <div class="pay-label">
-                                <strong>PayPal</strong>
-                                <small>Paga con il tuo conto PayPal in totale sicurezza</small>
-                            </div>
-                        </label>
-                        @endif
-                        @if (in_array('bonifico', $enabledMethods, true))
-                        <label class="pay-opt">
-                            <input type="radio" name="payment_method" value="bonifico"
-                                {{ $defaultMethod === 'bonifico' ? 'checked' : '' }}>
-                            <span class="pay-icon">🏦</span>
-                            <div class="pay-label">
-                                <strong>Bonifico bancario</strong>
-                                <small>Riceverai IBAN e causale via email — attivazione dopo conferma</small>
-                            </div>
-                        </label>
-                        @endif
-                    </div>
-                    @endif
-
-                    <div class="privacy-check">
-                        <input type="checkbox" name="privacy" id="privacy" {{ old('privacy') ? 'checked' : '' }}>
-                        <label for="privacy">
-                            Ho letto e accetto la
-                            <a href="{{ route('privacy') }}" target="_blank">Informativa sulla Privacy</a>
-                            e acconsento al trattamento dei miei dati personali per finalità contrattuali.
-                        </label>
-                    </div>
-                    @error('privacy')<div class="err-msg" style="margin-top:6px;">{{ $message }}</div>@enderror
-
-                    <button type="submit" class="btn-submit" id="btnSubmit">
-                        <span id="btnText">🔒 Procedi al pagamento</span>
-                        <span id="btnSpinner" style="display:none;">⏳ Attendi…</span>
-                    </button>
-                    <p class="secure-note">🛡 Connessione cifrata SSL — i tuoi dati sono al sicuro</p>
                 </div>
             </div>
 
