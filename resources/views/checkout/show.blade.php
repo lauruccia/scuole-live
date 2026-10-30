@@ -349,9 +349,9 @@
                 <div class="order-row"><span class="label">&#9201; Ore incluse</span><span class="val" id="sb-hours">—</span></div>
                 <div class="order-row"><span class="label">👤 Tipo</span><span class="val" id="sb-type">—</span></div>
                 <div class="order-row" id="sb-enroll-row" style="display:none;"><span class="label">Quota iscrizione</span><span class="val" id="sb-enroll"></span></div>
-                <div class="order-row" id="sb-price-row" style="display:none;"><span class="label">Quota corso</span><span class="val" id="sb-price"></span></div>
+                <div class="order-row" id="sb-price-row" style="display:none;"><span class="label" id="sb-price-label">Quota corso</span><span class="val" id="sb-price"></span></div>
                 <div class="order-total">
-                    <span class="label">Totale</span>
+                    <span class="label" id="sb-total-label">Totale</span>
                     <span class="val" id="sb-total">—</span>
                 </div>
             @else
@@ -368,10 +368,10 @@
                 <div class="order-row"><span class="label">Quota iscrizione</span><span class="val">€ {{ number_format($course->enrollment_fee, 2, ',', '.') }}</span></div>
             @endif
             @if($course->course_price > 0)
-                <div class="order-row"><span class="label">Quota corso</span><span class="val">€ {{ number_format($course->course_price, 2, ',', '.') }}</span></div>
+                <div class="order-row"><span class="label">Quota corso{{ $course->is_group_lesson ? ' a persona' : '' }}</span><span class="val">€ {{ number_format($course->course_price, 2, ',', '.') }}</span></div>
             @endif
             <div class="order-total">
-                <span class="label">Totale</span>
+                <span class="label">Totale{{ $course->is_group_lesson ? ' a persona' : '' }}</span>
                 <span class="val">€ {{ number_format($course->total_price, 2, ',', '.') }}</span>
             </div>
             @endif
@@ -704,6 +704,9 @@ document.addEventListener('DOMContentLoaded', () => {
             : dash;
         document.getElementById('sb-type').textContent  = current ? current.type : dash;
         document.getElementById('sb-total').textContent = current ? eur(current.total) : dash;
+        const perPerson = !!(current && current.perPerson);
+        document.getElementById('sb-total-label').textContent = perPerson ? 'Totale a persona' : 'Totale';
+        document.getElementById('sb-price-label').textContent = perPerson ? 'Quota corso a persona' : 'Quota corso';
 
         document.getElementById('sb-enroll-row').style.display = current && current.enrollment > 0 ? '' : 'none';
         document.getElementById('sb-price-row').style.display  = current && current.price > 0 ? '' : 'none';

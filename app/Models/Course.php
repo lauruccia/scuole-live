@@ -57,6 +57,14 @@ class Course extends Model
         return $this->hasMany(CoursePurchase::class);
     }
 
+    /**
+     * True per le lezioni di gruppo (2/4 persone, ecc.): il prezzo mostrato è a persona.
+     */
+    public function getIsGroupLessonAttribute(): bool
+    {
+        return (bool) preg_match('/gruppo/i', (string) $this->lesson_type);
+    }
+
     /** Prezzo totale da pagare (iscrizione + corso) */
     public function getTotalPriceAttribute(): float
     {
