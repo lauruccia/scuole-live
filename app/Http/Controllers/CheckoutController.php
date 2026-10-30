@@ -163,6 +163,7 @@ class CheckoutController extends Controller
                 'price'      => (float) $c->course_price,
                 'total'      => (float) $c->total_price,
                 'image'      => $c->image_url,
+                'perPerson'  => $c->is_group_lesson,
             ];
         })->values();
 
